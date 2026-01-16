@@ -1,0 +1,352 @@
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import Navbar from '../components/Navbar';
+import '../styles/Chat.css';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { 
+    faSpinner, 
+    faTimesCircle, 
+    faFolder, 
+    faGlobe, 
+    faPaperPlane 
+} from '@fortawesome/free-solid-svg-icons';
+import djangoApi from '../services/api'; 
+
+// Global counter for generating unique message IDs
+let messageIdCounter = Date.now();
+
+const Chatbot = ({ user }) => {
+    // --- State Variables ---
+    const [messageInput, setMessageInput] = useState('');
+    const [attachedFile, setAttachedFile] = useState(null); 
+    const [isSearchPopupVisible, setIsSearchPopupVisible] = useState(false);
+    const [currentSearchMode, setCurrentSearchMode] = useState('disabled');
+    const [isProcessing, setIsProcessing] = useState(false); 
+    const [history, setHistory] = useState([
+        { id: messageIdCounter++, text: "👋 Hello! I'm your AI study assistant. Ask me anything about your study materials or exams. Let’s study smarter together!", type: 'ai', sender: 'AI Tutor' }
+    ]);
+    
+    // --- Ref Variables ---
+    const chatMessagesRef = useRef(null);
+    const textareaRef = useRef(null);
+
+    // --- Utility Functions ---
+
+    const scrollToBottom = () => {
+        if (chatMessagesRef.current) {
+            chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
+        }
+    };
+
+    const clearAttachment = () => {
+        setAttachedFile(null);
+        const fileInput = document.getElementById('file-input');
+        if (fileInput) fileInput.value = '';
+    };
+
+    // --- Core Logic (API Calls) ---
+
+    // FIX: Use messageIdCounter for unique keys
+    const addMessage = (text, type, sender = null) => {
+        const newMessage = { id: messageIdCounter++, text, type, sender };
+        setHistory(prev => [...prev, newMessage]);
+        return newMessage;
+    };
+    
+    const handleSendMessage = useCallback(async (e) => {
+        e.preventDefault(); 
+
+        let text = messageInput.trim();
+        const fileToSend = attachedFile;
+
+        const isTextPresent = text.length > 0;
+        const isReadyToSend = isTextPresent || fileToSend;
+        
+        // Disabled state check, which relies on `isProcessing` being up-to-date
+        if (!isReadyToSend || isProcessing) return;
+
+        if (!isTextPresent && fileToSend) {
+            text = `Analyze the uploaded document and summarize its key concepts.`;
+        }
+
+        // 1. Prepare UI for sending
+        const userDisplayMessage = text + (fileToSend ? ` (attached: ${fileToSend.name})` : '');
+        addMessage(userDisplayMessage, "user");
+        
+        setMessageInput(''); 
+        clearAttachment();
+        
+        // 2. Set up AI response container and lock UI
+        // FIX: Use the new unique ID counter here as well
+        const placeholderId = messageIdCounter; 
+        addMessage("...", "ai", "AI Tutor"); 
+        
+        setIsProcessing(true); 
+
+        try {
+            if (fileToSend) {
+                // A. File Upload (Non-streaming endpoint)
+                const fileApiEndpoint = "chat/file/";
+                
+                setHistory(prev => prev.map(msg => 
+                    msg.id === placeholderId ? { ...msg, text: "Processing file... This may take a moment." } : msg
+                ));
+                
+                const formData = new FormData();
+                formData.append('file_upload', fileToSend);
+                formData.append('message', text);
+                formData.append('search_mode', currentSearchMode);
+                
+                // Use Axios for file upload
+                const res = await djangoApi.post(fileApiEndpoint, formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' },
+                });
+
+                const aiResponseText = res.data?.response || "[Error: Empty response from file API]";
+
+                setHistory(prev => prev.map(msg => 
+                    msg.id === placeholderId ? { ...msg, text: aiResponseText } : msg
+                ));
+
+            } else {
+                // B. Standard Streamed Chat (Streaming endpoint)
+                const streamApiEndpoint = "/chat/stream/";
+
+                // Build the full URL manually to preserve the /api/ prefix.
+                // Using URL() with a base of "http://localhost:8000/api" would
+                // incorrectly resolve to "http://localhost:8000/chat/stream/".
+                const baseUrl = djangoApi.defaults.baseURL.replace(/\/+$/, "");
+                const fullStreamUrl = `${baseUrl}${streamApiEndpoint}`;
+
+                const res = await fetch(fullStreamUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ 
+                        message: text,
+                        search_mode: currentSearchMode,
+                        conversation_history: [], 
+                        context_document: null 
+                    }),
+                });
+
+                if (!res.ok || !res.body) {
+                    throw new Error(`Stream API Connection Error: ${res.status}`);
+                }
+                
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder("utf-8");
+                let fullText = "";
+
+                const updateHistory = (newChunk) => {
+                    // Accumulate the full streamed text once
+                    fullText += newChunk;
+                    setHistory(prev => prev.map(msg => 
+                        msg.id === placeholderId ? { ...msg, text: fullText } : msg
+                    ));
+                    scrollToBottom();
+                };
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value, { stream: true });
+                    // Only update via the helper to avoid duplicating text
+                    updateHistory(chunk);
+                }
+            }
+        } catch (err) {
+            console.error("API Error:", err);
+            const errorMsg = err.response?.data?.detail || err.message || "An unknown error occurred.";
+            
+            setHistory(prev => prev.map(msg => 
+                msg.id === placeholderId ? { ...msg, text: `[Error: ${errorMsg}]` } : msg
+            ));
+        } finally {
+            // 3. Re-enable UI elements
+            setIsProcessing(false);
+            scrollToBottom();
+        }
+    }, [messageInput, attachedFile, currentSearchMode, isProcessing]);
+
+    // --- Effect Hooks ---
+
+    // Auto-resize Textarea
+    useEffect(() => {
+        if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto'; 
+            textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`; 
+        }
+    }, [messageInput]);
+
+    // Auto-scroll when history changes
+    useEffect(() => {
+        scrollToBottom();
+    }, [history]);
+
+
+    // --- Handler Functions ---
+
+    const handleInputChange = (e) => setMessageInput(e.target.value);
+
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            if (file.size > 10 * 1024 * 1024) { 
+                alert(`[Error: File ${file.name} is too large. Max size is 10MB.]`);
+                e.target.value = ''; 
+                return;
+            }
+            setAttachedFile(file);
+        } else {
+            clearAttachment();
+        }
+    };
+
+    const handleSearchModeChange = (e) => {
+        setCurrentSearchMode(e.target.value);
+        setIsSearchPopupVisible(false);
+    };
+
+
+    // --- Render Logic for Dynamic Classes/State ---
+    const isSearchActive = currentSearchMode !== 'disabled';
+    const fileBarClassName = `file-status-bar ${attachedFile ? '' : 'hidden'}`;
+    const searchIndicatorClassName = `search-indicator ${isProcessing && isSearchActive ? '' : 'hidden'}`;
+    const fileNameDisplay = attachedFile ? attachedFile.name : '';
+    const sendButtonClass = isProcessing ? 'processing' : '';
+    const searchButtonClass = `file-upload-btn ${isSearchActive ? 'active-search' : ''}`;
+    
+    // Calculate disabled state: Disabled if processing OR if no message/file present
+    const isTextPresent = messageInput.trim().length > 0;
+    const isReadyToSend = isTextPresent || attachedFile;
+    const shouldBeDisabled = !isReadyToSend || isProcessing; 
+
+
+    // --- JSX Message Bubble Component ---
+    const MessageBubble = ({ message }) => (
+        // The key is now guaranteed unique via messageIdCounter
+        <div key={message.id} className={`message-bubble ${message.type}-message`}>
+            {message.sender && <div className="sender-name">{message.sender}</div>}
+            <p style={{ whiteSpace: 'pre-wrap' }}>{message.text}</p>
+        </div>
+    );
+
+    return (
+        <>
+            <Navbar user={user}/>
+            <div className="chat-container">
+                <div className="chat-header">
+                    <h1>AI Tutor</h1>
+                    <span className="user-id-display" id="user-id-display">Connected</span>
+                </div>
+
+                <div id="chat-messages" ref={chatMessagesRef}>
+                    {/* Key is now message.id, generated by the counter */}
+                    {history.map(msg => <MessageBubble key={msg.id} message={msg} />)}
+                </div>
+
+                {/* Loading/Status Indicators */}
+                
+                <div id="typing-indicator" className="typing-indicator" style={{ display: isProcessing ? 'flex' : 'none' }}>
+                    <span className="typing-dot">•</span><span className="typing-dot">•</span><span className="typing-dot">•</span>
+                </div>
+
+                <div id="search-indicator" className={searchIndicatorClassName}>
+                    <span className="searching-text">
+                        <FontAwesomeIcon icon={faSpinner} spin /> 
+                        {currentSearchMode === 'deep_research' ? 'Conducting deep research...' : 'Searching the web...'}
+                    </span>
+                </div>
+
+                {/* File Display Area */}
+                <div id="file-status-bar" className={fileBarClassName}>
+                    <span id="file-name-display" className="truncate">{fileNameDisplay}</span>
+                    <button id="clear-file-btn" title="Remove attachment" onClick={clearAttachment} disabled={isProcessing}>
+                        <FontAwesomeIcon icon={faTimesCircle} />
+                    </button>
+                </div>
+
+                {/* Web Search Options Popup */}
+                <div 
+                    id="web-search-options-popup" 
+                    className={`web-search-popup ${isSearchPopupVisible ? '' : 'hidden'}`}
+                >
+                    <p className="popup-title">Web Search Mode:</p>
+                    {['disabled', 'web_search', 'deep_research'].map((mode) => (
+                        <label key={mode}>
+                            <input 
+                                type="radio" 
+                                name="search-mode" 
+                                value={mode} 
+                                checked={currentSearchMode === mode}
+                                onChange={handleSearchModeChange}
+                            />
+                            {mode === 'disabled' && 'Disabled (Use internal knowledge)'}
+                            {(mode === 'web_search' || mode === 'deep_research') && <strong>{mode === 'web_search' ? 'Web Search' : 'Deep Research'}</strong>}
+                            {mode === 'web_search' && ' (Quick, real-time results)'}
+                            {mode === 'deep_research' && ' (In-depth, multi-step analysis)'}
+                        </label>
+                    ))}
+                </div>
+
+
+                {/* Main Chat Input Area */}
+                <div className="chat-input-area">
+                    {/* Web Search Toggle Button */}
+                    <button 
+                        id="web-search-toggle-btn" 
+                        className={searchButtonClass} 
+                        title="Web Search Options"
+                        onClick={() => setIsSearchPopupVisible(prev => !prev)}
+                        disabled={isProcessing}
+                    >
+                        <FontAwesomeIcon icon={faGlobe} />
+                    </button>
+                    
+                    {/* File Upload Button/Label */}
+                    <label htmlFor="file-input" className="file-upload-btn" title="Upload File">
+                        <FontAwesomeIcon icon={faFolder} />
+                        <input 
+                            type="file" 
+                            id="file-input" 
+                            accept=".pdf, .docx, .pptx, .txt"
+                            onChange={handleFileChange}
+                            disabled={isProcessing}
+                        />
+                    </label>
+                    
+                    {/* Message Textarea */}
+                    <textarea 
+                        ref={textareaRef} 
+                        id="message-input" 
+                        placeholder="Ask me anything..." 
+                        rows="1"
+                        value={messageInput}
+                        onChange={handleInputChange}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault(); 
+                                handleSendMessage(e);
+                            }
+                        }}
+                        disabled={isProcessing}
+                    ></textarea>
+                    
+                    {/* Send Button */}
+                    <button 
+                        id="send-btn" 
+                        title="Send Message" 
+                        className={sendButtonClass}
+                        disabled={shouldBeDisabled}
+                        onClick={handleSendMessage}
+                    >
+                        <FontAwesomeIcon icon={faPaperPlane} />
+                    </button>
+                </div>
+
+            </div>
+        </>
+    );
+};
+
+export default Chatbot;

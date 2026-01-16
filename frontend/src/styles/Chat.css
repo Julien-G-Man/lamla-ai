@@ -1,0 +1,414 @@
+/* Chat page specific styles - inherits from base.css */
+
+.hidden {
+    display: none !important;
+}
+
+.chat-container {
+    width: min(1100px, 100% - 32px); /* nicely centered card on desktop, with side gutters */
+    height: calc(100vh - var(--navbar-height) - 32px); /* occupy most of the viewport */
+    margin: calc(var(--navbar-height) + 16px) auto 16px auto; /* center horizontally */
+    padding-top: 20px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+}
+
+.chat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    background-color: var(--background-white);
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    z-index: 10;
+}
+
+.chat-header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.user-id-display {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    background-color: var(--background-gray);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-weight: 500;
+}
+
+#chat-messages {
+    flex-grow: 1;
+    padding: 24px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    background-color: var(--background-gray);
+    scroll-behavior: smooth;
+}
+
+/* --- Search Indicator Styles --- */
+.search-indicator-wrapper {
+    /* Style to make the wrapper look like an AI bubble container */
+    align-self: flex-start;
+    max-width: 85%;
+    display: flex; /* Use flex to align avatar and bubble if structure includes it */
+    gap: 8px;
+}
+
+.search-indicator-wrapper .message-content {
+    display: flex;
+    gap: 8px;
+}
+
+.search-indicator-wrapper .ai-avatar {
+    /* Assuming you have a style for a small avatar */
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    color: white;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 5px; /* Adjust vertical alignment */
+}
+
+.searching-text {
+    /* Make the text look clean inside the bubble */
+    margin: 0;
+    font-style: italic;
+    color: var(--text-muted);
+}
+/* Ensure the indicator bubble itself has the right style */
+.search-indicator-wrapper .message-bubble {
+    /* Inherits general message-bubble styles but is a bit simpler */
+    padding: 10px 15px;
+    background-color: var(--surface);
+    box-shadow: none;
+}
+/* -------------------------------------- */
+
+.message-bubble {
+    max-width: 85%;
+    padding: 12px 18px;
+    border-radius: var(--radius-md);
+    line-height: 1.6;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+    box-shadow: var(--shadow-sm);
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.user-message {
+    background-color: var(--border);
+    color: var(--text-primary);
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+}
+
+.ai-message {
+    background-color: var(--border);
+    color: var(--text-primary);
+    align-self: flex-start;
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+}
+/* Ensure the welcome message (which doesn't have an avatar/content structure) 
+   still looks correct. */
+.ai-message.message-bubble:first-child { 
+    margin-bottom: 0;
+}
+
+
+.ai-message .sender-name {
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--primary-dark);
+}
+
+.typing-indicator {
+    align-self: flex-start;
+    padding: 12px 18px;
+    border-radius: var(--radius-md);
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-style: italic;
+    display: none;
+    margin-left: 24px;
+    margin-bottom: 16px;
+}
+
+@keyframes typing {
+    0% { opacity: 0.2; }
+    50% { opacity: 1; }
+    100% { opacity: 0.2; }
+}
+
+.typing-dot {
+    animation: typing 1.5s infinite;
+    display: inline-block;
+    margin: 0 1px;
+}
+.typing-dot:nth-child(1) { animation-delay: 0s; }
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+.chat-input-area {
+    display: flex;
+    padding: 16px 24px;
+    background-color: var(--background-white);
+    border-top: 1px solid var(--border);
+    gap: 12px;
+    position: relative;
+    align-items: flex-end; 
+}
+
+/* --- Pop-up and Button Styles --- */
+.web-search-popup {
+    position: absolute;
+    bottom: 100%; /* Position above the input area */
+    left: 24px; /* Align with the buttons */
+    width: 280px;
+    padding: 10px 15px;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    z-index: 20; /* Above everything in the chat container */
+    margin-bottom: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-x: hidden; /* Ensure no text can overflow horizontally */
+}
+
+.web-search-popup.hidden {
+    display: none;
+}
+
+.web-search-popup .popup-title {
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 5px 0;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap; /* Prevent wrapping for the title */
+}
+
+.web-search-popup label {
+    display: flex;
+    align-items: center;
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px 0;
+    transition: color 0.15s;    
+    /* FIX: Force label content to wrap neatly if it's too long */
+    word-break: break-word;
+    white-space: normal;
+}
+
+.web-search-popup label:hover {
+    color: var(--text-primary);
+}
+
+.web-search-popup input[type="radio"] {
+    margin-right: 10px;
+    /* Style for the radio button itself, optional */
+    accent-color: var(--primary-color);
+}
+
+/* Highlight the search toggle button when a search mode is ACTIVE */
+#web-search-toggle-btn.active-search {
+    color: var(--primary-color); /* Highlight the icon */
+    background-color: var(--primary-color-dimmed, rgba(255, 214, 0, 0.2)); /* A light background */
+    border-color: var(--primary-color);
+}
+/* -------------------------------------- */
+
+
+.file-upload-btn {
+    /* This style is now shared by the Web Search Toggle Button */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: var(--background-gray);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    color: var(--text-primary);
+}
+
+.file-upload-btn:hover {
+    background-color: var(--border);
+    color: var(--text-primary);
+}
+
+#file-input { display: none; }
+
+#message-input {
+    background-color: var(--border); 
+    flex-grow: 1;
+    padding: 14px 20px;
+    border-radius: 50px;
+    border: 1px solid var(--border);
+    font-size: 1rem;
+    outline: none;
+    transition: all 0.2s ease-in-out;
+    resize: none;
+    overflow-y: auto;
+    max-height: 120px;
+    color: var(--text-primary);
+}
+
+#message-input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(255, 214, 0, 0.2);
+}
+
+#send-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: var(--text-primary);
+    border: none;
+    color: var(--secondary-color);
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    box-shadow: var(--shadow-sm);
+}
+
+#send-btn:hover {
+    background-color: var(--primary-dark);
+    box-shadow: 0 4px 12px rgba(255, 214, 0, 0.3);
+}
+
+#send-btn:disabled {
+    background-color: #c2c1c1f1;
+    cursor: not-allowed;
+}
+
+#send-btn.processing {
+    background-color: var(--primary-dark-dimmed, #7a6e02); /* A dimmer version of your primary color */
+    color: var(--secondary-color);
+    opacity: 0.6; /* Dim the button */
+    cursor: wait; /* Change cursor to indicate waiting/processing */
+    /* Remove hover effects while processing */
+    pointer-events: none; 
+}
+
+/* Ensure the general disabled state is simple */
+#send-btn:disabled:not(.processing) {
+    background-color: #c2c1c1f1;
+    cursor: not-allowed;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 600px) {
+    .chat-container { height: 95vh; padding: 0; }
+    .chat-header { padding: 16px; }
+    #chat-messages { padding: 16px; }
+    .chat-input-area { padding: 12px 16px; gap: 8px; }
+    #message-input { padding: 10px 16px; }
+    .file-upload-btn, #send-btn { width: 40px; height: 40px; }
+}
+
+.file-status-bar {
+    display: flex;
+    align-items: center;
+    padding: 8px 24px; 
+    margin: 0; 
+    background-color: var(--background-white); 
+    border-top: 1px solid var(--border);
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    box-shadow: var(--shadow-sm);
+}
+
+.file-status-bar.hidden {
+    display: none;
+}
+
+#file-name-display {
+    flex-grow: 1;
+    margin-right: 15px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis; 
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+#clear-file-btn {
+    background: none;
+    color: #dc3545; 
+    border: none;
+    padding: 0;
+    margin: 0;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    font-size: 1.1em;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s;
+}
+
+#clear-file-btn:hover {
+    color: #c82333;
+}
+
+.search-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #eef4ff;
+    border: 1px solid #cdd9ff;
+    border-radius: 8px;
+    color: #2b3a67;
+    font-size: 0.9rem;
+    padding: 8px 12px;
+    margin: 8px 0;
+    animation: fadeIn 0.3s ease-in-out;
+    gap: 8px;
+}
+
+.search-indicator.hidden {
+    display: none;
+}
+
+.searching-text i {
+    margin-right: 6px;
+    color: #007bff;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+
+/* Hide the main footer element */
+.main-footer {
+    display: none !important;
+}

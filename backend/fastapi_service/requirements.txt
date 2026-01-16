@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+httpx
+openai
+requests
+python-dotenv
+psycopg2-binary
+aiohttp>=3.8.5
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
