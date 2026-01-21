@@ -6,7 +6,7 @@ This project uses:
 - **Django**: REST API gateway + database (single source of truth)
 - **FastAPI**: Stateless async worker for high-concurrency LLM tasks
 - **React**: Frontend (separate deployment)
-- **PostgreSQL**: Production database (SQLite for local dev)
+- **PostgreSQL**: Database for both development and production (database: `lamla_db`)
 
 ### Key Design Principles
 1. **FastAPI is stateless**: No database, no state persistence. Only processes prompts and calls LLM providers.
@@ -21,7 +21,7 @@ This project uses:
 
 ### Prerequisites
 - Python 3.10+
-- PostgreSQL (SQLite for dev)
+- PostgreSQL (see `backend/SETUP_POSTGRES.md` for setup)
 - Node.js + npm (for React)
 
 ### 1. Backend Setup
@@ -44,6 +44,10 @@ pip install -r requirements.txt
 cp ../.env.example ../.env
 # Edit .env with your API keys and FASTAPI_BASE_URL
 
+# Setup PostgreSQL database (see SETUP_POSTGRES.md)
+# For local dev: CREATE DATABASE lamla_db; (using psql)
+# For production: python manage.py setup_postgres (reads from .env)
+
 # Run Django migrations
 python manage.py migrate
 
@@ -56,9 +60,19 @@ python manage.py loaddata apps/chatbot/fixtures/knowledge_base.json
 
 ### 2. Start Django (API Gateway)
 
+**IMPORTANT**: Use ASGI server (uvicorn) for async support, not `runserver`:
+
 ```bash
 # From backend directory
-python manage.py runserver 0.0.0.0:8000
+# Windows:
+.\run_django.bat
+# Or manually:
+uvicorn lamla.asgi:application --host 0.0.0.0 --port 8000 --reload
+
+# Linux/Mac:
+./run_django.sh
+# Or manually:
+uvicorn lamla.asgi:application --host 0.0.0.0 --port 8000 --reload
 ```
 
 Django will listen on `http://localhost:8000`.
@@ -278,12 +292,40 @@ docker-compose up -d
 
 ---
 
+## Security
+
+**⚠️ CRITICAL: Never commit secrets to version control!**
+
+### Best Practices
+
+1. **Environment Variables**: Store all secrets in `.env` files (already in `.gitignore`)
+2. **Database Passwords**: Use strong passwords, never hardcode in SQL scripts
+3. **API Keys**: Store in environment variables, not in source code
+4. **Production**: Use secrets management services (AWS Secrets Manager, Azure Key Vault, etc.)
+
+### Quick Security Checklist
+
+- [ ] `.env` file is in `.gitignore` ✅ (already configured)
+- [ ] No passwords in SQL scripts (use placeholders)
+- [ ] No API keys in source files
+- [ ] Strong passwords for production databases
+- [ ] Different credentials for dev/staging/prod
+
+See `backend/SECURITY.md` for detailed security guidelines.
+
+---
+
 ## Production Deployment
 
 ### Checklist
 - [ ] Set `DEBUG=False`
-- [ ] Use strong `SECRET_KEY`
-- [ ] Configure PostgreSQL
+- [ ] Use strong `SECRET_KEY` (generate with: `openssl rand -hex 32`)
+- [ ] Configure PostgreSQL with strong passwords
+- [ ] **Never hardcode credentials** - use environment variables or secrets manager
+- [ ] Enable SSL/TLS for database connections
+- [ ] Set `FASTAPI_SECRET` to a strong random value
+- [ ] Configure CORS properly for production domains
+- [ ] Use managed PostgreSQL service (AWS RDS, Azure Database, etc.)
 - [ ] Set all LLM provider keys
 - [ ] Configure CORS origins (production URLs only)
 - [ ] Run behind a reverse proxy (Nginx, CloudFront)
@@ -298,10 +340,6 @@ docker-compose up -d
 - **Frontend**: Vercel / Netlify
 
 ---
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## License
 
