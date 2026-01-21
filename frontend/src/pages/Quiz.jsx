@@ -7,7 +7,6 @@ const Quiz = () => {
     const location = useLocation();
     const navigate = useNavigate();
     
-    // Updated redirect path to match your Django URL name 'custom_quiz'
     const { quizData } = location.state || { quizData: null };
     const REDIRECT_PATH = '/custom-quiz'; 
 
@@ -32,6 +31,7 @@ const Quiz = () => {
         try {
             const response = await djangoApi.post('/quiz/submit/', {
                 quiz_id: quizData.id,
+                quiz_data: quizData,  // Send full quiz data for answer validation
                 user_answers: userAnswers,
                 total_questions: allQuestions.length
             });
@@ -40,7 +40,7 @@ const Quiz = () => {
         } catch (err) {
             console.error("Submission failed", err);
             setIsSubmitting(false);
-            alert("Failed to submit quiz. Please check your connection.");
+            alert(err.response?.data?.error || "Failed to submit quiz. Please check your connection.");
         }
     }, [isSubmitting, quizData, userAnswers, allQuestions.length, storageKey, navigate]);
 

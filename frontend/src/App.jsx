@@ -1,4 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { useEffect } from "react";
+
 import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import CustomQuiz from "./pages/CustomQuiz";
@@ -7,13 +9,27 @@ import QuizResults from "./pages/QuizResults";
 import Flashcards from "./pages/Flashcards";
 import Chatbot from "./pages/Chatbot";
 import About from "./pages/About";
-import './App.css';
+
+import { DJANGO_WARMUP_ENDPOINT } from "./services/api";
+import { FASTAPI_HEALTH_ENDPOINT } from "./services/api";
+import "./App.css";
 
 function App() {
+  useEffect(() => {
+
+    // Wake Django
+    fetch(DJANGO_WARMUP_ENDPOINT).catch(() => {});
+
+    // Wake FastAPI
+    fetch(FASTAPI_HEALTH_ENDPOINT)
+      .then(res => res.json())
+      .catch(err => console.warn("FastAPI not reachable: ", err));
+  }, []);
+
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Home />} /> 
+        <Route path="/" element={<Home />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/custom-quiz" element={<CustomQuiz />} />
         <Route path="/quiz" element={<Quiz />} />

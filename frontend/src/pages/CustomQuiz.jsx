@@ -131,7 +131,8 @@ const CustomQuiz = ({ user }) => {
             quiz_time: quizTime,
             difficulty: difficulty
           });
-          navigate('/quiz/results', { state: { quizData: response.data } });
+          // Navigate to quiz page with quiz data (not results page)
+          navigate('/quiz', { state: { quizData: response.data } });
         } catch (err) {
             showToast(err.response?.data?.error || "Generation failed", 'error');
             setIsGenerating(false);
