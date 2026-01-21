@@ -53,13 +53,19 @@ async def _save_ai_message(session_obj, ai_message: str):
     )
 
 
-async def _get_conversation_history(session_obj, limit: int = 7):
-    """Get conversation history for context"""
+async def _get_conversation_history(session_obj, limit: int = 10):
+    """
+    Get conversation history for context - last 5 conversations (10 messages: 5 user + 5 AI).
+    
+    This ensures the bot remembers the last 5 exchanges with the user for context continuity.
+    """
+    # Get last 10 messages (5 conversations = 5 user messages + 5 AI responses)
     history_qs = await sync_to_async(list)(session_obj.messages.order_by('-created_at')[:limit])
     conversation_history = []
+    # Reverse to get chronological order (oldest first)
     for msg in reversed(history_qs):
         conversation_history.append({"message_type": msg.sender, "content": msg.content})
-    return conversation_history[-6:]  # Return last 6 messages
+    return conversation_history  # Return all 10 messages (last 5 conversations)
 
 
 async def _build_chatbot_prompt(user_message: str, conversation_history=None, context_document=None):
@@ -141,35 +147,60 @@ async def chatbot_api_async(request):
         # 2. Save user message
         await _save_user_message(session_obj, user_message)
         
-        # 3. Get conversation history
-        conversation_history = await _get_conversation_history(session_obj)
+        # 3. Get conversation history (last 5 conversations = 10 messages)
+        conversation_history = await _get_conversation_history(session_obj, limit=10)
         
         # 4. Build full prompt
         full_prompt = await _build_chatbot_prompt(user_message, conversation_history)
         
         # 5. Forward to FastAPI using async client
-        client = get_async_client()
-        headers = build_fastapi_headers()
-        
-        fastapi_resp = await client.post(
-            "/chatbot/",
-            json={"prompt": full_prompt, "max_tokens": 400},
-            headers=headers,
-            timeout=60.0
-        )
-        
-        if fastapi_resp.status_code != 200:
-            logger.warning(f"FastAPI responded {fastapi_resp.status_code}: {fastapi_resp.text}")
-            return JsonResponse(
-                {"error": "AI service temporarily unavailable"}, 
-                status=503
+        try:
+            client = get_async_client()
+            headers = build_fastapi_headers()
+            
+            fastapi_resp = await client.post(
+                "/chatbot/",
+                json={"prompt": full_prompt, "max_tokens": 400},
+                headers=headers,
+                timeout=60.0
             )
-        
-        resp_json = fastapi_resp.json()
-        ai_response = resp_json.get("response", "")
-        
-        if not ai_response:
-            ai_response = chatbot_service._get_fallback_response(user_message)
+            
+            if fastapi_resp.status_code != 200:
+                logger.warning(f"FastAPI responded {fastapi_resp.status_code}: {fastapi_resp.text}")
+                return JsonResponse(
+                    {"error": "AI service temporarily unavailable"}, 
+                    status=503
+                )
+            
+            # Parse response with better error handling
+            try:
+                resp_json = fastapi_resp.json()
+                ai_response = resp_json.get("response", "")
+                
+                # If response is empty or None, try to extract from choices (Azure format)
+                if not ai_response and "choices" in resp_json:
+                    choices = resp_json.get("choices", [])
+                    if choices and len(choices) > 0:
+                        choice = choices[0]
+                        if isinstance(choice, dict):
+                            message = choice.get("message", {})
+                            if isinstance(message, dict):
+                                ai_response = message.get("content", "")
+                
+                if not ai_response:
+                    logger.warning(f"FastAPI returned empty response. Full response: {resp_json}")
+                    ai_response = chatbot_service._get_fallback_response(user_message)
+            except (json.JSONDecodeError, KeyError, TypeError) as e:
+                logger.error(f"Failed to parse FastAPI response: {e}. Response text: {fastapi_resp.text[:200]}")
+                ai_response = chatbot_service._get_fallback_response(user_message)
+        except RuntimeError as e:
+            if "Event loop is closed" in str(e):
+                logger.error("Event loop is closed. Django must run with ASGI server (uvicorn/daphne), not WSGI (runserver).")
+                return JsonResponse(
+                    {"error": "Server configuration error. Please contact administrator."}, 
+                    status=500
+                )
+            raise
         
         # Clean markdown
         cleaned_response = chatbot_service.clean_markdown(ai_response.strip())
@@ -187,6 +218,14 @@ async def chatbot_api_async(request):
     except httpx.RequestError as e:
         logger.error(f"FastAPI request error: {e}")
         return JsonResponse({"error": "Service unavailable"}, status=503)
+    except RuntimeError as e:
+        if "Event loop is closed" in str(e) or "cannot be called from a running event loop" in str(e):
+            logger.error("Event loop error. Django must run with ASGI server (uvicorn/daphne), not WSGI (runserver).")
+            return JsonResponse(
+                {"error": "Server configuration error. Please ensure Django is running with uvicorn."}, 
+                status=500
+            )
+        raise
     except Exception as e:
         logger.error(f"Chatbot API error: {e}", exc_info=True)
         return JsonResponse({"error": "Internal server error"}, status=500)
@@ -214,36 +253,60 @@ async def chatbot_stream_async(request):
         # 2. Save user message
         await _save_user_message(session_obj, user_message)
         
-        # 3. Get conversation history
-        conversation_history = await _get_conversation_history(session_obj, limit=6)
+        # 3. Get conversation history (last 5 conversations = 10 messages)
+        conversation_history = await _get_conversation_history(session_obj, limit=10)
         
         # 4. Build full prompt
         full_prompt = await _build_chatbot_prompt(user_message, conversation_history)
         
         # 5. Forward to FastAPI (Note: FastAPI doesn't stream yet, so we get full response and stream it)
-        client = get_async_client()
-        headers = build_fastapi_headers()
-        
-        fastapi_resp = await client.post(
-            "/chatbot/",
-            json={"prompt": full_prompt, "max_tokens": 400},
-            headers=headers,
-            timeout=60.0
-        )
-        
-        if fastapi_resp.status_code != 200:
-            logger.warning(f"FastAPI responded {fastapi_resp.status_code}: {fastapi_resp.text}")
-            return JsonResponse(
-                {"error": "AI service temporarily unavailable"}, 
-                status=503
+        try:
+            client = get_async_client()
+            headers = build_fastapi_headers()
+            
+            fastapi_resp = await client.post(
+                "/chatbot/",
+                json={"prompt": full_prompt, "max_tokens": 400},
+                headers=headers,
+                timeout=60.0
             )
-        
-        # Parse response
-        resp_json = fastapi_resp.json()
-        ai_response = resp_json.get("response", "")
-        
-        if not ai_response:
-            ai_response = chatbot_service._get_fallback_response(user_message)
+            
+            if fastapi_resp.status_code != 200:
+                logger.warning(f"FastAPI responded {fastapi_resp.status_code}: {fastapi_resp.text}")
+                return JsonResponse(
+                    {"error": "AI service temporarily unavailable"}, 
+                    status=503
+                )
+            
+            # Parse response
+            try:
+                resp_json = fastapi_resp.json()
+                ai_response = resp_json.get("response", "")
+                
+                # If response is empty or None, try to extract from choices (Azure format)
+                if not ai_response and "choices" in resp_json:
+                    choices = resp_json.get("choices", [])
+                    if choices and len(choices) > 0:
+                        choice = choices[0]
+                        if isinstance(choice, dict):
+                            message = choice.get("message", {})
+                            if isinstance(message, dict):
+                                ai_response = message.get("content", "")
+                
+                if not ai_response:
+                    logger.warning(f"FastAPI returned empty response. Full response: {resp_json}")
+                    ai_response = chatbot_service._get_fallback_response(user_message)
+            except (json.JSONDecodeError, KeyError, TypeError) as e:
+                logger.error(f"Failed to parse FastAPI response: {e}. Response text: {fastapi_resp.text[:200]}")
+                ai_response = chatbot_service._get_fallback_response(user_message)
+        except RuntimeError as e:
+            if "Event loop is closed" in str(e):
+                logger.error("Event loop is closed. Django must run with ASGI server (uvicorn/daphne), not WSGI (runserver).")
+                return JsonResponse(
+                    {"error": "Server configuration error. Please contact administrator."}, 
+                    status=500
+                )
+            raise
         
         # Clean markdown
         cleaned_response = chatbot_service.clean_markdown(ai_response.strip())
@@ -279,6 +342,14 @@ async def chatbot_stream_async(request):
     except httpx.RequestError as e:
         logger.error(f"FastAPI request error: {e}")
         return JsonResponse({"error": "Service unavailable"}, status=503)
+    except RuntimeError as e:
+        if "Event loop is closed" in str(e) or "cannot be called from a running event loop" in str(e):
+            logger.error("Event loop error. Django must run with ASGI server (uvicorn/daphne), not WSGI (runserver).")
+            return JsonResponse(
+                {"error": "Server configuration error. Please ensure Django is running with uvicorn."}, 
+                status=500
+            )
+        raise
     except Exception as e:
         logger.error(f"Chatbot Stream API error: {e}", exc_info=True)
         return JsonResponse({"error": "Internal server error"}, status=500)

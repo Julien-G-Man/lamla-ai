@@ -1,3 +1,10 @@
 __pycache__/
 venv/
+fastapi_service/fastenv/
 .env
+.cache_ggshield
+db.sqlite3
+
+# Legacy setup files with hardcoded passwords
+setup_postgres.sql
+setup_postgres.bat

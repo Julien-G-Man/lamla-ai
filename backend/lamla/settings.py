@@ -18,7 +18,7 @@ from corsheaders.defaults import default_headers
 
 load_dotenv()
 
-# django-environ setup: prefer explicit DATABASE_URL, fallback to sqlite
+# django-environ setup
 env = environ.Env()
 env.read_env()
 
@@ -27,13 +27,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY')
 
-DEBUG = True
+DEBUG = os.getenv("DEBUG")
 
 ALLOWED_HOSTS = [
     "*",
     "localhost",
     "http://localhost:3000",
-    "https://lamla-ai.vercel.app"
+    "https://lamla-ai.vercel.app",
+    "https://lamla-ai.netlify.app"
 ]
 
 
@@ -70,6 +71,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
 
 ROOT_URLCONF = 'lamla.urls'
@@ -92,10 +94,12 @@ TEMPLATES = [
 WSGI_APPLICATION = 'lamla.wsgi.application'
 
 
-# Database
-# Use DATABASE_URL if provided; fall back to local sqlite for development
+# Database Configuration
 DATABASES = {
-    'default': env.db_url('DATABASE_URL', default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
+    'default': env.db_url(
+        'DATABASE_URL', 
+        default='postgresql://postgres:postgres@localhost:5432/lamla_db'  # Dev default only
+    )
 }
 
 AUTH_PASSWORD_VALIDATORS = [

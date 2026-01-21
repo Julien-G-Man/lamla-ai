@@ -16,9 +16,13 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from apps.core.views import HealthCheckView, warmup
 
 urlpatterns = [
+    path('warmup/', warmup),
+    path('health/', HealthCheckView, name="health"),
     path('admin/', admin.site.urls),
+    
     path('api/', include("apps.chatbot.urls")),
     path('api/', include("apps.quiz.urls")),
     path('api/', include("apps.flashcards.urls")),

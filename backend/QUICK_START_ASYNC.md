@@ -4,14 +4,37 @@
 
 1. **Django 5.1+** (supports async views)
 2. **ASGI Server** (Uvicorn or Daphne) - **Required** for async support
-3. **httpx** (already in requirements.txt)
+3. **PostgreSQL** - Database for bot memory (last 5 conversations per user)
+4. **httpx** (already in requirements.txt)
 
 ## Setup Steps
+
+### 0. Setup PostgreSQL Database
+
+**Local Development (Manual):**
+```bash
+# Create database (as postgres user)
+psql -U postgres
+CREATE DATABASE lamla_db;
+\q
+```
+
+**Production (Automated - reads from .env):**
+```bash
+# Configure .env with POSTGRES_ADMIN_PASSWORD and POSTGRES_DB_PASSWORD
+python manage.py setup_postgres
+```
+
+See `SETUP_POSTGRES.md` for detailed instructions.
 
 ### 1. Configure Environment Variables
 
 **Django (.env or environment):**
 ```bash
+# Database (PostgreSQL)
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/lamla_db
+
+# FastAPI Configuration
 FASTAPI_BASE_URL=http://localhost:8001
 FASTAPI_SECRET=your-secret-key-here-change-in-production
 ```
@@ -23,7 +46,16 @@ FASTAPI_HOST=0.0.0.0
 FASTAPI_PORT=8001
 ```
 
-### 2. Run Django with ASGI Server
+### 2. Run Database Migrations
+
+```bash
+cd backend
+python manage.py migrate
+```
+
+This creates all tables in the `lamla_db` database.
+
+### 3. Run Django with ASGI Server
 
 **Development:**
 ```bash
@@ -36,14 +68,14 @@ uvicorn lamla.asgi:application --host 0.0.0.0 --port 8000 --reload
 uvicorn lamla.asgi:application --host 0.0.0.0 --port 8000 --workers 4
 ```
 
-### 3. Run FastAPI Service
+### 4. Run FastAPI Service
 
 ```bash
 cd lamla/backend/fastapi_service
 python run.py
 ```
 
-### 4. Test the Endpoints
+### 5. Test the Endpoints
 
 **Chatbot (async):**
 ```bash
