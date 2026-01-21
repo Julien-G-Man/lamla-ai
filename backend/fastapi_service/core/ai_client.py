@@ -14,7 +14,6 @@ class APIIntegrationError(Exception):
     """Raised when all AI providers fail or a configured provider fails fatally."""
     pass
 
-origins = ["http://localhost:8000", "https://lamla-api.onrender.com"]
 
 def _extract_json_substring(text: str):
     if not text or not isinstance(text, str):
@@ -97,14 +96,38 @@ class AIClient:
                     errors.append((provider, "Provider not configured"))
                     continue
 
-                text = str(raw).strip()
-                if not text:
-                    raise APIIntegrationError(f"{provider} returned empty text")
+                # Handle different return types
+                if isinstance(raw, dict):
+                    # Already parsed JSON, return as-is
+                    text = json.dumps(raw)
+                    if not text or text == "{}":
+                        raise APIIntegrationError(f"{provider} returned empty JSON response")
+                    return raw
+                elif isinstance(raw, str):
+                    text = raw.strip()
+                    if not text:
+                        logger.error(f"{provider} returned empty text. Raw response type: {type(raw)}")
+                        raise APIIntegrationError(f"{provider} returned empty text")
+                else:
+                    text = str(raw).strip()
+                    if not text:
+                        logger.error(f"{provider} returned empty text. Raw response type: {type(raw)}, value: {raw}")
+                        raise APIIntegrationError(f"{provider} returned empty text")
 
                 # Try to parse full JSON first
                 try:
-                    return json.loads(text)
-                except Exception:
+                    parsed = json.loads(text)
+                    # For Azure, extract content from choices if present
+                    if provider == "azure" and isinstance(parsed, dict):
+                        if "choices" in parsed and isinstance(parsed["choices"], list) and len(parsed["choices"]) > 0:
+                            choice = parsed["choices"][0]
+                            if "message" in choice and "content" in choice["message"]:
+                                content = choice["message"]["content"]
+                                if content and content.strip():
+                                    return parsed  # Return full JSON for upstream processing
+                    return parsed
+                except json.JSONDecodeError as e:
+                    logger.debug(f"{provider} response is not valid JSON: {text[:200]}")
                     parsed = _extract_json_substring(text)
                     if parsed is not None:
                         return parsed
@@ -131,28 +154,29 @@ class AIClient:
         resp.raise_for_status()
         return resp.text
 
-    async def _call_azure_openai(self, client: httpx.AsyncClient, prompt: str, max_tokens: int) -> str:
+    async def _call_azure_openai(self, client: httpx.AsyncClient, prompt: str, max_tokens: int) -> Union[dict, str]:
         if not self.azure_endpoint or not self.azure_key:
             raise APIIntegrationError("Azure OpenAI not configured")
 
         base_url = self.azure_endpoint.rstrip('/')
         if '/openai/deployments/' in base_url.lower():
-            url = url = f"{base_url}/openai/deployments/{self.azure_deployment}/chat/completions?api-version={self.azure_api_version}"
+            # Endpoint already contains deployment path
+            url = f"{base_url}/chat/completions?api-version={self.azure_api_version}"
         else:
-            url = base_url
-            if "api-version" not in url:
-                url += f"?api-version={self.azure_api_version}"
+            # Need to construct full URL with deployment
+            if not self.azure_deployment:
+                raise APIIntegrationError("Azure OpenAI deployment name is required")
+            url = f"{base_url}/openai/deployments/{self.azure_deployment}/chat/completions?api-version={self.azure_api_version}"
 
         headers = {
             "Content-Type": "application/json", 
-            "api-key": self.azure_key, 
-            "Access-Control-Allow-Origin": origins
-            }
+            "api-key": self.azure_key
+        }
         
         payload = {
             "messages": [
                 {"role": "user", "content": prompt}
-                ], 
+            ], 
             "max_tokens": max_tokens, 
             "temperature": 0.7
         }
@@ -162,7 +186,21 @@ class AIClient:
             logger.error(f"Azure API Error: {resp.status_code} - {resp.text}")
             resp.raise_for_status()
         
-        return resp.text
+        # Azure returns JSON, parse and return as dict
+        try:
+            resp_json = resp.json()
+            logger.debug(f"Azure response keys: {list(resp_json.keys()) if isinstance(resp_json, dict) else 'not a dict'}")
+            # Validate response has content
+            if "choices" in resp_json and isinstance(resp_json["choices"], list) and len(resp_json["choices"]) > 0:
+                choice = resp_json["choices"][0]
+                if "message" in choice:
+                    content = choice["message"].get("content", "")
+                    if not content or not content.strip():
+                        logger.warning(f"Azure response has empty content. Full response: {resp_json}")
+            return resp_json
+        except json.JSONDecodeError as e:
+            logger.error(f"Azure response is not valid JSON: {resp.text[:500]}")
+            raise APIIntegrationError(f"Azure returned invalid JSON: {str(e)}")
 
     async def _call_gemini(self, client: httpx.AsyncClient, prompt: str, max_tokens: int) -> str:
         if not self.gemini_key or not self.gemini_url:
@@ -191,4 +229,4 @@ class AIClient:
 
 
 # instantiate global client
-ai_service = AIClient(provider_priority="azure")
+ai_service = AIClient(provider_priority=["azure"])
