@@ -33,6 +33,8 @@ ALLOWED_HOSTS = [
     "*",
     "localhost",
     "http://localhost:3000",
+    "lamla-api.onrender.com",
+    "https://lamla-api.onrender.com",
     "https://lamla-ai.vercel.app",
     "https://lamla-ai.netlify.app"
 ]
@@ -97,7 +99,6 @@ ASGI_APPLICATION = "lamla.asgi.application"
 DATABASES = {
     'default': env.db_url(
         'DATABASE_URL', 
-        default='postgresql://postgres:postgres@localhost:5432/lamla_db'  # Dev default only
     )
 }
 
