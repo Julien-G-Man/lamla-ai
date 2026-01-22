@@ -91,8 +91,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'lamla.wsgi.application'
-
+ASGI_APPLICATION = "lamla.asgi.application"
 
 # Database Configuration
 DATABASES = {
