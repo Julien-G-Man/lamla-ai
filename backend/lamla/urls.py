@@ -20,7 +20,7 @@ from apps.core.views import HealthCheckView, warmup
 
 urlpatterns = [
     path('warmup/', warmup),
-    path('health/', HealthCheckView, name="health"),
+    path('health/', HealthCheckView.as_view(), name="health"),
     path('admin/', admin.site.urls),
     
     path('api/', include("apps.chatbot.urls")),

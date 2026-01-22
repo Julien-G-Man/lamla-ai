@@ -14,6 +14,7 @@ class QuizSession(models.Model):
     duration_minutes = models.IntegerField(default=0, help_text="Time taken in minutes")
     questions_data = models.JSONField(default=dict, help_text="Stored quiz questions and answers")
     user_answers = models.JSONField(default=dict, help_text="User's answers")
+    created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
         ordering = ['-created_at']
