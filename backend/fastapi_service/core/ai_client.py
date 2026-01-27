@@ -129,7 +129,8 @@ class AIClient:
                             if "message" in choice and "content" in choice["message"]:
                                 content = choice["message"]["content"]
                                 if content and content.strip():
-                                    return parsed  # Return full JSON for upstream processing
+                                    logger.debug(f"Azure extracted content: {content[:100]}...")
+                                    return content  # Return extracted content string for parsing
                     return parsed
                 except json.JSONDecodeError as e:
                     logger.debug(f"{provider} response is not valid JSON: {text[:200]}")

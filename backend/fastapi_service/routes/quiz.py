@@ -83,20 +83,39 @@ async def quiz_endpoint(payload: QuizRequest):
             # Increase max_tokens for quiz generation (need more tokens for multiple questions)
             raw = await ai_service.generate_content(client, prompt, max_tokens=2048)
 
-        # If the provider already returned a dict, try to normalize it
+        logger.debug(f"Quiz provider returned type: {type(raw).__name__}")
+        
+        # Handle different response types
+        data = None
+        
+        # If raw is a dict, check if it's an Azure response with choices array
         if isinstance(raw, dict):
-            data = raw
+            if "choices" in raw and isinstance(raw.get("choices"), list):
+                # Azure response format - extract content from choices
+                try:
+                    choice = raw["choices"][0]
+                    if "message" in choice and "content" in choice["message"]:
+                        content_str = choice["message"]["content"]
+                        logger.debug(f"Extracted Azure content: {content_str[:100]}...")
+                        data = json.loads(content_str)
+                except (KeyError, IndexError, json.JSONDecodeError) as e:
+                    logger.error(f"Failed to extract Azure quiz content: {e}")
+                    raise HTTPException(status_code=502, detail="Failed to parse Azure response")
+            else:
+                # Regular dict response (already parsed JSON)
+                data = raw
         else:
+            # String response - parse as JSON
             text = str(raw)
             try:
                 data = json.loads(text)
             except Exception:
-                logger.warning("Quiz provider did not return pure JSON. Raw: %s", text[:300])
+                logger.warning("Quiz provider did not return valid JSON. Raw: %s", text[:300])
                 raise HTTPException(status_code=502, detail="Invalid quiz format from AI provider")
 
         # Validate response structure - check for mcq_questions and short_questions
-        mcq_questions = data.get("mcq_questions", [])
-        short_questions = data.get("short_questions", [])
+        mcq_questions = data.get("mcq_questions", []) if data else []
+        short_questions = data.get("short_questions", []) if data else []
         
         if not isinstance(mcq_questions, list):
             mcq_questions = []

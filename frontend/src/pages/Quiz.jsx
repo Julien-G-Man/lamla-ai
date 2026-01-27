@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import styles from '../styles/Quiz.css';
 import djangoApi from '../services/api';
@@ -14,6 +14,7 @@ const Quiz = () => {
     const [userAnswers, setUserAnswers] = useState({});
     const [flaggedQuestions, setFlaggedQuestions] = useState({});
     const [timeRemaining, setTimeRemaining] = useState(0);
+    const [timerInitialized, setTimerInitialized] = useState(false);
     const [isTimeHidden, setIsTimeHidden] = useState(false);
     const [isPanelOpen, setIsPanelOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -23,6 +24,8 @@ const Quiz = () => {
         : [];
     
     const storageKey = `lamla_quiz_${quizData?.id || 'temp'}`;
+    const autoSubmittedRef = useRef(false);  // Prevent multiple auto-submit calls
+    const initializedRef = useRef(false);  // Track if timer has been initialized
 
     // --- Submission Logic ---
     const submitQuiz = useCallback(async () => {
@@ -44,49 +47,83 @@ const Quiz = () => {
         }
     }, [isSubmitting, quizData, userAnswers, allQuestions.length, storageKey, navigate]);
 
-    const handleAutoSubmit = useCallback(() => {
-        alert("Time's up! Submitting your answers.");
-        submitQuiz();
-    }, [submitQuiz]);
-
     // --- Initialization & Persistence ---
     useEffect(() => {
+        // Prevent multiple initializations
+        if (initializedRef.current) return;
+        
         if (!quizData) {
             navigate(REDIRECT_PATH);
             return;
         }
 
+        initializedRef.current = true;
+
         const saved = localStorage.getItem(storageKey);
         if (saved) {
+            // Resume existing quiz
             const parsed = JSON.parse(saved);
             setUserAnswers(parsed.userAnswers || {});
             setFlaggedQuestions(parsed.flaggedQuestions || {});
             setCurrentIndex(parsed.currentIndex || 0);
             const remaining = Math.max(0, Math.floor((parsed.endTime - Date.now()) / 1000));
+            console.log('Quiz resumed with remaining time:', remaining, 'seconds');
             setTimeRemaining(remaining);
+            setTimerInitialized(true);
         } else {
-            const initialSeconds = (quizData.time_limit || 10) * 60;
-            setTimeRemaining(initialSeconds);
+            // New quiz - initialize with full time
+            // quizData.time_limit should be a number (minutes) from backend
+            const timeLimitMinutes = parseInt(quizData.time_limit, 10);
+            
+            if (isNaN(timeLimitMinutes) || timeLimitMinutes <= 0) {
+                console.error('Invalid time_limit:', quizData.time_limit, '- defaulting to 10 minutes');
+                const defaultSeconds = 10 * 60;
+                setTimeRemaining(defaultSeconds);
+            } else {
+                const initialSeconds = timeLimitMinutes * 60;
+                console.log('Starting new quiz with time limit:', timeLimitMinutes, 'minutes =', initialSeconds, 'seconds');
+                setTimeRemaining(initialSeconds);
+            }
+            setTimerInitialized(true);
         }
     }, [quizData, navigate, storageKey, REDIRECT_PATH]);
 
-    // --- Timer Loop ---
+    // --- Timer Countdown Interval ---
     useEffect(() => {
-        if (timeRemaining <= 0 && !isSubmitting && quizData) {
-            handleAutoSubmit();
+        // Don't run until timer is initialized and time is valid
+        if (!timerInitialized || timeRemaining === undefined) {
             return;
         }
 
+        // Create single interval that ticks down every second
         const timer = setInterval(() => {
-            setTimeRemaining(prev => prev - 1);
+            setTimeRemaining(prev => {
+                const newTime = Math.max(0, prev - 1);
+                // Log every 60 seconds and when time is running out
+                if (newTime % 60 === 0 || newTime <= 60) {
+                    console.log('Quiz time remaining:', newTime, 'seconds');
+                }
+                return newTime;
+            });
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [timeRemaining, isSubmitting, handleAutoSubmit, quizData]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [timerInitialized]);
 
-    // --- Auto-save ---
+    // --- Auto-Submit When Time Runs Out ---
     useEffect(() => {
-        if (quizData) {
+        if (timerInitialized && timeRemaining <= 0 && !autoSubmittedRef.current && !isSubmitting) {
+            console.log('Time is up! Auto-submitting quiz...');
+            autoSubmittedRef.current = true;
+            alert("Time's up! Submitting your answers.");
+            submitQuiz();
+        }
+    }, [timeRemaining, timerInitialized, isSubmitting, submitQuiz]);
+
+    // --- Auto-save (only after timer is initialized) ---
+    useEffect(() => {
+        if (quizData && timerInitialized && timeRemaining > 0) {
             const state = {
                 userAnswers,
                 flaggedQuestions,
@@ -95,7 +132,7 @@ const Quiz = () => {
             };
             localStorage.setItem(storageKey, JSON.stringify(state));
         }
-    }, [userAnswers, flaggedQuestions, currentIndex, timeRemaining, storageKey, quizData]);
+    }, [userAnswers, flaggedQuestions, currentIndex, timeRemaining, storageKey, quizData, timerInitialized]);
 
     // --- Handlers ---
     const handleAnswer = (val) => {
@@ -113,9 +150,30 @@ const Quiz = () => {
         return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
     };
 
-    if (!quizData || allQuestions.length === 0) return null;
+    if (!quizData || allQuestions.length === 0) {
+        console.error('Quiz render blocked - missing data. quizData:', !!quizData, 'questions:', allQuestions.length);
+        return null;
+    }
+
+    // Don't render quiz until timer is properly initialized
+    if (!timerInitialized) {
+        return <div className={styles.quizContainer}><p>Loading quiz...</p></div>;
+    }
+
+    // Additional safeguard: if timeRemaining is invalid, show error
+    if (timeRemaining === undefined || timeRemaining === null || isNaN(timeRemaining)) {
+        console.error('Invalid timeRemaining state:', timeRemaining);
+        return <div className={styles.quizContainer}><p>Error: Timer initialization failed. Please refresh the page.</p></div>;
+    }
 
     const currentQ = allQuestions[currentIndex];
+    
+    // Calculate progress bar width (percent of time remaining)
+    const timeLimitMinutes = parseInt(quizData.time_limit, 10) || 10;
+    const totalSeconds = timeLimitMinutes * 60;
+    const timePercent = Math.max(0, (timeRemaining / totalSeconds) * 100);
+    // Color changes based on time remaining: green > yellow > red
+    const timerColor = timePercent > 33 ? '#03903e' : timePercent > 10 ? '#FF9800' : '#bd2413';
 
     return (
         <div className={styles.quizContainer}>
@@ -129,6 +187,14 @@ const Quiz = () => {
                 <button className={styles.hideBtn} onClick={() => setIsTimeHidden(!isTimeHidden)}>
                     {isTimeHidden ? 'Show' : 'Hide'}
                 </button>
+            </div>
+
+            {/* Timer Progress Bar */}
+            <div className={styles.timerProgressContainer}>
+                <div 
+                    className={styles.timerProgressBar} 
+                    style={{ width: `${timePercent}%`, backgroundColor: timerColor }}
+                />
             </div>
 
             <div className={styles.metaCard}>

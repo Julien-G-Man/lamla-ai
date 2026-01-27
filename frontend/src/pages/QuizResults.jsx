@@ -1,6 +1,93 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import styles from '../styles/QuizResults.css';
+import djangoApi from '../services/api';
+
+const downloadAsText = (results) => {
+    const { score, total, score_percent, details, subject, difficulty } = results;
+    const timestamp = new Date().toLocaleString();
+    
+    let content = `QUIZ RESULTS REPORT\n`;
+    content += `${'='.repeat(60)}\n\n`;
+    content += `Subject: ${subject}\n`;
+    content += `Difficulty: ${difficulty}\n`;
+    content += `Date: ${timestamp}\n`;
+    content += `Score: ${score}/${total} (${score_percent.toFixed(1)}%)\n`;
+    content += `${'='.repeat(60)}\n\n`;
+    
+    content += `DETAILED ANSWER REVIEW\n`;
+    content += `${'-'.repeat(60)}\n\n`;
+    
+    details.forEach((detail, idx) => {
+        content += `Q${idx + 1}. ${detail.question}\n`;
+        content += `Your Answer: ${detail.user_answer || '(Unanswered)'}\n`;
+        content += `Correct Answer: ${detail.correct_answer}\n`;
+        content += `Status: ${detail.is_correct ? 'CORRECT ✓' : 'INCORRECT ✗'}\n`;
+        if (detail.reasoning) {
+            content += `Evaluation: ${detail.reasoning}\n`;
+        }
+        if (detail.explanation) {
+            content += `Explanation: ${detail.explanation}\n`;
+        }
+        content += '\n';
+    });
+    
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Quiz_Results_${subject.replace(/\s+/g, '_')}.txt`);
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+};
+
+// PDF download via backend
+const downloadAsPDF = async (results) => {
+    try {
+        const response = await djangoApi.post('/quiz/download/', {
+            results: results,
+            format: 'pdf'
+        }, { responseType: 'blob' });
+        
+        const blob = response.data;
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Quiz_Results_${results.subject.replace(/\s+/g, '_')}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    } catch (err) {
+        console.error('PDF download failed:', err);
+        alert('Failed to download PDF. Please try TXT or DOCX format.');
+    }
+};
+
+const downloadAsDOCX = async (results) => {
+    try {
+        const response = await djangoApi.post('/quiz/download/', {
+            results: results,
+            format: 'docx'
+        }, { responseType: 'blob' });
+        
+        const blob = response.data;
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Quiz_Results_${results.subject.replace(/\s+/g, '_')}.docx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    } catch (err) {
+        console.error('DOCX download failed:', err);
+        alert('Failed to download DOCX. Please try TXT or PDF format.');
+    }
+};
 
 const QuizResults = () => {
     const location = useLocation();
@@ -115,6 +202,18 @@ const QuizResults = () => {
                                     </button>
                                 </span>
                             </div>
+                            {detail.reasoning && (
+                                <div className={styles.answerLine}>
+                                    <span className={styles.answerLabel}>Evaluation:</span>
+                                    <span className={styles.reasoning}>{detail.reasoning}</span>
+                                </div>
+                            )}
+                            {detail.explanation && (
+                                <div className={styles.answerLine}>
+                                    <span className={styles.answerLabel}>Explanation:</span>
+                                    <span className={styles.explanation}>{detail.explanation}</span>
+                                </div>
+                            )}
                         </div>
                     </div>
                 ))}
@@ -136,11 +235,23 @@ const QuizResults = () => {
                 </div>
                 {feedbackSent && <p className="text-green-500">Thank you for your feedback! 🎉</p>}
 
-                <div className="flex justify-center gap-4 mt-6">
+                <div className="flex justify-center gap-4 mt-6" style={{ flexWrap: 'wrap', justifyContent: 'center', gap: '12px' }}>
                     <button className={styles.actionBtn} onClick={handleShare}>
                         <i className="fas fa-share-alt mr-2" /> Share
                     </button>
-                    <Link to="/quiz/setup" className="btn primary">
+                    
+                    {/* Download Buttons */}
+                    <button className={styles.actionBtn} onClick={() => downloadAsText(results)} title="Download as Plain Text">
+                        <i className="fas fa-file-alt mr-2" /> TXT
+                    </button>
+                    <button className={styles.actionBtn} onClick={() => downloadAsPDF(results)} title="Download as PDF">
+                        <i className="fas fa-file-pdf mr-2" /> PDF
+                    </button>
+                    <button className={styles.actionBtn} onClick={() => downloadAsDOCX(results)} title="Download as Word Document">
+                        <i className="fas fa-file-word mr-2" /> DOCX
+                    </button>
+                    
+                    <Link to="/custom-quiz" className="btn primary">
                         Generate New Quiz
                     </Link>
                 </div>

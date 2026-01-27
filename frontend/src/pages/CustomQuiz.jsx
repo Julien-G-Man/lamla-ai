@@ -187,6 +187,7 @@ const CustomQuiz = ({ user }) => {
                                 <option value="History">History</option>
                                 <option value="Geography">Geography</option>
                                 <option value="Economics">Economics</option>
+                                <option value="Programming">Programming</option>
                                 <option value="Other">Other (type your own)</option>
                             </select>
 
@@ -284,7 +285,7 @@ const CustomQuiz = ({ user }) => {
                             </div>
                             <div className="option-group">
                                 <span><FontAwesomeIcon icon={faClock} /> Quiz Time (min)</span>
-                                <input type="number" value={quizTime} onChange={(e) => setQuizTime(e.target.value)} min="1" max="120" className="number-input" />
+                                <input type="number" value={quizTime} onChange={(e) => setQuizTime(Math.max(1, parseInt(e.target.value) || 10))} min="1" max="120" className="number-input" />
                             </div>
                             <div className="option-group">
                                 <span><FontAwesomeIcon icon={faChartLine} /> Difficulty</span>
