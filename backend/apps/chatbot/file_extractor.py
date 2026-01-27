@@ -1,5 +1,6 @@
 import os
 import logging
+import re
 import PyPDF2
 import docx
 from pptx import Presentation
@@ -13,6 +14,34 @@ class FileExtractionError(Exception):
 
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 MAX_TEXT_LENGTH = 50000          # 50,000 characters
+
+
+def sanitize_extracted_text(text: str) -> str:
+    """
+    Sanitize extracted text to reduce Azure content filter triggers.
+    Removes potentially problematic patterns while preserving educational content.
+    """
+    if not text:
+        return text
+    
+    # Remove email addresses (often flagged)
+    text = re.sub(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', '[EMAIL]', text)
+    
+    # Remove phone numbers (sometimes flagged)
+    text = re.sub(r'\b(?:\+?1[-.]?)?\(?[0-9]{3}\)?[-.]?[0-9]{3}[-.]?[0-9]{4}\b', '[PHONE]', text)
+    
+    # Remove URLs (sometimes flagged)
+    text = re.sub(r'https?://[^\s]+', '[URL]', text)
+    
+    # Remove social media handles
+    text = re.sub(r'@\w+', '[USER]', text)
+    
+    # Normalize whitespace
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    text = re.sub(r' {2,}', ' ', text)
+    
+    return text.strip()
+
 
 def extract_text_from_file(file):
     """
@@ -84,6 +113,9 @@ def extract_text_from_file(file):
     text = text.strip()
     if not text:
         raise FileExtractionError('No readable text could be extracted from the file.')
+    
+    # 2.5. Sanitize text to avoid Azure content filter
+    text = sanitize_extracted_text(text)
     
     # 3. Limit text length
     if len(text) > MAX_TEXT_LENGTH:

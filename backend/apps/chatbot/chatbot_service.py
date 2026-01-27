@@ -2,7 +2,7 @@ import logging
 import re
 import requests
 from django.conf import settings
-from .models import ChatbotKnowledge
+from .models import ChatbotKnowledge, ChatMessage, ChatSession
 from .websearch import search_engine, SearchResult
 from typing import List
 logger = logging.getLogger(__name__)
@@ -115,16 +115,18 @@ Best Practices in Educational Technology:
         """
         Generate a chatbot response using AIClient, optionally grounding it with context_document.
         """
+        user_log = ChatMessage.objects.create(content=user_message, role='user')
+        
         try:
             lamla_knowledge = self.get_lamla_knowledge_base()
             edtech_best_practices = self.get_edtech_best_practices()
 
-            # --- CONTEXT DOCUMENT INTEGRATION START (NEW) ---
+            # --- CONTEXT DOCUMENT INTEGRATION START ---
             document_context = ""
             if context_document:
                 document_context = f"""
-INSTRUCTION: The user has uploaded study material. Use the following text as the primary context for answering their current question.
-DOCUMENT TEXT:
+The following text is provided as educational reference material from the user's uploaded document. 
+Please refer to this content when answering questions:
 {context_document}
 """
 
@@ -167,8 +169,8 @@ IMPORTANT RESPONSE GUIDELINES:
 7. Be helpful, concise, and well-organized
 8. When providing step-by-step instructions, use numbered lists with proper indentation
 9. When listing features or options, use bullet points with proper indentation
-10. DO NOT use markdown symbols like ** or ## in your responses
-11. Use clean, readable formatting without bold or heading symbols
+10. Please ensure the response is in plain text format without markdown symbols like bolding or headers.
+11. Maintain a clean, readable text structure.
 12. Immediately identify the user's language and respond in the same language
 13. Follow EdTech Best Practices, but be sincere about your limitations and the features you have
 
@@ -188,24 +190,31 @@ You can also answer general questions and help with various topics. Always maint
             try:
                 resp = requests.post(fastapi_url, json={"prompt": full_prompt, "max_tokens": 400}, timeout=30)
                 if resp.status_code != 200:
-                    raise RuntimeError(f"FastAPI responded {resp.status_code}: {resp.text}")
-                resp_json = resp.json()
-                raw_response = resp_json.get("response", "")
+                    resp_json = resp.json()
+                    raw_response = resp_json.get("response", "")
+                else:  
+                    content = "⚠️ [Safety Block] Request flagged by Azure. Please rephrase."
+                    logger.error(f"Content Filter Triggered for Message ID: {user_log.id}")
+                    raw_response = "I encountered a safety filter issue. Could you please rephrase your question?"
             except Exception as e:
+                content = "Service temporarily unavailable."
                 logger.warning("FastAPI call failed: %s", e)
                 raw_response = ""
 
             # Handle dict vs str (simplification from the original snippet, assuming a standardized client)
             if isinstance(raw_response, dict):
-                content = (raw_response.get("choices", [{}])[0]
-                           .get("message", {})
-                           .get("content", "")) or str(raw_response)
+                # If it's the full Azure JSON object
+                choices = raw_response.get("choices", [])
+                content = choices[0].get("message", {}).get("content", "") if choices else str(raw_response)
             else:
+                # If it's a direct string from a fallback or error handler
                 content = str(raw_response)
 
+            ChatMessage.objects.create(content=content, role='assistant',)
+            
             if not content.strip():
                 return self.clean_markdown(self._get_fallback_response(user_message))
-
+            
             return self.clean_markdown(content.strip())
 
         except Exception as e:
