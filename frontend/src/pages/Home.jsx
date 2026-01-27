@@ -80,21 +80,21 @@ const Home = ({ user }) => {
                     </a>
 
                     {/* 3. Flashcards */}
-                    <a href="/flashcards" className="feature-card">
+                    <a href="#/flashcards" className="feature-card">
                         <div className="feature-icon"><span className="icon-emoji">🃏</span><div className="icon-bg"></div></div>
                         <h3 className="feature-title">Interactive Flashcards</h3>
                         <p className="feature-desc">Create and study with AI-generated flashcards for quick review.</p>
                     </a>
 
                     {/* 4. Exam Analyzer */}
-                    <a href="/exam-analyzer" className="feature-card">
+                    <a href="#/exam-analyzer" className="feature-card">
                         <div className="feature-icon"><span className="icon-emoji">🔍</span><div className="icon-bg"></div></div>
                         <h3 className="feature-title">Exam Pattern Analysis</h3>
                         <p className="feature-desc">Analyze uploaded exams or slides for instant feedback and topic breakdowns.</p>
                     </a>                
 
                     {/* 5. Performance Analytics */}
-                    <a href="/dashboard" className="feature-card">
+                    <a href="#/dashboard" className="feature-card">
                         <div className="feature-icon"><span className="icon-emoji">📊</span><div className="icon-bg"></div></div>
                         <h3 className="feature-title">Performance Analytics</h3>
                         <p className="feature-desc">Track your progress and identify weak points to focus your efforts.</p>

@@ -24,14 +24,14 @@ const Navbar = ({ user }) => {
             <li><Link to="/about">About</Link></li>
             <li><Link to="/ai-tutor">AI Tutor</Link></li>
             <li><Link to="/custom-quiz">Quiz</Link></li>
-            <li><Link to="/flashcards">Flashcards</Link></li>
+            <li><Link to="#/flashcards">Flashcards</Link></li>
             {user ? (
               <li className="nav-item-cta">
-                <Link to="/dashboard" className="btn btn-nav-secondary">Dashboard</Link>
+                <Link to="#/dashboard" className="btn btn-nav-secondary">Dashboard</Link>
               </li>
             ) : (
               <li className="nav-item-cta">
-                <Link to="/account/signup" className="btn btn-nav-secondary">Sign Up</Link>
+                <Link to="#/account/signup" className="btn btn-nav-secondary">Sign Up</Link>
               </li>
             )}
           </ul>
