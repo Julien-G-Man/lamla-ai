@@ -7,7 +7,8 @@ import {
     faTimesCircle, 
     faFolder, 
     faGlobe, 
-    faPaperPlane 
+    faPaperPlane,
+    faCopy
 } from '@fortawesome/free-solid-svg-icons';
 import djangoApi from '../services/api'; 
 
@@ -45,15 +46,14 @@ const Chatbot = ({ user }) => {
 
     // --- Core Logic (API Calls) ---
 
-    // FIX: Use messageIdCounter for unique keys
     const addMessage = (text, type, sender = null) => {
         const newMessage = { id: messageIdCounter++, text, type, sender };
         setHistory(prev => [...prev, newMessage]);
-        return newMessage;
+        return newMessage; // Return the message object to capture its specific ID
     };
     
     const handleSendMessage = useCallback(async (e) => {
-        e.preventDefault(); 
+        if (e) e.preventDefault(); 
 
         let text = messageInput.trim();
         const fileToSend = attachedFile;
@@ -61,7 +61,6 @@ const Chatbot = ({ user }) => {
         const isTextPresent = text.length > 0;
         const isReadyToSend = isTextPresent || fileToSend;
         
-        // Disabled state check, which relies on `isProcessing` being up-to-date
         if (!isReadyToSend || isProcessing) return;
 
         if (!isTextPresent && fileToSend) {
@@ -76,9 +75,9 @@ const Chatbot = ({ user }) => {
         clearAttachment();
         
         // 2. Set up AI response container and lock UI
-        // FIX: Use the new unique ID counter here as well
-        const placeholderId = messageIdCounter; 
-        addMessage("...", "ai", "AI Tutor"); 
+        // FIXED: Capture the ID from the returned message object to ensure we update the correct bubble
+        const aiPlaceholder = addMessage("...", "ai", "AI Tutor"); 
+        const placeholderId = aiPlaceholder.id;
         
         setIsProcessing(true); 
 
@@ -96,7 +95,6 @@ const Chatbot = ({ user }) => {
                 formData.append('message', text);
                 formData.append('search_mode', currentSearchMode);
                 
-                // Use Axios for file upload
                 const res = await djangoApi.post(fileApiEndpoint, formData, {
                     headers: { 'Content-Type': 'multipart/form-data' },
                 });
@@ -110,10 +108,6 @@ const Chatbot = ({ user }) => {
             } else {
                 // B. Standard Streamed Chat (Streaming endpoint)
                 const streamApiEndpoint = "/chat/stream/";
-
-                // Build the full URL manually to preserve the /api/ prefix.
-                // Using URL() with a base of "http://localhost:8000/api" would
-                // incorrectly resolve to "http://localhost:8000/chat/stream/".
                 const baseUrl = djangoApi.defaults.baseURL.replace(/\/+$/, "");
                 const fullStreamUrl = `${baseUrl}${streamApiEndpoint}`;
 
@@ -134,15 +128,12 @@ const Chatbot = ({ user }) => {
                 
                 const reader = res.body.getReader();
                 const decoder = new TextDecoder("utf-8");
-                let fullText = "";
+                let accumulatedText = "";
 
-                const updateHistory = (newChunk) => {
-                    // Accumulate the full streamed text once
-                    fullText += newChunk;
-                    setHistory(prev => prev.map(msg => 
-                        msg.id === placeholderId ? { ...msg, text: fullText } : msg
+                const updateState = (text) => {
+                    setHistory(prev => prev.map(msg =>
+                        msg.id === placeholderId ? { ...msg, text: text } : msg
                     ));
-                    scrollToBottom();
                 };
 
                 while (true) {
@@ -150,8 +141,10 @@ const Chatbot = ({ user }) => {
                     if (done) break;
 
                     const chunk = decoder.decode(value, { stream: true });
-                    // Only update via the helper to avoid duplicating text
-                    updateHistory(chunk);
+                    accumulatedText += chunk;
+                    
+                    updateState(accumulatedText);
+                    scrollToBottom();
                 }
             }
         } catch (err) {
@@ -162,7 +155,6 @@ const Chatbot = ({ user }) => {
                 msg.id === placeholderId ? { ...msg, text: `[Error: ${errorMsg}]` } : msg
             ));
         } finally {
-            // 3. Re-enable UI elements
             setIsProcessing(false);
             scrollToBottom();
         }
@@ -170,7 +162,6 @@ const Chatbot = ({ user }) => {
 
     // --- Effect Hooks ---
 
-    // Auto-resize Textarea
     useEffect(() => {
         if (textareaRef.current) {
             textareaRef.current.style.height = 'auto'; 
@@ -178,7 +169,6 @@ const Chatbot = ({ user }) => {
         }
     }, [messageInput]);
 
-    // Auto-scroll when history changes
     useEffect(() => {
         scrollToBottom();
     }, [history]);
@@ -207,8 +197,17 @@ const Chatbot = ({ user }) => {
         setIsSearchPopupVisible(false);
     };
 
+    const copyToClipboard = (text) => {
+        navigator.clipboard.writeText(text).then(() => {
+            // Optional: You could add a temporary "Copied!" toast here
+            alert("Response copied to clipboard!");
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+        });
+    };
 
-    // --- Render Logic for Dynamic Classes/State ---
+
+    // --- Render Logic ---
     const isSearchActive = currentSearchMode !== 'disabled';
     const fileBarClassName = `file-status-bar ${attachedFile ? '' : 'hidden'}`;
     const searchIndicatorClassName = `search-indicator ${isProcessing && isSearchActive ? '' : 'hidden'}`;
@@ -216,21 +215,30 @@ const Chatbot = ({ user }) => {
     const sendButtonClass = isProcessing ? 'processing' : '';
     const searchButtonClass = `file-upload-btn ${isSearchActive ? 'active-search' : ''}`;
     
-    // Calculate disabled state: Disabled if processing OR if no message/file present
     const isTextPresent = messageInput.trim().length > 0;
     const isReadyToSend = isTextPresent || attachedFile;
     const shouldBeDisabled = !isReadyToSend || isProcessing; 
 
-
-    // --- JSX Message Bubble Component ---
     const MessageBubble = ({ message }) => (
-        // The key is now guaranteed unique via messageIdCounter
-        <div key={message.id} className={`message-bubble ${message.type}-message`}>
-            {message.sender && <div className="sender-name">{message.sender}</div>}
+        <div className={`message-bubble ${message.type}-message`}>
+            {message.sender && (
+                <div className="sender-row">
+                    <div className="sender-name">{message.sender}</div>
+                    {message.type === 'ai' && message.text !== "..." && (
+                        <button 
+                            className="copy-btn" 
+                            title="Copy to clipboard"
+                            onClick={() => copyToClipboard(message.text)}
+                        >
+                            <FontAwesomeIcon icon={faCopy} size="xs" />
+                        </button>
+                    )}
+                </div>
+            )}
             <p style={{ whiteSpace: 'pre-wrap' }}>{message.text}</p>
         </div>
     );
-
+    
     return (
         <>
             <Navbar user={user}/>
@@ -241,12 +249,9 @@ const Chatbot = ({ user }) => {
                 </div>
 
                 <div id="chat-messages" ref={chatMessagesRef}>
-                    {/* Key is now message.id, generated by the counter */}
                     {history.map(msg => <MessageBubble key={msg.id} message={msg} />)}
                 </div>
 
-                {/* Loading/Status Indicators */}
-                
                 <div id="typing-indicator" className="typing-indicator" style={{ display: isProcessing ? 'flex' : 'none' }}>
                     <span className="typing-dot">•</span><span className="typing-dot">•</span><span className="typing-dot">•</span>
                 </div>
@@ -258,7 +263,6 @@ const Chatbot = ({ user }) => {
                     </span>
                 </div>
 
-                {/* File Display Area */}
                 <div id="file-status-bar" className={fileBarClassName}>
                     <span id="file-name-display" className="truncate">{fileNameDisplay}</span>
                     <button id="clear-file-btn" title="Remove attachment" onClick={clearAttachment} disabled={isProcessing}>
@@ -266,11 +270,7 @@ const Chatbot = ({ user }) => {
                     </button>
                 </div>
 
-                {/* Web Search Options Popup */}
-                <div 
-                    id="web-search-options-popup" 
-                    className={`web-search-popup ${isSearchPopupVisible ? '' : 'hidden'}`}
-                >
+                <div id="web-search-options-popup" className={`web-search-popup ${isSearchPopupVisible ? '' : 'hidden'}`}>
                     <p className="popup-title">Web Search Mode:</p>
                     {['disabled', 'web_search', 'deep_research'].map((mode) => (
                         <label key={mode}>
@@ -289,12 +289,8 @@ const Chatbot = ({ user }) => {
                     ))}
                 </div>
 
-
-                {/* Main Chat Input Area */}
                 <div className="chat-input-area">
-                    {/* Web Search Toggle Button */}
                     <button 
-                        id="web-search-toggle-btn" 
                         className={searchButtonClass} 
                         title="Web Search Options"
                         onClick={() => setIsSearchPopupVisible(prev => !prev)}
@@ -303,7 +299,6 @@ const Chatbot = ({ user }) => {
                         <FontAwesomeIcon icon={faGlobe} />
                     </button>
                     
-                    {/* File Upload Button/Label */}
                     <label htmlFor="file-input" className="file-upload-btn" title="Upload File">
                         <FontAwesomeIcon icon={faFolder} />
                         <input 
@@ -315,7 +310,6 @@ const Chatbot = ({ user }) => {
                         />
                     </label>
                     
-                    {/* Message Textarea */}
                     <textarea 
                         ref={textareaRef} 
                         id="message-input" 
@@ -332,7 +326,6 @@ const Chatbot = ({ user }) => {
                         disabled={isProcessing}
                     ></textarea>
                     
-                    {/* Send Button */}
                     <button 
                         id="send-btn" 
                         title="Send Message" 
@@ -343,7 +336,6 @@ const Chatbot = ({ user }) => {
                         <FontAwesomeIcon icon={faPaperPlane} />
                     </button>
                 </div>
-
             </div>
         </>
     );

@@ -347,6 +347,9 @@ body {
     margin-top: 80px;
     position: relative;
     overflow: hidden;
+    z-index: 9999;
+    display: block !important;
+    clear: both;
 }
 
 .main-footer::before {

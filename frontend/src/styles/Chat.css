@@ -402,6 +402,31 @@
     color: #007bff;
 }
 
+.sender-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.copy-btn {
+    background: transparent;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    padding: 2px 5px;
+    transition: color 0.2s;
+}
+
+.copy-btn:hover {
+    color: #4a90e2; /* Or your primary brand color */
+}
+
+/* Ensure the AI bubble doesn't cut off the button */
+.ai-message {
+    position: relative;
+}
+
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(5px); }
     to { opacity: 1; transform: translateY(0); }

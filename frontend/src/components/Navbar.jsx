@@ -31,7 +31,7 @@ const Navbar = ({ user }) => {
               </li>
             ) : (
               <li className="nav-item-cta">
-                <Link to="/signup" className="btn btn-nav-secondary">Sign Up</Link>
+                <Link to="/account/signup" className="btn btn-nav-secondary">Sign Up</Link>
               </li>
             )}
           </ul>

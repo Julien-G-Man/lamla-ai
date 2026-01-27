@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { useEffect } from "react";
+import "./App.css";
 
 import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
@@ -12,7 +13,6 @@ import About from "./pages/About";
 
 import { DJANGO_WARMUP_ENDPOINT } from "./services/api";
 import { FASTAPI_HEALTH_ENDPOINT } from "./services/api";
-import "./App.css";
 
 function App() {
   useEffect(() => {

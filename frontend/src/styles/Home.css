@@ -1,7 +1,9 @@
 /* Home page specific styles - inheriting from base.css */
 
 /* Define dark theme variables for easy management */
+/*
 @import url('./Home.css');
+*/
 
 :root {
     --primary-color: #FFD600;
@@ -25,6 +27,13 @@
     padding: 0 12px;
 }
 
+.home-page {
+    display: block;
+    width: 100%;
+    min-height: 100vh;
+    overflow: visible;
+}
+
 /* Hero Section */
 .hero-section {
     position: relative;
@@ -32,12 +41,13 @@
     align-items: center;
     justify-content: center;
     min-height: 90vh;
+    height: auto !important;
     padding: 80px 16px;
     background-image: url('/public/assets/student_desk.webp');
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
-    overflow: hidden;
+    overflow: visible !important;
     color: var(--text-primary);
     text-align: center;
 }
@@ -428,12 +438,13 @@
 /* Newsletter Section */
 .newsletter-section {
     position: relative;
+    height: auto !important;
     background: var(--surface);
     padding: 80px 0;
     border-radius: var(--radius-xl);
     margin-bottom: 80px;
     text-align: center;
-    overflow: hidden;
+    overflow: visible !important;
 }
 
 .newsletter-bg {
@@ -532,6 +543,7 @@
 /* Testimonials Section */
 .testimonials-section {
     position: relative;
+    height: auto !important;
     padding: 100px 0;
     background-image: url('/public/assets/graduation-cap.jpg'); 
     background-size: cover;
@@ -539,7 +551,7 @@
     background-attachment: fixed;
     border-radius: var(--radius-xl);
     margin-bottom: 80px;
-    overflow: hidden;
+    overflow: visible !important;
     color: #f0f0f0; /* Sets a light color for all text in this section */
 }
 
@@ -758,6 +770,8 @@
     .features-section,
     .newsletter-section,
     .testimonials-section {
+        overflow: visible !important;
+        height: auto !important;
         padding-top: 30px;
         padding-bottom: 30px;
         margin-bottom: 30px;
