@@ -6,10 +6,10 @@ import "../App.css";
 
 const Home = ({ user }) => {
   return (
-    <div className="site-wrapper"> {/* Required for Sticky Footer logic */}
+    <div className="site-wrapper">
       <Navbar user={user} />
       
-      <main className="main-content"> {/* main-content pushes the footer */}
+      <main className="main-content">
         
         {/* Hero Section */}
         <section className="hero-section">
@@ -67,44 +67,74 @@ const Home = ({ user }) => {
                 <div className="features-grid">
                     {/* 1. Quiz Mode */}
                     <a href="/custom-quiz" className="feature-card">
-                        <div className="feature-icon"><span className="icon-emoji">🧠</span><div className="icon-bg"></div></div>
-                        <h3 className="feature-title">Quiz Mode</h3>
-                        <p className="feature-desc">Automatically generates multiple-choice questions from your materials.</p>
+                        <div className="feature-image">
+                            <img src="/assets/quizzes.jpg" alt="Quiz Mode" />
+                        </div>
+                        <div className="feature-card-content">
+                            <h3 className="feature-title">Quiz Mode</h3>
+                            <p className="feature-desc">Automatically generates multiple-choice questions from your materials.</p>
+                            <span className="feature-link">Explore Feature →</span>
+                        </div>
                     </a>
                 
                     {/* 2. AI Tutor */}
                     <a href="/ai-tutor" className="feature-card">
-                        <div className="feature-icon"><span className="icon-emoji">🤖</span><div className="icon-bg"></div></div>
-                        <h3 className="feature-title">AI Tutor</h3>
-                        <p className="feature-desc">Get instant answers to your questions and deeper explanations.</p>
+                        <div className="feature-image">
+                            <img src="/assets/ai-tutor.jpg" alt="AI Tutor" />
+                        </div>
+                        <div className="feature-card-content">
+                            <h3 className="feature-title">AI Tutor</h3>
+                            <p className="feature-desc">Get instant answers to your questions and deeper explanations.</p>
+                            <span className="feature-link">Explore Feature →</span>
+                        </div>
                     </a>
 
                     {/* 3. Flashcards */}
                     <a href="#/flashcards" className="feature-card">
-                        <div className="feature-icon"><span className="icon-emoji">🃏</span><div className="icon-bg"></div></div>
-                        <h3 className="feature-title">Interactive Flashcards</h3>
-                        <p className="feature-desc">Create and study with AI-generated flashcards for quick review.</p>
+                        <div className="feature-image">
+                            <img src="/assets/flashcards.jpeg" alt="Flashcards" />
+                        </div>
+                        <div className="feature-card-content">
+                            <h3 className="feature-title">Interactive Flashcards</h3>
+                            <p className="feature-desc">Create and study with AI-generated flashcards for quick review.</p>
+                            <span className="feature-link">Explore Feature →</span>
+                        </div>
                     </a>
 
                     {/* 4. Exam Analyzer */}
                     <a href="#/exam-analyzer" className="feature-card">
-                        <div className="feature-icon"><span className="icon-emoji">🔍</span><div className="icon-bg"></div></div>
-                        <h3 className="feature-title">Exam Pattern Analysis</h3>
-                        <p className="feature-desc">Analyze uploaded exams or slides for instant feedback and topic breakdowns.</p>
+                        <div className="feature-image">
+                            <img src="/assets/uni_exams.jpg" alt="Exam Analyzer" />
+                        </div>
+                        <div className="feature-card-content">
+                            <h3 className="feature-title">Exam Pattern Analysis</h3>
+                            <p className="feature-desc">Analyze uploaded exams or slides for instant feedback and topic breakdowns.</p>
+                            <span className="feature-link">Explore Feature →</span>
+                        </div>
                     </a>                
 
                     {/* 5. Performance Analytics */}
                     <a href="#/dashboard" className="feature-card">
-                        <div className="feature-icon"><span className="icon-emoji">📊</span><div className="icon-bg"></div></div>
-                        <h3 className="feature-title">Performance Analytics</h3>
-                        <p className="feature-desc">Track your progress and identify weak points to focus your efforts.</p>
+                        <div className="feature-image">
+                            <img src="/assets/improve-performance.jpg" alt="Performance Analytics" />
+                        </div>
+                        <div className="feature-card-content">
+                            <h3 className="feature-title">Performance Analytics</h3>
+                            <p className="feature-desc">Track your progress and identify weak points to focus your efforts.</p>
+                            <span className="feature-link">Explore Feature →</span>
+                        </div>
                     </a>
 
                     {/* 6. Subject Selection */}
                     <a href="/custom-quiz" className="feature-card">
-                        <div className="feature-icon"><span className="icon-emoji">📚</span><div className="icon-bg"></div></div>
-                        <h3 className="feature-title">Subject Selection</h3>
-                        <p className="feature-desc">Select your subject or topic before quiz generation for targeted study.</p>
+                        <div className="feature-image">
+                            <img src="/assets/steam.jpg" alt="Subject Selection" />
+                        </div>
+                        <div className="feature-card-content">
+                            <h3 className="feature-title">Subject Selection</h3>
+                            <p className="feature-desc">Select your subject or topic before quiz generation for targeted study.</p>
+                            <span className="feature-link">Explore Feature →</span>
+                        </div>
                     </a>                 
                 </div>
             </div>
