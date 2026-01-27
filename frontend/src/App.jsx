@@ -1,18 +1,42 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, Suspense, lazy, useState } from "react";
 import "./App.css";
-
-import Home from "./pages/Home";
-import Dashboard from "./pages/Dashboard";
-import CustomQuiz from "./pages/CustomQuiz";
-import Quiz from "./pages/Quiz";
-import QuizResults from "./pages/QuizResults";
-import Flashcards from "./pages/Flashcards";
-import Chatbot from "./pages/Chatbot";
-import About from "./pages/About";
-
 import { DJANGO_WARMUP_ENDPOINT } from "./services/api";
 import { FASTAPI_HEALTH_ENDPOINT } from "./services/api";
+
+// Lazy load pages
+const Home = lazy(() => import("./pages/Home"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const CustomQuiz = lazy(() => import("./pages/CustomQuiz"));
+const Quiz = lazy(() => import("./pages/Quiz"));
+const QuizResults = lazy(() => import("./pages/QuizResults"));
+const Flashcards = lazy(() => import("./pages/Flashcards"));
+const Chatbot = lazy(() => import("./pages/Chatbot"));
+const About = lazy(() => import("./pages/About"));
+
+// Delayed loading component - only shows if loading takes longer than 500ms
+const DelayedLoadingFallback = () => {
+  const [showLoader, setShowLoader] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowLoader(true), 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return showLoader ? (
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      height: "100vh",
+      color: "#FFD600",
+      fontSize: "1.2rem",
+      fontWeight: "600"
+    }}>
+      <span>Loading...</span>
+    </div>
+  ) : null;
+};
 
 function App() {
   useEffect(() => {
@@ -28,16 +52,18 @@ function App() {
 
   return (
     <Router>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/custom-quiz" element={<CustomQuiz />} />
-        <Route path="/quiz" element={<Quiz />} />
-        <Route path="/quiz/results" element={<QuizResults />} />
-        <Route path="/flashcards" element={<Flashcards />} />
-        <Route path="/ai-tutor" element={<Chatbot />} />
-        <Route path="/about" element={<About />} />
-      </Routes>
+      <Suspense fallback={<DelayedLoadingFallback />}>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/custom-quiz" element={<CustomQuiz />} />
+          <Route path="/quiz" element={<Quiz />} />
+          <Route path="/quiz/results" element={<QuizResults />} />
+          <Route path="/flashcards" element={<Flashcards />} />
+          <Route path="/ai-tutor" element={<Chatbot />} />
+          <Route path="/about" element={<About />} />
+        </Routes>
+      </Suspense>
     </Router>
   );
 }

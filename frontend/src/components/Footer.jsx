@@ -24,26 +24,34 @@ const Footer = () => {
             <li><Link to="/about">About Us</Link></li>
             <li><Link to="/ai-tutor">AI Tutor</Link></li>
             <li><Link to="/custom-quiz">Quiz</Link></li>
-            <li><Link to="/flashcards">Flashcards</Link></li>
-            <li><Link to="/exam-analyzer">Exam Analyzer</Link></li>
+            <li><Link to="/#flashcards">Flashcards</Link></li>
+            <li><Link to="/#exam-analyzer">Exam Analyzer</Link></li>
           </ul>
         </div>
         <div className="footer-col">
           <h3>Connect With Us</h3>
           <div className="social-icons">
-            <a href="https://www.instagram.com/lamla.io" className="social-icon" aria-label="Instagram"><i className="fab fa-instagram"></i></a>
-            <a href="https://www.linkedin.com/company/lamla-ai" className="social-icon" aria-label="LinkedIn"><i className="fab fa-linkedin-in"></i></a>
-            <a href="https://www.facebook.com/people/LamlaAI/61578006032583/" className="social-icon" aria-label="Facebook"><i className="fab fa-facebook-f"></i></a>
-            <a href="https://x.com/lamla.ai" className="social-icon"><i className="fab fa-twitter" aria-label="X/Tweeter"></i></a>
+            <a href="https://www.instagram.com/lamla.io" className="social-icon" aria-label="Instagram">
+              <img src="https://staticassets.netlify.app/public/icons/social/instagram.png" alt="Instagram" />
+            </a>
+            <a href="https://www.linkedin.com/company/lamla-ai" className="social-icon" aria-label="LinkedIn">
+              <img src="https://staticassets.netlify.app/public/icons/social/linkedin.png" alt="LinkedIn" />
+            </a>
+            <a href="https://www.facebook.com/people/LamlaAI/61578006032583/" className="social-icon" aria-label="Facebook">
+              <img src="https://staticassets.netlify.app/public/icons/social/facebook.png" alt="Facebook" />
+            </a>
+            <a href="https://x.com/lamla.ai" className="social-icon" aria-label="X/Twitter">
+              <img src="https://staticassets.netlify.app/public/icons/social/twitter.png" alt="X/Twitter" />
+            </a>
           </div>
         </div>
       </div>
       <div className="footer-bottom">
-        <p>&copy; 2025 Lamla AI. All rights reserved.</p>
+        <p>&copy; 2026 Lamla AI. All rights reserved.</p>
         <div className="legal-links">
-          <Link to="/privacy-policy">Privacy Policy</Link>
-          <Link to="/terms-of-service">Terms of Service</Link>
-          <Link to="/cookie-policy">Cookie Policy</Link>
+          <Link to="#/privacy-policy">Privacy Policy</Link>
+          <Link to="#/terms-of-service">Terms of Service</Link>
+          <Link to="#/cookie-policy">Cookie Policy</Link>
         </div>
       </div>
     </footer>

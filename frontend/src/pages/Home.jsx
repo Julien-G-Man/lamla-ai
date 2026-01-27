@@ -1,10 +1,52 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import "../styles/Home.css";
 import "../App.css";
 
 const Home = ({ user }) => {
+  const [isVisible, setIsVisible] = useState({
+    features: false,
+    testimonials: false
+  });
+
+  useEffect(() => {
+    const observers = {};
+    
+    // Lazy load features section
+    const featuresObserver = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setIsVisible(prev => ({ ...prev, features: true }));
+        featuresObserver.unobserve(entry.target);
+      }
+    }, { threshold: 0.1 });
+
+    const featuresEl = document.getElementById("features");
+    if (featuresEl) {
+      featuresObserver.observe(featuresEl);
+      observers.features = featuresObserver;
+    }
+
+    // Lazy load testimonials section
+    const testimonialsObserver = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setIsVisible(prev => ({ ...prev, testimonials: true }));
+        testimonialsObserver.unobserve(entry.target);
+      }
+    }, { threshold: 0.1 });
+
+    const testimonialsEl = document.getElementById("testimonials");
+    if (testimonialsEl) {
+      testimonialsObserver.observe(testimonialsEl);
+      observers.testimonials = testimonialsObserver;
+    }
+
+    return () => {
+      if (observers.features) observers.features.disconnect();
+      if (observers.testimonials) observers.testimonials.disconnect();
+    };
+  }, []);
+
   return (
     <div className="site-wrapper">
       <Navbar user={user} />
@@ -64,7 +106,8 @@ const Home = ({ user }) => {
                     <h2>Smart Features for <span className="brand-highlight"> Smart Students</span></h2>
                 </div>
             
-                <div className="features-grid">
+                {isVisible.features && (
+                  <div className="features-grid">
                     {/* 1. Quiz Mode */}
                     <a href="/custom-quiz" className="feature-card">
                         <div className="feature-image">
@@ -136,17 +179,19 @@ const Home = ({ user }) => {
                             <span className="feature-link">Explore Feature →</span>
                         </div>
                     </a>                 
-                </div>
+                  </div>
+                )}
             </div>
         </section>
 
         {/* Testimonials */}
-        <section className="testimonials-section">
+        <section id="testimonials" className="testimonials-section">
             <div className="container">
                 <div className="section-header">
                     <h2>What Our Students <span className="highlight">Have To Say</span></h2>
                 </div>
-                <div className="testimonials-grid">
+                {isVisible.testimonials && (
+                  <div className="testimonials-grid">
                     <div className="testimonial-card">
                         <blockquote className="testimonial-quote">
                             "Lamla AI helped me turn my lecture slides into practice quizzes in seconds. It's an amazing tool!"
@@ -159,7 +204,8 @@ const Home = ({ user }) => {
                             </div>
                         </div>
                     </div>
-                </div>
+                  </div>
+                )}
             </div>
         </section>
 
