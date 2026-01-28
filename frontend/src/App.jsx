@@ -13,6 +13,7 @@ const QuizResults = lazy(() => import("./pages/QuizResults"));
 const Flashcards = lazy(() => import("./pages/Flashcards"));
 const Chatbot = lazy(() => import("./pages/Chatbot"));
 const About = lazy(() => import("./pages/About"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Delayed loading component - only shows if loading takes longer than 500ms
 const DelayedLoadingFallback = () => {
@@ -62,6 +63,7 @@ function App() {
           <Route path="/flashcards" element={<Flashcards />} />
           <Route path="/ai-tutor" element={<Chatbot />} />
           <Route path="/about" element={<About />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
     </Router>
