@@ -98,13 +98,25 @@ TEMPLATES = [
 
 ASGI_APPLICATION = "lamla.asgi.application"
 
+
 # Database Configuration
+
 DATABASES = {
-    'default': env.db_url(
-        'DATABASE_URL', 
-        ssl_require=True
-    )
+    'default': env.db_url('DATABASE_URL')
 }
+
+DB_SSL_REQUIRE = os.getenv("DB_SSL_REQUIRE", "false").lower() == "true"
+
+# Force SSL in production
+if not DEBUG:
+    DB_SSL_REQUIRE = True
+
+# Inject the SSL setting into the OPTIONS dictionary where Django expects it
+if DB_SSL_REQUIRE:
+    DATABASES['default'].setdefault('OPTIONS', {})
+    DATABASES['default']['OPTIONS']['sslmode'] = 'require'
+
+
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -164,12 +176,12 @@ AUTH_EMAIL_HOST_PASSWORD = os.getenv("AUTH_EMAIL_HOST_PASSWORD")
 WELCOME_EMAIL_HOST_USER = os.getenv("WELCOME_EMAIL_HOST_USER")
 WELCOME_EMAIL_HOST_PASSWORD = os.getenv("WELCOME_EMAIL_HOST_PASSWORD")
 
-# CORS / CSRF configuration to allow React frontend (adjust via env vars)
+# CORS / CSRF configuration to allow React frontend
 CORS_ALLOWED_ORIGINS = [
-    o.strip() for o in os.getenv(
+    origin.strip() for origin in os.getenv(
         "CORS_ALLOWED_ORIGINS",
         "http://localhost:3000,http://127.0.0.1:3000,https://lamla-ai.vercel.app"
-    ).split(",") if o
+    ).split(",") if origin
 ]
 
 CORS_ALLOW_CREDENTIALS = True
