@@ -19,6 +19,8 @@ from django.urls import path, include
 from apps.core.views import HealthCheckView, warmup
 
 urlpatterns = [
+    path('warmup', warmup),
+    path('warmup/', warmup),
     path('warmup/', warmup),
     path('health/', HealthCheckView.as_view(), name="health"),
     path('admin/', admin.site.urls),
