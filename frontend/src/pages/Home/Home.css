@@ -726,6 +726,18 @@
     opacity: 0.6;
 }
 
+/* Add this to Home.css or App.css */
+.site-wrapper {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    width: 100%;
+}
+
+.main-content {
+    flex: 1 0 auto; /* This pushes the footer to the bottom */
+}
+
 /* Responsive adjustments */
 @media (max-width: 992px) {
     .hero-section {
@@ -816,4 +828,12 @@
     .testimonial-quote {
         font-size: 1.1rem;
     }
+}
+
+.hero-section, 
+.features-section, 
+.testimonials-section, 
+.newsletter-section {
+    position: relative;
+    z-index: 2; /* Sits above background shapes */
 }

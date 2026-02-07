@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import Navbar from '../components/Navbar';
-import '../styles/Chat.css';
+import Navbar from '../../components/Navbar';
+import './Chatbot.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
     faSpinner, 
@@ -10,7 +10,7 @@ import {
     faPaperPlane,
     faCopy
 } from '@fortawesome/free-solid-svg-icons';
-import djangoApi from '../services/api'; 
+import djangoApi from '../../services/api'; 
 
 // Global counter for generating unique message IDs
 let messageIdCounter = Date.now();

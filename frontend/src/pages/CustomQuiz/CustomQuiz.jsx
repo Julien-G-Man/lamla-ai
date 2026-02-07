@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Navbar from '../components/Navbar';
-import djangoApi from '../services/api';
-import '../styles/CustomQuiz.css'; 
+import Navbar from '../../components/Navbar';
+import djangoApi from '../../services/api';
+import './CustomQuiz.css'; 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
     faKeyboard, 

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
-import "../styles/Home.css";
-import "../App.css";
+import Navbar from "../../components/Navbar";
+import Footer from "../../components/Footer";
+import "./Home.css";
+import "../../App.css";
 
 const Home = ({ user }) => {
   const [isVisible, setIsVisible] = useState({

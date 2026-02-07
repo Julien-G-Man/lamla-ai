@@ -2,15 +2,15 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { useEffect } from "react";
 import "./App.css";
 import { DJANGO_WARMUP_ENDPOINT, FASTAPI_HEALTH_ENDPOINT } from "./services/api";
-import Home from "./pages/Home";
-import Dashboard from "./pages/Dashboard";
-import CustomQuiz from "./pages/CustomQuiz";
-import Quiz from "./pages/Quiz";
-import QuizResults from "./pages/QuizResults";
-import Flashcards from "./pages/Flashcards";
-import Chatbot from "./pages/Chatbot";
-import About from "./pages/About";
-import NotFound from "./pages/NotFound";
+import Home from "./pages/Home/Home";
+import Dashboard from "./pages/Dashboard/Dashboard";
+import CustomQuiz from "./pages/CustomQuiz/CustomQuiz";
+import Quiz from "./pages/Quiz/Quiz";
+import QuizResults from "./pages/QuizResults/QuizResults";
+import Flashcards from "./pages/Flashcards/Flashcards";
+import Chatbot from "./pages/Chatbot/Chatbot";
+import About from "./pages/About/About";
+import NotFound from "./pages/NotFound/NotFound";
 
 function App() {
   useEffect(() => {

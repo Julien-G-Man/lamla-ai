@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import styles from '../styles/Quiz.css';
-import djangoApi from '../services/api';
+import styles from './Quiz.css';
+import djangoApi from '../../services/api';
 
 const Quiz = () => {
     const location = useLocation();

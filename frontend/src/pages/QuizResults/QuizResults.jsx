@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import styles from '../styles/QuizResults.css';
-import djangoApi from '../services/api';
+import styles from './QuizResults.css';
+import djangoApi from '../../services/api';
 
 const downloadAsText = (results) => {
     const { score, total, score_percent, details, subject, difficulty } = results;
