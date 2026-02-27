@@ -2,116 +2,187 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEnvelope, faLock, faSpinner, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import {
+  faEnvelope,
+  faLock,
+  faEye,
+  faEyeSlash,
+  faTriangleExclamation,
+} from '@fortawesome/free-solid-svg-icons';
 import './Login.css';
 
+// ── Brand-panel feature list ──────────────────────────────────────────────────
+const FEATURES = [
+  { icon: '⚡', label: 'AI-powered quiz generation from any document' },
+  { icon: '🃏', label: 'Smart flashcards with spaced repetition' },
+  { icon: '📊', label: 'Progress analytics & performance insights' },
+  { icon: '🤖', label: 'Personal AI tutor, available 24/7' },
+];
+
+// ── Component ─────────────────────────────────────────────────────────────────
 const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail]               = useState('');
+  const [password, setPassword]         = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [isLoading, setIsLoading]       = useState(false);
+  const [error, setError]               = useState('');
+
   const navigate = useNavigate();
   const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (!email.trim() || !password) {
+      setError('Please enter your email and password.');
+      return;
+    }
+
     setIsLoading(true);
-
     try {
-      if (!email || !password) {
-        setError('Please fill in all fields');
-        setIsLoading(false);
-        return;
-      }
-
-      const response = await login(email, password);
-      
-      // Determine redirect based on user role
-      const userRole = response.user?.is_admin ? 'admin' : 'user';
-      
-      if (userRole === 'admin') {
-        navigate('/admin-dashboard');
-      } else {
-        navigate('/dashboard');
-      }
+      const response = await login(email.trim(), password);
+      const isAdmin  = response?.user?.is_admin;
+      navigate(isAdmin ? '/admin-dashboard' : '/dashboard');
     } catch (err) {
-      setError(err.message || 'Login failed. Please try again.');
+      // Normalise error message from various server response shapes
+      const msg =
+        err?.non_field_errors?.[0] ||
+        err?.detail ||
+        err?.message ||
+        'Incorrect email or password. Please try again.';
+      setError(msg);
+    } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="login-container">
-      <div className="login-wrapper">
-        <div className="login-header">
-          <img src="/assets/lamla_logo.png" alt="Lamla AI" className="login-logo" />
-          <h1>Welcome Back</h1>
-          <p>Sign in to continue your study journey</p>
+    <div className="auth-page">
+      {/* ── Left: Brand panel ── */}
+      <aside className="auth-brand-panel">
+        <div className="brand-glow" aria-hidden="true" />
+
+        <div className="auth-brand-logo">
+          <img src="/assets/lamla_logo.png" alt="Lamla AI logo" />
+          <span>Lamla AI</span>
         </div>
 
-        {error && <div className="error-banner">{error}</div>}
-
-        <form onSubmit={handleSubmit} className="login-form">
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <div className="input-wrapper">
-              <FontAwesomeIcon icon={faEnvelope} className="input-icon" />
-              <input
-                type="email"
-                id="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <div className="input-wrapper">
-              <FontAwesomeIcon icon={faLock} className="input-icon" />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                id="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={isLoading}
-              />
-              <button
-                type="button"
-                className="toggle-password"
-                onClick={() => setShowPassword(!showPassword)}
-                disabled={isLoading}
-              >
-                <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
-              </button>
-            </div>
-          </div>
-
-          <button type="submit" className="login-btn" disabled={isLoading}>
-            {isLoading ? (
-              <>
-                <FontAwesomeIcon icon={faSpinner} spin /> Signing in...
-              </>
-            ) : (
-              'Sign In'
-            )}
-          </button>
-        </form>
-
-        <div className="login-footer">
+        <div className="auth-brand-headline">
+          <h2>
+            Study smarter,<br />
+            not <em>harder</em>.
+          </h2>
           <p>
-            Don't have an account? <Link to="/signup">Create one</Link>
-          </p>
-          <p>
-            <Link to="/" className="back-home">← Back to Home</Link>
+            Join thousands of students who use Lamla AI to ace their exams
+            with personalised quizzes, flashcards, and an always-on AI tutor.
           </p>
         </div>
-      </div>
+
+        <div className="auth-features">
+          {FEATURES.map(({ icon, label }) => (
+            <div className="auth-feature-item" key={label}>
+              <div className="auth-feature-icon" aria-hidden="true">{icon}</div>
+              <span className="auth-feature-text">{label}</span>
+            </div>
+          ))}
+        </div>
+      </aside>
+
+      {/* ── Right: Form panel ── */}
+      <main className="auth-form-panel">
+        <div className="auth-form-inner">
+          <div className="auth-form-header">
+            <h1>Welcome back</h1>
+            <p>Sign in to continue your study journey.</p>
+          </div>
+
+          {/* Error banner */}
+          {error && (
+            <div className="auth-error-banner" role="alert">
+              <FontAwesomeIcon icon={faTriangleExclamation} />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="auth-form" noValidate>
+            {/* Email */}
+            <div className="auth-field">
+              <label htmlFor="login-email">Email address</label>
+              <div className="auth-input-wrap">
+                <FontAwesomeIcon icon={faEnvelope} className="auth-input-icon" />
+                <input
+                  id="login-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                  disabled={isLoading}
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Password */}
+            <div className="auth-field">
+              <label htmlFor="login-password">Password</label>
+              <div className="auth-input-wrap">
+                <FontAwesomeIcon icon={faLock} className="auth-input-icon" />
+                <input
+                  id="login-password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  disabled={isLoading}
+                  required
+                />
+                <button
+                  type="button"
+                  className="auth-pw-toggle"
+                  onClick={() => setShowPassword((v) => !v)}
+                  disabled={isLoading}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
+                </button>
+              </div>
+            </div>
+
+            {/* Submit */}
+            <button
+              type="submit"
+              className="auth-submit-btn"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <span className="auth-spinner" aria-hidden="true" />
+                  Signing in…
+                </>
+              ) : (
+                'Sign In'
+              )}
+            </button>
+          </form>
+
+          {/* Footer */}
+          <footer className="auth-form-footer">
+            <p>
+              Don't have an account?{' '}
+              <Link to="/auth/signup" className="auth-link">
+                Create one free
+              </Link>
+            </p>
+            <Link to="/" className="auth-link-muted">
+              ← Back to home
+            </Link>
+          </footer>
+        </div>
+      </main>
     </div>
   );
 };

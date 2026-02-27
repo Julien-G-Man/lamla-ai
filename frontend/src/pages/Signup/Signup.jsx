@@ -1,270 +1,279 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser, faEnvelope, faLock, faSpinner, faEye, faEyeSlash, faCheckCircle } from '@fortawesome/free-solid-svg-icons';
+import {
+  faUser,
+  faEnvelope,
+  faLock,
+  faEye,
+  faEyeSlash,
+  faCheckCircle,
+  faTriangleExclamation,
+} from '@fortawesome/free-solid-svg-icons';
+
+import '../Login/Login.css';
 import './Signup.css';
 
-const Signup = () => {
-  const [formData, setFormData] = useState({
-    first_name: '',
-    last_name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-  });
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [validations, setValidations] = useState({
-    passwordLength: false,
-    passwordMatch: false,
-    emailValid: false,
-    namesProvided: false,
-  });
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  const navigate = useNavigate();
+const BRAND_FEATURES = [
+  { icon: '⚡', label: 'AI-powered quiz generation from any document' },
+  { icon: '🃏', label: 'Smart flashcards with spaced repetition' },
+  { icon: '📊', label: 'Progress analytics & performance insights' },
+  { icon: '🤖', label: 'Personal AI tutor, available 24/7' },
+];
+
+const validate = (fields) => ({
+  firstNameOk: fields.first_name.trim().length > 0,
+  lastNameOk:  fields.last_name.trim().length > 0,
+  emailOk:     EMAIL_RE.test(fields.email),
+  lengthOk:    fields.password.length >= 8,
+  matchOk:     fields.password !== '' && fields.password === fields.confirmPassword,
+});
+
+const Signup = () => {
+  const [fields, setFields] = useState({
+    first_name: '', last_name: '', email: '', password: '', confirmPassword: '',
+  });
+  const [showPw,        setShowPw]        = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
+  const [isLoading,     setIsLoading]     = useState(false);
+  const [error,         setError]         = useState('');
+
+  const navigate   = useNavigate();
   const { signup } = useAuth();
 
-  const handleChange = (e) => {
+  const v         = validate(fields);
+  const formValid = v.firstNameOk && v.lastNameOk && v.emailOk && v.lengthOk && v.matchOk;
+
+  const progressStep =
+    (v.firstNameOk && v.lastNameOk ? 1 : 0) +
+    (v.emailOk ? 1 : 0) +
+    (v.lengthOk && v.matchOk ? 1 : 0);
+
+  const handleChange = useCallback((e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    validateField(name, value);
-  };
-
-  const validateField = (name, value) => {
-    switch (name) {
-      case 'password':
-        setValidations(prev => ({
-          ...prev,
-          passwordLength: value.length >= 8,
-          passwordMatch: value === formData.confirmPassword || formData.confirmPassword === '',
-        }));
-        break;
-      case 'confirmPassword':
-        setValidations(prev => ({
-          ...prev,
-          passwordMatch: value === formData.password,
-        }));
-        break;
-      case 'email':
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        setValidations(prev => ({
-          ...prev,
-          emailValid: emailRegex.test(value),
-        }));
-        break;
-      case 'first_name':
-      case 'last_name':
-        setValidations(prev => ({
-          ...prev,
-          namesProvided: formData.first_name.trim() !== '' && formData.last_name.trim() !== '',
-        }));
-        break;
-      default:
-        break;
-    }
-  };
-
-  const isFormValid = () => {
-    return (
-      validations.passwordLength &&
-      validations.passwordMatch &&
-      validations.emailValid &&
-      formData.first_name.trim() &&
-      formData.last_name.trim()
-    );
-  };
+    setFields((prev) => ({ ...prev, [name]: value }));
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    if (!formValid) {
+      setError('Please complete all fields correctly before continuing.');
+      return;
+    }
     setIsLoading(true);
-
     try {
-      if (!isFormValid()) {
-        setError('Please fill in all fields correctly');
-        setIsLoading(false);
-        return;
-      }
-
-      await signup(
-        formData.email,
-        formData.password,
-        formData.first_name,
-        formData.last_name
-      );
-
-      // Redirect to user dashboard after signup
+      await signup(fields.email.trim(), fields.password, fields.first_name.trim(), fields.last_name.trim());
       navigate('/dashboard');
     } catch (err) {
-      setError(err.message || err.email?.[0] || 'Signup failed. Please try again.');
+      const msg =
+        err?.email?.[0]            ||
+        err?.password?.[0]         ||
+        err?.non_field_errors?.[0] ||
+        err?.detail                ||
+        err?.message               ||
+        'Something went wrong. Please try again.';
+      setError(msg);
+    } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="signup-container">
-      <div className="signup-wrapper">
-        <div className="signup-header">
-          <img src="/assets/lamla_logo.png" alt="Lamla AI" className="signup-logo" />
-          <h1>Create Your Account</h1>
-          <p>Join thousands of students studying smarter with Lamla AI</p>
+    <div className="auth-page auth-page--signup">
+
+      {/* ── Left: Brand panel ── */}
+      <aside className="auth-brand-panel">
+        <div className="brand-glow" aria-hidden="true" />
+
+        <div className="auth-brand-logo">
+          <img src="/assets/lamla_logo.png" alt="Lamla AI logo" />
+          <span>Lamla AI</span>
         </div>
 
-        {error && <div className="error-banner">{error}</div>}
-
-        <form onSubmit={handleSubmit} className="signup-form">
-          {/* Name Fields */}
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="first_name">First Name</label>
-              <div className="input-wrapper">
-                <FontAwesomeIcon icon={faUser} className="input-icon" />
-                <input
-                  type="text"
-                  id="first_name"
-                  name="first_name"
-                  placeholder="John"
-                  value={formData.first_name}
-                  onChange={handleChange}
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="last_name">Last Name</label>
-              <div className="input-wrapper">
-                <FontAwesomeIcon icon={faUser} className="input-icon" />
-                <input
-                  type="text"
-                  id="last_name"
-                  name="last_name"
-                  placeholder="Doe"
-                  value={formData.last_name}
-                  onChange={handleChange}
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Email Field */}
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <div className="input-wrapper">
-              <FontAwesomeIcon icon={faEnvelope} className="input-icon" />
-              <input
-                type="email"
-                id="email"
-                name="email"
-                placeholder="you@example.com"
-                value={formData.email}
-                onChange={handleChange}
-                disabled={isLoading}
-              />
-              {validations.emailValid && (
-                <FontAwesomeIcon icon={faCheckCircle} className="check-icon" />
-              )}
-            </div>
-          </div>
-
-          {/* Password Field */}
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <div className="input-wrapper">
-              <FontAwesomeIcon icon={faLock} className="input-icon" />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                id="password"
-                name="password"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={handleChange}
-                disabled={isLoading}
-              />
-              <button
-                type="button"
-                className="toggle-password"
-                onClick={() => setShowPassword(!showPassword)}
-                disabled={isLoading}
-              >
-                <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
-              </button>
-            </div>
-            <div className="validation-hint">
-              <small className={validations.passwordLength ? 'valid' : ''}>
-                <span className="bullet">•</span> At least 8 characters
-              </small>
-            </div>
-          </div>
-
-          {/* Confirm Password Field */}
-          <div className="form-group">
-            <label htmlFor="confirmPassword">Confirm Password</label>
-            <div className="input-wrapper">
-              <FontAwesomeIcon icon={faLock} className="input-icon" />
-              <input
-                type={showConfirmPassword ? 'text' : 'password'}
-                id="confirmPassword"
-                name="confirmPassword"
-                placeholder="••••••••"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                disabled={isLoading}
-              />
-              <button
-                type="button"
-                className="toggle-password"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                disabled={isLoading}
-              >
-                <FontAwesomeIcon icon={showConfirmPassword ? faEyeSlash : faEye} />
-              </button>
-            </div>
-            <div className="validation-hint">
-              <small className={validations.passwordMatch ? 'valid' : ''}>
-                <span className="bullet">•</span> Passwords match
-              </small>
-            </div>
-          </div>
-
-          <button 
-            type="submit" 
-            className="signup-btn" 
-            disabled={!isFormValid() || isLoading}
-          >
-            {isLoading ? (
-              <>
-                <FontAwesomeIcon icon={faSpinner} spin /> Creating account...
-              </>
-            ) : (
-              'Create Account'
-            )}
-          </button>
-        </form>
-
-        <div className="signup-footer">
+        <div className="auth-brand-headline">
+          <h2>
+            Start learning<br />
+            <em>smarter today</em>.
+          </h2>
           <p>
-            Already have an account? <Link to="/login">Sign in</Link>
-          </p>
-          <p>
-            <Link to="/" className="back-home">← Back to Home</Link>
+            Join thousands of students who use Lamla AI to ace their exams
+            with personalised quizzes, flashcards, and an always-on AI tutor.
           </p>
         </div>
 
-        <div className="signup-features">
-          <p className="features-label">What you get:</p>
-          <ul className="features-list">
-            <li>AI-powered quiz generation</li>
-            <li>Personalized flashcards</li>
-            <li>Progress tracking</li>
-            <li>AI tutor assistant</li>
-          </ul>
+        <div className="auth-features">
+          {BRAND_FEATURES.map(({ icon, label }) => (
+            <div className="auth-feature-item" key={label}>
+              <div className="auth-feature-icon" aria-hidden="true">{icon}</div>
+              <span className="auth-feature-text">{label}</span>
+            </div>
+          ))}
         </div>
-      </div>
+      </aside>
+
+      {/* ── Right: Form panel ── */}
+      <main className="auth-form-panel">
+        <div className="auth-form-inner">
+
+          {/* Progress dots */}
+          <div className="auth-progress" aria-label="Form completion progress">
+            {[0, 1, 2].map((step) => (
+              <div
+                key={step}
+                className={`auth-progress-dot ${
+                  progressStep > step
+                    ? 'auth-progress-dot--done'
+                    : progressStep === step
+                    ? 'auth-progress-dot--active'
+                    : ''
+                }`}
+              />
+            ))}
+          </div>
+
+          <div className="auth-form-header">
+            <h1>Create your account</h1>
+            <p>Join thousands of students studying smarter with Lamla AI.</p>
+          </div>
+
+          {error && (
+            <div className="auth-error-banner" role="alert">
+              <FontAwesomeIcon icon={faTriangleExclamation} />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="auth-form" noValidate>
+
+            <div className="auth-name-row">
+              <div className="auth-field">
+                <label htmlFor="signup-first-name">First name</label>
+                <div className="auth-input-wrap">
+                  <FontAwesomeIcon icon={faUser} className="auth-input-icon" />
+                  <input
+                    id="signup-first-name"
+                    name="first_name"
+                    type="text"
+                    placeholder="John"
+                    value={fields.first_name}
+                    onChange={handleChange}
+                    autoComplete="given-name"
+                    disabled={isLoading}
+                    required
+                  />
+                  {v.firstNameOk && <FontAwesomeIcon icon={faCheckCircle} className="auth-input-check" />}
+                </div>
+              </div>
+
+              <div className="auth-field">
+                <label htmlFor="signup-last-name">Last name</label>
+                <div className="auth-input-wrap">
+                  <FontAwesomeIcon icon={faUser} className="auth-input-icon" />
+                  <input
+                    id="signup-last-name"
+                    name="last_name"
+                    type="text"
+                    placeholder="Doe"
+                    value={fields.last_name}
+                    onChange={handleChange}
+                    autoComplete="family-name"
+                    disabled={isLoading}
+                    required
+                  />
+                  {v.lastNameOk && <FontAwesomeIcon icon={faCheckCircle} className="auth-input-check" />}
+                </div>
+              </div>
+            </div>
+
+            <div className="auth-field">
+              <label htmlFor="signup-email">Email address</label>
+              <div className="auth-input-wrap">
+                <FontAwesomeIcon icon={faEnvelope} className="auth-input-icon" />
+                <input
+                  id="signup-email"
+                  name="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={fields.email}
+                  onChange={handleChange}
+                  autoComplete="email"
+                  disabled={isLoading}
+                  required
+                />
+                {v.emailOk && <FontAwesomeIcon icon={faCheckCircle} className="auth-input-check" />}
+              </div>
+            </div>
+
+            <div className="auth-field">
+              <label htmlFor="signup-password">Password</label>
+              <div className="auth-input-wrap">
+                <FontAwesomeIcon icon={faLock} className="auth-input-icon" />
+                <input
+                  id="signup-password"
+                  name="password"
+                  type={showPw ? 'text' : 'password'}
+                  placeholder="Min. 8 characters"
+                  value={fields.password}
+                  onChange={handleChange}
+                  autoComplete="new-password"
+                  disabled={isLoading}
+                  required
+                />
+                <button type="button" className="auth-pw-toggle" onClick={() => setShowPw((v) => !v)} disabled={isLoading} aria-label={showPw ? 'Hide password' : 'Show password'}>
+                  <FontAwesomeIcon icon={showPw ? faEyeSlash : faEye} />
+                </button>
+              </div>
+              <p className={`auth-hint ${v.lengthOk ? 'auth-hint--valid' : ''}`}>
+                <span className="auth-hint-dot" /> At least 8 characters
+              </p>
+            </div>
+
+            <div className="auth-field">
+              <label htmlFor="signup-confirm-password">Confirm password</label>
+              <div className="auth-input-wrap">
+                <FontAwesomeIcon icon={faLock} className="auth-input-icon" />
+                <input
+                  id="signup-confirm-password"
+                  name="confirmPassword"
+                  type={showConfirmPw ? 'text' : 'password'}
+                  placeholder="Repeat your password"
+                  value={fields.confirmPassword}
+                  onChange={handleChange}
+                  autoComplete="new-password"
+                  disabled={isLoading}
+                  required
+                />
+                <button type="button" className="auth-pw-toggle" onClick={() => setShowConfirmPw((v) => !v)} disabled={isLoading} aria-label={showConfirmPw ? 'Hide password' : 'Show password'}>
+                  <FontAwesomeIcon icon={showConfirmPw ? faEyeSlash : faEye} />
+                </button>
+              </div>
+              <p className={`auth-hint ${v.matchOk ? 'auth-hint--valid' : ''}`}>
+                <span className="auth-hint-dot" /> Passwords match
+              </p>
+            </div>
+
+            <button type="submit" className="auth-submit-btn" disabled={!formValid || isLoading}>
+              {isLoading
+                ? <><span className="auth-spinner" aria-hidden="true" /> Creating account…</>
+                : 'Create Account'
+              }
+            </button>
+          </form>
+
+          <footer className="auth-form-footer">
+            <p>
+              Already have an account?{' '}
+              <Link to="/auth/login" className="auth-link">Sign in</Link>
+            </p>
+            <Link to="/" className="auth-link-muted">← Back to home</Link>
+          </footer>
+
+        </div>
+      </main>
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect } from "react";
 import "./App.css";
 import { ThemeProvider } from "./context/ThemeContext";
@@ -23,8 +23,8 @@ function App() {
 
     // Wake FastAPI
     fetch(FASTAPI_HEALTH_ENDPOINT)
-      .then(res => res.json())
-      .catch(err => console.warn("FastAPI not reachable: ", err));
+      .then((res) => res.json())
+      .catch((err) => console.warn("FastAPI not reachable: ", err));
   }, []);
 
   return (
@@ -32,17 +32,27 @@ function App() {
       <AuthProvider>
         <Router>
           <Routes>
+            {/* Public */}
             <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/dashboard" element={<Dashboard />} />
+
+            {/* Auth routes */}
+            <Route path="/auth/login"  element={<Login />} />
+            <Route path="/auth/signup" element={<Signup />} />
+
+            {/* Legacy redirects — keeps old bookmarks working */}
+            <Route path="/login"  element={<Navigate to="/auth/login"  replace />} />
+            <Route path="/signup" element={<Navigate to="/auth/signup" replace />} />
+
+            {/* Protected */}
+            <Route path="/dashboard"       element={<Dashboard />} />
             <Route path="/admin-dashboard" element={<AdminDashboard />} />
-            <Route path="/custom-quiz" element={<CustomQuiz />} />
-            <Route path="/quiz" element={<Quiz />} />
-            <Route path="/quiz/results" element={<QuizResults />} />
-            <Route path="/flashcards" element={<Flashcards />} />
-            <Route path="/ai-tutor" element={<Chatbot />} />
-            {/* Catch-all route for 404s */}
+            <Route path="/custom-quiz"     element={<CustomQuiz />} />
+            <Route path="/quiz"            element={<Quiz />} />
+            <Route path="/quiz/results"    element={<QuizResults />} />
+            <Route path="/flashcards"      element={<Flashcards />} />
+            <Route path="/ai-tutor"        element={<Chatbot />} />
+
+            {/* 404 */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Router>
