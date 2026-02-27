@@ -7,7 +7,7 @@ import {
   faUsers,
   faChartBar,
   faFileAlt,
-  faLogout,
+  faArrowRightFromBracket,
   faChevronRight,
   faCog,
   faAlertTriangle,
@@ -78,7 +78,7 @@ const AdminDashboard = () => {
           </nav>
 
           <button className="admin-logout-btn" onClick={handleLogout}>
-            <FontAwesomeIcon icon={faLogout} /> Logout
+            <FontAwesomeIcon icon={faArrowRightFromBracket} /> Logout
           </button>
         </aside>
 

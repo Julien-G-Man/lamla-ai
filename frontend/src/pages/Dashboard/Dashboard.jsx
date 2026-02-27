@@ -9,7 +9,7 @@ import {
   faCloudUploadAlt,
   faLock,
   faUser,
-  faLogout,
+  faArrowRightFromBracket,
   faChevronRight,
   faBook,
   faTrophy,
@@ -94,7 +94,7 @@ const Dashboard = () => {
           </nav>
 
           <button className="sidebar-logout" onClick={handleLogout}>
-            <FontAwesomeIcon icon={faLogout} /> Logout
+            <FontAwesomeIcon icon={faArrowRightFromBracket} /> Logout
           </button>
         </aside>
 
