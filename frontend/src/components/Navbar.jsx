@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
+import { useAuth } from "../context/AuthContext";
 import "../App.css"; 
 
 const Navbar = ({ user }) => {
   const [isOpen, setIsOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
+  const { isAuthenticated, user: authUser } = useAuth();
 
   return (
     <header className="main-header">
@@ -40,14 +42,17 @@ const Navbar = ({ user }) => {
                 )}
               </button>
             </li>
-            {user ? (
+            {isAuthenticated || user ? (
               <li className="nav-item-cta">
-                <Link to="#/dashboard" className="btn btn-nav-secondary">Dashboard</Link>
+                <Link to="/dashboard" className="btn btn-nav-secondary">Dashboard</Link>
               </li>
             ) : (
-              <li className="nav-item-cta">
-                <Link to="#/account/signup" className="btn btn-nav-secondary">Sign Up</Link>
-              </li>
+              <>
+                <li><Link to="/login">Login</Link></li>
+                <li className="nav-item-cta">
+                  <Link to="/signup" className="btn btn-nav-secondary">Sign Up</Link>
+                </li>
+              </>
             )}
           </ul>
         </nav>
