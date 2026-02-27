@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import { useTheme } from "../context/ThemeContext";
 import "../App.css"; 
 
 const Navbar = ({ user }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <header className="main-header">
@@ -21,10 +23,23 @@ const Navbar = ({ user }) => {
           </div>
           <ul className={`nav-links ${isOpen ? "open" : ""}`}>
             <li><Link to="/">Home</Link></li>
-            <li><Link to="/about">About</Link></li>
             <li><Link to="/ai-tutor">AI Tutor</Link></li>
             <li><Link to="/custom-quiz">Quiz</Link></li>
             <li><Link to="#/flashcards">Flashcards</Link></li>
+            <li className="theme-toggle-wrapper">
+              <button 
+                className="theme-toggle-btn" 
+                onClick={toggleTheme}
+                aria-label="toggle theme"
+                title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              >
+                {theme === 'dark' ? (
+                  <i className="fas fa-sun"></i>
+                ) : (
+                  <i className="fas fa-moon"></i>
+                )}
+              </button>
+            </li>
             {user ? (
               <li className="nav-item-cta">
                 <Link to="#/dashboard" className="btn btn-nav-secondary">Dashboard</Link>

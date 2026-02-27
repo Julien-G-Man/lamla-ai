@@ -39,7 +39,7 @@
     position: relative;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     min-height: 90vh;
     height: auto !important;
     padding: 80px 16px;
@@ -49,7 +49,7 @@
     background-attachment: fixed;
     overflow: visible !important;
     color: var(--text-primary);
-    text-align: center;
+    text-align: left;
 }
 
 .hero-section::before {
@@ -66,8 +66,10 @@
 .hero-content {
     position: relative;
     z-index: 2;
-    max-width: 800px;
+    max-width: 700px;
     padding: 24px;
+    margin-left: 0;
+    text-align: left;
 }
 
 .hero-bg-elements {
@@ -144,7 +146,7 @@
 
 .hero-stats {
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 32px;
     margin-bottom: 40px;
     padding: 24px 0;
@@ -155,8 +157,8 @@
 .stat-item {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    text-align: center;
+    align-items: flex-start;
+    text-align: left;
 }
 
 .stat-number {
@@ -176,7 +178,7 @@
     display: flex;
     gap: 16px;
     flex-wrap: wrap;
-    justify-content: center;
+    justify-content: flex-start;
 }
 
 .hero-btn {
@@ -271,10 +273,10 @@
 }
 
 .section-header {
-    text-align: center;
+    text-align: left;
     margin-bottom: 80px;
     max-width: 800px;
-    margin-left: auto;
+    margin-left: 0;
     margin-right: auto;
 }
 
@@ -296,6 +298,7 @@
     color: var(--text-primary);
     margin-bottom: 20px;
     line-height: 1.2;
+    text-align: left;
 }
 
 .section-header .highlight {
@@ -318,7 +321,7 @@
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 24px;
-    justify-content: center;
+    justify-content: flex-start;
 }
 
 .feature-card {
@@ -397,15 +400,7 @@
 }
 
 /* Keep the title and desc centered or left-aligned depending on your preference */
-.feature-title {
-    text-align: left;
-    margin-top: 8px;
-}
 
-.feature-desc {
-    text-align: left;
-    font-size: 0.95rem;
-}
 
 
 .feature-card:hover .feature-icon {
@@ -421,7 +416,7 @@
     font-weight: 600;
     color: var(--text-primary);
     margin-bottom: 16px;
-    text-align: center;
+    text-align: left;
     transition: var(--transition);
 }
 
@@ -432,7 +427,7 @@
 .feature-desc {
     color: var(--text-secondary);
     line-height: 1.6;
-    text-align: center;
+    text-align: left;
     margin-bottom: 20px;
 }
 
@@ -594,14 +589,15 @@
     padding: 0 24px;
 }
 
-.section-header {
-    text-align: center;
+.testimonials-section .section-header {
+    text-align: left;
     margin-bottom: 48px;
 }
 
-.section-header h2 {
+.testimonials-section .section-header h2 {
     font-size: clamp(2rem, 5vw, 2.5rem);
     color: var(--text-primary); /* Ensures the heading is white */
+    text-align: left;
 }
 
 .section-header p {
@@ -743,31 +739,57 @@
     .hero-section {
         padding-top: 60px;
         padding-bottom: 60px;
+        justify-content: flex-start;
     }
     .hero-content {
         max-width: none;
+        text-align: left;
     }
     .hero-stats {
-        flex-direction: column;
+        flex-direction: row;
         gap: 20px;
+        justify-content: flex-start;
+        flex-wrap: wrap;
     }
     .hero-btns {
-        justify-content: center;
+        justify-content: flex-start;
     }
 }
 @media (max-width: 768px) {
     .home-container {
         padding: 0 16px;
     }
+    .hero-section {
+        padding: 60px 16px;
+    }
+    .hero-content {
+        padding: 16px;
+    }
     .hero-title {
         font-size: clamp(2rem, 8vw, 3rem);
+        text-align: left;
     }
     .hero-desc {
         font-size: 1.1rem;
+        text-align: left;
+    }
+    .hero-stats {
+        flex-direction: column;
+        gap: 16px;
+        justify-content: flex-start;
+    }
+    .stat-item {
+        align-items: flex-start;
     }
     .newsletter-form {
         flex-direction: column;
         gap: 12px;
+    }
+    .section-header {
+        text-align: left;
+    }
+    .section-header h2 {
+        text-align: left;
     }
 }
 @media (max-width: 480px) {
@@ -775,13 +797,31 @@
         padding: 0 12px;
     }
     .hero-section {
-        padding: 40px 16px;
+        padding: 40px 12px;
+        justify-content: flex-start;
+    }
+    .hero-content {
+        max-width: 100%;
+        padding: 12px;
     }
     .hero-title {
-        font-size: 2rem;
+        font-size: 1.8rem;
+        text-align: left;
     }
     .hero-desc {
         font-size: 1rem;
+        text-align: left;
+    }
+    .hero-stats {
+        flex-direction: column;
+        gap: 16px;
+        justify-content: flex-start;
+        border-top: 1px solid var(--border-dark);
+        border-bottom: 1px solid var(--border-dark);
+        padding: 16px 0;
+    }
+    .stat-item {
+        align-items: flex-start;
     }
     .hero-btn {
         width: 100%;
@@ -797,11 +837,13 @@
         max-width: none;
         margin-left: 0 !important;
         margin-right: 0 !important;
+        justify-content: flex-start;
     }
 
     .features-section,
     .newsletter-section,
-    .testimonials-section {
+    .testimonials-section,
+    .principles-section {
         overflow: visible !important;
         height: auto !important;
         padding-top: 30px;
@@ -824,9 +866,19 @@
     .feature-title {
         font-size: 1.2rem;
         margin-bottom: 12px;
+        text-align: left;
     }
     .testimonial-quote {
         font-size: 1.1rem;
+    }
+    .principles-grid {
+        gap: 20px;
+    }
+    .principle-card {
+        padding: 24px;
+    }
+    .cta-section {
+        padding: 24px;
     }
 }
 
@@ -836,4 +888,179 @@
 .newsletter-section {
     position: relative;
     z-index: 2; /* Sits above background shapes */
+}
+
+/* Principles Section Styles */
+.principles-section {
+    position: relative;
+    padding: 100px 0;
+    background: var(--background-color);
+    overflow: hidden;
+}
+
+.principles-header {
+    max-width: 900px;
+    margin-bottom: 80px;
+    text-align: left;
+}
+
+.principles-header h2 {
+    text-align: left;
+    margin-bottom: 24px;
+}
+
+.section-intro {
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+    line-height: 1.7;
+    max-width: 800px;
+    margin-bottom: 0;
+}
+
+.principles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 40px;
+    margin-bottom: 80px;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 0 24px;
+}
+
+.principle-card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 40px;
+    transition: var(--transition);
+    overflow: hidden;
+}
+
+.principle-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--primary-color);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: var(--transition);
+}
+
+.principle-card:hover {
+    transform: translateY(-8px);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 20px rgba(255, 214, 0, 0.15);
+}
+
+.principle-card:hover::before {
+    transform: scaleX(1);
+}
+
+.principle-icon {
+    font-size: 2.5rem;
+    margin-bottom: 16px;
+    display: block;
+}
+
+.principle-card h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+    text-align: left;
+}
+
+.principle-card p {
+    color: var(--text-secondary);
+    line-height: 1.7;
+    margin-bottom: 24px;
+    text-align: left;
+}
+
+.principle-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.principle-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.principle-list i {
+    color: var(--primary-color);
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+/* CTA Section */
+.cta-section {
+    text-align: left;
+    max-width: 900px;
+    padding: 60px 40px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    margin: 0 auto;
+}
+
+.cta-section h2 {
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+    line-height: 1.2;
+}
+
+.cta-section p {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    line-height: 1.6;
+}
+
+.cta-section .hero-btns {
+    margin-top: 32px;
+}
+
+/* Responsive adjustments for principles */
+@media (max-width: 992px) {
+    .principles-grid {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 30px;
+    }
+    
+    .cta-section {
+        padding: 40px 30px;
+    }
+}
+
+@media (max-width: 768px) {
+    .principles-grid {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+    
+    .principle-card {
+        padding: 32px 24px;
+    }
+    
+    .cta-section {
+        padding: 32px 24px;
+    }
+    
+    .cta-section h2 {
+        font-size: 2rem;
+    }
 }
