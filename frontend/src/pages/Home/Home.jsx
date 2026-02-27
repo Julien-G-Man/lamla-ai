@@ -7,7 +7,8 @@ import "../../App.css";
 const Home = ({ user }) => {
   const [isVisible, setIsVisible] = useState({
     features: false,
-    testimonials: false
+    testimonials: false,
+    principles: false
   });
 
   useEffect(() => {
@@ -41,9 +42,24 @@ const Home = ({ user }) => {
       observers.testimonials = testimonialsObserver;
     }
 
+    // Lazy load principles section
+    const principlesObserver = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setIsVisible(prev => ({ ...prev, principles: true }));
+        principlesObserver.unobserve(entry.target);
+      }
+    }, { threshold: 0.1 });
+
+    const principlesEl = document.getElementById("principles");
+    if (principlesEl) {
+      principlesObserver.observe(principlesEl);
+      observers.principles = principlesObserver;
+    }
+
     return () => {
       if (observers.features) observers.features.disconnect();
       if (observers.testimonials) observers.testimonials.disconnect();
+      if (observers.principles) observers.principles.disconnect();
     };
   }, []);
 
@@ -203,6 +219,36 @@ const Home = ({ user }) => {
                                 <p className="author-title">Student @ KNUST</p>
                             </div>
                         </div>
+                    </div>
+                  </div>
+                )}
+            </div>
+        </section>
+
+        {/* About Section - Image Left, Text Right */}
+        <section id="principles" className="principles-section">
+            <div className="container">
+                {isVisible.principles && (
+                  <div className="principles-grid">
+                    {/* Image Card - Left */}
+                    <div className="principle-card">
+                      <img 
+                        src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Screenshot%202026-02-27%20121446-oxg1xAA2KtzNtZuRzaoad3Lpjjmzxr.png" 
+                        alt="Excellence in Science Education" 
+                      />
+                      <div className="principle-icon">Excellence in Science</div>
+                    </div>
+
+                    {/* Text Content - Right */}
+                    <div className="principle-card">
+                      <h3>Excellence in Science Education & Research</h3>
+                      <p>The College of Science at Kwame Nkrumah University of Science and Technology (KNUST) has been at the forefront of scientific education and research in Ghana since its establishment.</p>
+                      <p>Our commitment to academic excellence and innovation has produced generations of scientists, researchers, and industry leaders who are making a global impact.</p>
+                      <p>With state-of-the-art facilities, world-class faculty, and a vibrant research ecosystem, we provide students with the tools and opportunities to explore, discover, and innovate.</p>
+                      <div className="hero-btns">
+                        <a href="#read-more" className="hero-btn primary">Read More About Us →</a>
+                        <a href="#research" className="hero-btn secondary">Our Research</a>
+                      </div>
                     </div>
                   </div>
                 )}

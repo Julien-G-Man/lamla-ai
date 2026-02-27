@@ -66,8 +66,10 @@
 .hero-content {
     position: relative;
     z-index: 2;
-    max-width: 800px;
+    max-width: 700px;
     padding: 24px;
+    margin: 0 auto;
+    text-align: center;
 }
 
 .hero-bg-elements {
@@ -180,18 +182,23 @@
 }
 
 .hero-btn {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 16px 32px;
-    border-radius: var(--radius-md);
-    font-size: 1.1rem;
+    display: inline-block;
+    padding: 14px 32px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--primary-color), #FFB700);
+    color: #000;
     font-weight: 600;
+    font-size: 1rem;
     text-decoration: none;
+    cursor: pointer;
     transition: var(--transition);
-    overflow: hidden;
-    border: 2px solid transparent;
+    border: none;
+}
+
+.hero-btn.secondary {
+    background: transparent;
+    border: 2px solid var(--border-light);
+    color: var(--text-primary);
 }
 
 .hero-btn.primary {
@@ -296,6 +303,7 @@
     color: var(--text-primary);
     margin-bottom: 20px;
     line-height: 1.2;
+    text-align: center;
 }
 
 .section-header .highlight {
@@ -397,15 +405,7 @@
 }
 
 /* Keep the title and desc centered or left-aligned depending on your preference */
-.feature-title {
-    text-align: left;
-    margin-top: 8px;
-}
 
-.feature-desc {
-    text-align: left;
-    font-size: 0.95rem;
-}
 
 
 .feature-card:hover .feature-icon {
@@ -594,14 +594,15 @@
     padding: 0 24px;
 }
 
-.section-header {
+.testimonials-section .section-header {
     text-align: center;
     margin-bottom: 48px;
 }
 
-.section-header h2 {
+.testimonials-section .section-header h2 {
     font-size: clamp(2rem, 5vw, 2.5rem);
-    color: var(--text-primary); /* Ensures the heading is white */
+    color: var(--text-primary);
+    text-align: center;
 }
 
 .section-header p {
@@ -743,13 +744,17 @@
     .hero-section {
         padding-top: 60px;
         padding-bottom: 60px;
+        justify-content: center;
     }
     .hero-content {
         max-width: none;
+        text-align: center;
     }
     .hero-stats {
-        flex-direction: column;
+        flex-direction: row;
         gap: 20px;
+        justify-content: center;
+        flex-wrap: wrap;
     }
     .hero-btns {
         justify-content: center;
@@ -759,15 +764,41 @@
     .home-container {
         padding: 0 16px;
     }
+    .hero-section {
+        padding: 60px 16px;
+        justify-content: center;
+    }
+    .hero-content {
+        padding: 16px;
+        text-align: center;
+    }
     .hero-title {
         font-size: clamp(2rem, 8vw, 3rem);
+        text-align: center;
     }
     .hero-desc {
         font-size: 1.1rem;
+        text-align: center;
+    }
+    .hero-stats {
+        flex-direction: row;
+        gap: 16px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    .stat-item {
+        align-items: center;
+        text-align: center;
     }
     .newsletter-form {
         flex-direction: column;
         gap: 12px;
+    }
+    .section-header {
+        text-align: center;
+    }
+    .section-header h2 {
+        text-align: center;
     }
 }
 @media (max-width: 480px) {
@@ -775,13 +806,34 @@
         padding: 0 12px;
     }
     .hero-section {
-        padding: 40px 16px;
+        padding: 40px 12px;
+        justify-content: center;
+    }
+    .hero-content {
+        max-width: 100%;
+        padding: 12px;
+        text-align: center;
     }
     .hero-title {
-        font-size: 2rem;
+        font-size: 1.8rem;
+        text-align: center;
     }
     .hero-desc {
         font-size: 1rem;
+        text-align: center;
+    }
+    .hero-stats {
+        flex-direction: row;
+        gap: 12px;
+        justify-content: center;
+        flex-wrap: wrap;
+        border-top: 1px solid var(--border-dark);
+        border-bottom: 1px solid var(--border-dark);
+        padding: 16px 0;
+    }
+    .stat-item {
+        align-items: center;
+        text-align: center;
     }
     .hero-btn {
         width: 100%;
@@ -797,11 +849,13 @@
         max-width: none;
         margin-left: 0 !important;
         margin-right: 0 !important;
+        justify-content: center;
     }
 
     .features-section,
     .newsletter-section,
-    .testimonials-section {
+    .testimonials-section,
+    .principles-section {
         overflow: visible !important;
         height: auto !important;
         padding-top: 30px;
@@ -824,9 +878,20 @@
     .feature-title {
         font-size: 1.2rem;
         margin-bottom: 12px;
+        text-align: center;
     }
     .testimonial-quote {
         font-size: 1.1rem;
+    }
+    .principles-grid {
+        gap: 20px;
+        grid-template-columns: 1fr;
+    }
+    .principle-card {
+        padding: 24px;
+    }
+    .cta-section {
+        display: none;
     }
 }
 
@@ -836,4 +901,150 @@
 .newsletter-section {
     position: relative;
     z-index: 2; /* Sits above background shapes */
+}
+
+/* About Section (formerly Principles) Styles */
+.principles-section {
+    position: relative;
+    padding: 80px 0;
+    background: var(--background-color);
+    overflow: hidden;
+}
+
+.principles-header {
+    display: none;
+}
+
+.principles-header h2 {
+    display: none;
+}
+
+.section-intro {
+    display: none;
+}
+
+.principles-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+    align-items: center;
+}
+
+/* About Section - Image Card (Left) */
+.principle-card:first-child {
+    position: relative;
+    background: var(--surface);
+    border: none;
+    border-radius: 20px;
+    padding: 0;
+    overflow: hidden;
+    height: 100%;
+}
+
+.principle-card:first-child::before {
+    display: none;
+}
+
+.principle-card:first-child:hover {
+    transform: none;
+    border-color: transparent;
+    box-shadow: 0 10px 30px rgba(255, 214, 0, 0.1);
+}
+
+.principle-card:first-child img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: 20px;
+}
+
+.principle-card:first-child .principle-icon {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    padding: 12px 20px;
+    border-radius: 50px;
+    font-size: 1rem;
+    margin-bottom: 0;
+    color: var(--text-primary);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* About Section - Text Content (Right) */
+.principle-card:nth-child(2) {
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
+.principle-card:nth-child(2)::before {
+    display: none;
+}
+
+.principle-card:nth-child(2):hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.principle-card:nth-child(3) {
+    display: none;
+}
+
+.principle-icon {
+    display: none;
+}
+
+.principle-card h3 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 24px;
+    text-align: left;
+    line-height: 1.2;
+}
+
+.principle-card p {
+    color: var(--text-secondary);
+    line-height: 1.8;
+    margin-bottom: 16px;
+    text-align: left;
+    font-size: 1rem;
+}
+
+.principle-list {
+    display: none;
+}
+
+/* CTA Section - Hidden for About Layout */
+.cta-section {
+    display: none;
+}
+
+/* Responsive adjustments for about section */
+@media (max-width: 992px) {
+    .principles-grid {
+        grid-template-columns: 1fr;
+        gap: 40px;
+    }
+}
+
+@media (max-width: 768px) {
+    .principles-grid {
+        grid-template-columns: 1fr;
+        gap: 32px;
+    }
+    
+    .principles-section {
+        padding: 60px 0;
+    }
+    
+    .principle-card h3 {
+        font-size: 1.8rem;
+    }
 }
