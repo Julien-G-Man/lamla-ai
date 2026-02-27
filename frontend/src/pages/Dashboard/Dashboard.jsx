@@ -9,11 +9,11 @@ import {
   faCloudUploadAlt,
   faLock,
   faUser,
-  faLogout,
-  faChevronRight,
+  faRightFromBracket,
   faBook,
   faTrophy,
   faCalendar,
+  faChevronRight,
 } from '@fortawesome/free-solid-svg-icons';
 import './Dashboard.css';
 
@@ -21,12 +21,13 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout, getUserRole } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
-  const [stats, setStats] = useState({
+  
+  const stats = {
     totalQuizzes: 0,
     averageScore: 0,
     studyStreak: 0,
     totalFlashcards: 0,
-  });
+  };
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -94,7 +95,7 @@ const Dashboard = () => {
           </nav>
 
           <button className="sidebar-logout" onClick={handleLogout}>
-            <FontAwesomeIcon icon={faLogout} /> Logout
+            <FontAwesomeIcon icon={faRightFromBracket} /> Logout
           </button>
         </aside>
 

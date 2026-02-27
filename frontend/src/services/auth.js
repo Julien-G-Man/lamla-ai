@@ -1,7 +1,6 @@
 import axios from "axios";
 
 const DJANGO_API_URL = process.env.REACT_APP_DJANGO_API_URL;
-const DJANGO_ROOT_URL = DJANGO_API_URL.replace(/\/api\/?$/, "");
 
 const authApi = axios.create({
   baseURL: DJANGO_API_URL,

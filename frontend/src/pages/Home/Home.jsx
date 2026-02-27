@@ -6,70 +6,43 @@ import "../../App.css";
 
 const Home = ({ user }) => {
   const [isVisible, setIsVisible] = useState({
+    about: false,
     features: false,
     testimonials: false,
-    principles: false
   });
 
   useEffect(() => {
-    const observers = {};
-    
-    // Lazy load features section
-    const featuresObserver = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        setIsVisible(prev => ({ ...prev, features: true }));
-        featuresObserver.unobserve(entry.target);
-      }
-    }, { threshold: 0.1 });
+    const createObserver = (id, key) => {
+      const el = document.getElementById(id);
+      if (!el) return null;
+      const obs = new IntersectionObserver(([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(prev => ({ ...prev, [key]: true }));
+          obs.unobserve(entry.target);
+        }
+      }, { threshold: 0.1 });
+      obs.observe(el);
+      return obs;
+    };
 
-    const featuresEl = document.getElementById("features");
-    if (featuresEl) {
-      featuresObserver.observe(featuresEl);
-      observers.features = featuresObserver;
-    }
-
-    // Lazy load testimonials section
-    const testimonialsObserver = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        setIsVisible(prev => ({ ...prev, testimonials: true }));
-        testimonialsObserver.unobserve(entry.target);
-      }
-    }, { threshold: 0.1 });
-
-    const testimonialsEl = document.getElementById("testimonials");
-    if (testimonialsEl) {
-      testimonialsObserver.observe(testimonialsEl);
-      observers.testimonials = testimonialsObserver;
-    }
-
-    // Lazy load principles section
-    const principlesObserver = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        setIsVisible(prev => ({ ...prev, principles: true }));
-        principlesObserver.unobserve(entry.target);
-      }
-    }, { threshold: 0.1 });
-
-    const principlesEl = document.getElementById("principles");
-    if (principlesEl) {
-      principlesObserver.observe(principlesEl);
-      observers.principles = principlesObserver;
-    }
+    const o1 = createObserver("about", "about");
+    const o2 = createObserver("features", "features");
+    const o3 = createObserver("testimonials", "testimonials");
 
     return () => {
-      if (observers.features) observers.features.disconnect();
-      if (observers.testimonials) observers.testimonials.disconnect();
-      if (observers.principles) observers.principles.disconnect();
+      if (o1) o1.disconnect();
+      if (o2) o2.disconnect();
+      if (o3) o3.disconnect();
     };
   }, []);
 
   return (
     <div className="site-wrapper">
       <Navbar user={user} />
-      
+
       <main className="main-content">
-        
-        {/* Hero Section */}
+
+        {/* ── 1. HERO ── */}
         <section className="hero-section">
           <div className="hero-content">
             <div className="hero-badge">
@@ -78,30 +51,15 @@ const Home = ({ user }) => {
             </div>
 
             <h1 className="hero-title">
-                <span className="title-line">Level Up Your Exam Game with</span>
-                <span className="brand-highlight">Lamla AI</span>
+              <span className="title-line">Level Up Your Exam</span>
+              <span className="title-line">Game with <span className="brand-highlight">Lamla AI</span></span>
             </h1>
 
             <p className="hero-desc">
-                Lamla AI is a smart exam preparation assistant designed to help you study with intention, not panic. 
-                Upload your study materials and transform them into interactive quizzes and flashcards.
-                <br /><strong className="highlight-text">Study smarter. Perform better.</strong>
+              Upload your study materials and transform them into quizzes and flashcards.
+              AI Tutor breaks down complex concepts into easy-to-understand explanations.
+              <br></br><strong className="highlight-text"> Study smarter. Perform better.</strong>
             </p>
-
-            <div className="hero-stats">
-                <div className="stat-item">
-                    <span className="stat-number">50+</span>
-                    <span className="stat-label">Students</span>
-                </div>
-                <div className="stat-item">
-                    <span className="stat-number">250+</span>
-                    <span className="stat-label">Quizzes Generated</span>
-                </div>
-                <div className="stat-item">
-                    <span className="stat-number">92%</span>
-                    <span className="stat-label">Success Rate</span>
-                </div>
-            </div>
 
             <div className="hero-btns">
               {!user ? (
@@ -114,145 +72,169 @@ const Home = ({ user }) => {
           </div>
         </section>
 
-        {/* Features Section */}
+        {/* ── 2. STATS BAND — hovers over the hero/about seam ── */}
+        <div className="stats-band-wrapper">
+          <div className="stats-band">
+            <div className="stat-item">
+              <span className="stat-number">50+</span>
+              <span className="stat-label">STUDENTS</span>
+            </div>
+            <div className="stat-divider" />
+            <div className="stat-item">
+              <span className="stat-number">250+</span>
+              <span className="stat-label">QUIZZES GENERATED</span>
+            </div>
+            <div className="stat-divider" />
+            <div className="stat-item">
+              <span className="stat-number">92%</span>
+              <span className="stat-label">SUCCESS RATE</span>
+            </div>
+            <div className="stat-divider" />
+            <div className="stat-item">
+              <span className="stat-number">3+</span>
+              <span className="stat-label">AI FEATURES</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── 3. ABOUT ── */}
+        <section id="about" className="principles-section">
+          <div className="container">
+            {isVisible.about && (
+              <div className="principles-grid">
+                {/* Image — Left */}
+                <div className="principle-card">
+                  <img src="/assets/highfive-with-teacher.jpg" alt="About Lamla AI" />
+                  <div className="principle-icon">AI-Powered Study Tool</div>
+                </div>
+
+                {/* Text — Right */}
+                <div className="principle-card principle-text">
+                  <p className="about-label">ABOUT LAMLA AI</p>
+                  <h3>Smarter Studying,{" "}
+                    <span className="brand-highlight-text">Better Results</span>
+                  </h3>
+                  <p>Lamla AI was built for students who want to study with purpose. We combine cutting-edge AI with your own course materials to create a personalised study experience that actually works.</p>
+                  <p>Whether you're preparing for finals or just reviewing before a test — Lamla AI turns your slides and notes into quizzes, flashcards, and instant AI-powered explanations.</p>
+                  <p>Built by students, for students. Our platform evolves with your feedback so you can walk into every exam with confidence.</p>
+                  <div className="hero-btns about-btns">
+                    <a href="/custom-quiz" className="hero-btn primary">Start Studying →</a>
+                    <a href="#features" className="hero-btn secondary">Our Features</a>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ── 4. FEATURES ── */}
         <section id="features" className="features-section">
-            <div className="container">
-                <div className="section-header">
-                    <div className="section-badge"><span>✨ Features</span></div>
-                    <h2>Smart Features for <span className="brand-highlight"> Smart Students</span></h2>
-                </div>
-            
-                {isVisible.features && (
-                  <div className="features-grid">
-                    {/* 1. Quiz Mode */}
-                    <a href="/custom-quiz" className="feature-card">
-                        <div className="feature-image">
-                            <img src="/assets/quizzes.jpg" alt="Quiz Mode" />
-                        </div>
-                        <div className="feature-card-content">
-                            <h3 className="feature-title">Quiz Mode</h3>
-                            <p className="feature-desc">Automatically generates multiple-choice questions from your materials.</p>
-                            <span className="feature-link">Explore Feature →</span>
-                        </div>
-                    </a>
-                
-                    {/* 2. AI Tutor */}
-                    <a href="/ai-tutor" className="feature-card">
-                        <div className="feature-image">
-                            <img src="/assets/ai-tutor.jpg" alt="AI Tutor" />
-                        </div>
-                        <div className="feature-card-content">
-                            <h3 className="feature-title">AI Tutor</h3>
-                            <p className="feature-desc">Get instant answers to your questions and deeper explanations.</p>
-                            <span className="feature-link">Explore Feature →</span>
-                        </div>
-                    </a>
-
-                    {/* 3. Flashcards */}
-                    <a href="#/flashcards" className="feature-card">
-                        <div className="feature-image">
-                            <img src="/assets/flashcards.jpeg" alt="Flashcards" />
-                        </div>
-                        <div className="feature-card-content">
-                            <h3 className="feature-title">Interactive Flashcards</h3>
-                            <p className="feature-desc">Create and study with AI-generated flashcards for quick review.</p>
-                            <span className="feature-link">Explore Feature →</span>
-                        </div>
-                    </a>
-
-                    {/* 4. Exam Analyzer */}
-                    <a href="#/exam-analyzer" className="feature-card">
-                        <div className="feature-image">
-                            <img src="/assets/uni_exams.jpg" alt="Exam Analyzer" />
-                        </div>
-                        <div className="feature-card-content">
-                            <h3 className="feature-title">Exam Pattern Analysis</h3>
-                            <p className="feature-desc">Analyze uploaded exams or slides for instant feedback and topic breakdowns.</p>
-                            <span className="feature-link">Explore Feature →</span>
-                        </div>
-                    </a>                
-
-                    {/* 5. Performance Analytics */}
-                    <a href="#/dashboard" className="feature-card">
-                        <div className="feature-image">
-                            <img src="/assets/improve-performance.jpg" alt="Performance Analytics" />
-                        </div>
-                        <div className="feature-card-content">
-                            <h3 className="feature-title">Performance Analytics</h3>
-                            <p className="feature-desc">Track your progress and identify weak points to focus your efforts.</p>
-                            <span className="feature-link">Explore Feature →</span>
-                        </div>
-                    </a>
-
-                    {/* 6. Subject Selection */}
-                    <a href="/custom-quiz" className="feature-card">
-                        <div className="feature-image">
-                            <img src="/assets/steam.jpg" alt="Subject Selection" />
-                        </div>
-                        <div className="feature-card-content">
-                            <h3 className="feature-title">Subject Selection</h3>
-                            <p className="feature-desc">Select your subject or topic before quiz generation for targeted study.</p>
-                            <span className="feature-link">Explore Feature →</span>
-                        </div>
-                    </a>                 
-                  </div>
-                )}
+          <div className="container">
+            <div className="section-header section-header--left">
+              <p className="section-label">✨ FEATURES</p>
+              <div className="section-header-row">
+                <h2>Smart Features for <span className="brand-highlight-text">Smart Students</span></h2>
+              </div>
             </div>
+
+            {isVisible.features && (
+              <div className="features-grid">
+
+                <a href="/custom-quiz" className="feature-card">
+                  <div className="feature-image">
+                    <img src="/assets/quizzes.jpg" alt="Quiz Mode" />
+                  </div>
+                  <div className="feature-card-content">
+                    <h3 className="feature-title">Quiz Mode</h3>
+                    <p className="feature-desc">Automatically generates multiple-choice questions from your materials.</p>
+                    <span className="feature-link">Explore Feature →</span>
+                  </div>
+                </a>
+
+                <a href="/ai-tutor" className="feature-card">
+                  <div className="feature-image">
+                    <img src="/assets/ai-tutor.jpg" alt="AI Tutor" />
+                  </div>
+                  <div className="feature-card-content">
+                    <h3 className="feature-title">AI Tutor</h3>
+                    <p className="feature-desc">Get instant answers to your questions and deeper explanations.</p>
+                    <span className="feature-link">Explore Feature →</span>
+                  </div>
+                </a>
+
+                <a href="/flashcards" className="feature-card">
+                  <div className="feature-image">
+                    <img src="/assets/flashcards.jpeg" alt="Flashcards" />
+                  </div>
+                  <div className="feature-card-content">
+                    <h3 className="feature-title">Flashcards</h3>
+                    <p className="feature-desc">Create and study with AI-generated flashcards for quick review.</p>
+                    <span className="feature-link">Explore Feature →</span>
+                  </div>
+                </a>
+
+                <a href="#/exam-analyzer" className="feature-card">
+                  <div className="feature-image">
+                    <img src="/assets/uni_exams.jpg" alt="Exam Analyzer" />
+                  </div>
+                  <div className="feature-card-content">
+                    <h3 className="feature-title">Exam Analysis</h3>
+                    <p className="feature-desc">Analyze uploaded exams or slides for instant feedback and topic breakdowns.</p>
+                    <span className="feature-link">Explore Feature →</span>
+                  </div>
+                </a>
+
+                <a href="#/dashboard" className="feature-card">
+                  <div className="feature-image">
+                    <img src="/assets/improve-performance.jpg" alt="Performance Analytics" />
+                  </div>
+                  <div className="feature-card-content">
+                    <h3 className="feature-title">Performance Analytics</h3>
+                    <p className="feature-desc">Track your progress and identify weak points to focus your efforts.</p>
+                    <span className="feature-link">Explore Feature →</span>
+                  </div>
+                </a>
+
+                <a href="/custom-quiz" className="feature-card">
+                  <div className="feature-image">
+                    <img src="/assets/steam.jpg" alt="Subject Selection" />
+                  </div>
+                  <div className="feature-card-content">
+                    <h3 className="feature-title">Subject Selection</h3>
+                    <p className="feature-desc">Select your subject or topic before quiz generation for targeted study.</p>
+                    <span className="feature-link">Explore Feature →</span>
+                  </div>
+                </a>
+
+              </div>
+            )}
+          </div>
         </section>
 
-        {/* Testimonials */}
+        {/* ── 5. TESTIMONIALS ── */}
         <section id="testimonials" className="testimonials-section">
-            <div className="container">
-                <div className="section-header">
-                    <h2>What Our Students <span className="highlight">Have To Say</span></h2>
+          <div className="container">
+            <div className="section-header section-header--left">
+              <p className="section-label">⭐ TESTIMONIALS</p>
+              <h2>What Our Users <span className="brand-highlight-text">Have To Say</span></h2>
+            </div>
+            {isVisible.testimonials && (
+              <div className="testimonials-grid">
+                <div className="testimonial-card">
+                  <blockquote className="testimonial-quote">
+                    "Lamla AI helped me turn my lecture slides into practice quizzes in seconds. It's an amazing tool!"
+                  </blockquote>
+                  <div className="testimonial-author">
+                    <div className="author-avatar"><span>CN</span></div>
+                    <div className="author-info">
+                      <p className="author-name">Christopher N</p>
+                      <p className="author-title">Student @ KNUST</p>
+                    </div>
+                  </div>
                 </div>
-                {isVisible.testimonials && (
-                  <div className="testimonials-grid">
-                    <div className="testimonial-card">
-                        <blockquote className="testimonial-quote">
-                            "Lamla AI helped me turn my lecture slides into practice quizzes in seconds. It's an amazing tool!"
-                        </blockquote> 
-                        <div className="testimonial-author">
-                            <div className="author-avatar"><span>CN</span></div>
-                            <div className="author-info">
-                                <p className="author-name">Christopher N</p>
-                                <p className="author-title">Student @ KNUST</p>
-                            </div>
-                        </div>
-                    </div>
-                  </div>
-                )}
-            </div>
-        </section>
-
-        {/* About Section - Image Left, Text Right */}
-        <section id="principles" className="principles-section">
-            <div className="container">
-                {isVisible.principles && (
-                  <div className="principles-grid">
-                    {/* Image Card - Left */}
-                    <div className="principle-card">
-                      <img 
-                        src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Screenshot%202026-02-27%20121446-oxg1xAA2KtzNtZuRzaoad3Lpjjmzxr.png" 
-                        alt="Excellence in Science Education" 
-                      />
-                      <div className="principle-icon">Excellence in Science</div>
-                    </div>
-
-                    {/* Text Content - Right */}
-                    <div className="principle-card">
-                      <h3>Excellence in Science Education & Research</h3>
-                      <p>The College of Science at Kwame Nkrumah University of Science and Technology (KNUST) has been at the forefront of scientific education and research in Ghana since its establishment.</p>
-                      <p>Our commitment to academic excellence and innovation has produced generations of scientists, researchers, and industry leaders who are making a global impact.</p>
-                      <p>With state-of-the-art facilities, world-class faculty, and a vibrant research ecosystem, we provide students with the tools and opportunities to explore, discover, and innovate.</p>
-                      <div className="hero-btns">
-                        <a href="#read-more" className="hero-btn primary">Read More About Us →</a>
-                        <a href="#research" className="hero-btn secondary">Our Research</a>
-                      </div>
-                    </div>
-                  </div>
-                )}
-            </div>
+              </div>
+            )}
+          </div>
         </section>
 
       </main>

@@ -7,10 +7,9 @@ import {
   faUsers,
   faChartBar,
   faFileAlt,
-  faLogout,
-  faChevronRight,
+  faRightFromBracket,
   faCog,
-  faAlertTriangle,
+  faTriangleExclamation,
 } from '@fortawesome/free-solid-svg-icons';
 import './AdminDashboard.css';
 
@@ -78,7 +77,7 @@ const AdminDashboard = () => {
           </nav>
 
           <button className="admin-logout-btn" onClick={handleLogout}>
-            <FontAwesomeIcon icon={faLogout} /> Logout
+            <FontAwesomeIcon icon={faRightFromBracket} /> Logout
           </button>
         </aside>
 
@@ -291,7 +290,7 @@ const AdminDashboard = () => {
                 <h2>Danger Zone</h2>
                 <p>Irreversible actions</p>
                 <button className="danger-btn">
-                  <FontAwesomeIcon icon={faAlertTriangle} /> Clear All Cache
+                  <FontAwesomeIcon icon={faTriangleExclamation} /> Clear All Cache
                 </button>
               </div>
             </div>

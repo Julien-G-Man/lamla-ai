@@ -8,7 +8,7 @@ const Navbar = ({ user }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const { theme, toggleTheme } = useTheme();
-  const { isAuthenticated, user: authUser } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -32,7 +32,13 @@ const Navbar = ({ user }) => {
         </Link>
 
         <nav className="main-nav">
-          <div className="navbar-hamburger" id="hamburgerBtn" onClick={() => setIsOpen(!isOpen)}>
+          {isOpen && (
+            <div
+                className="nav-overlay"
+                onClick={() => setIsOpen(false)}
+            />
+          )}
+          <div className={`navbar-hamburger ${isOpen ? "open" : ""}`} id="hamburgerBtn" onClick={() => setIsOpen(!isOpen)}>
             <span></span>
             <span></span>
             <span></span>
@@ -41,7 +47,7 @@ const Navbar = ({ user }) => {
             <li><Link to="/">Home</Link></li>
             <li><Link to="/ai-tutor">AI Tutor</Link></li>
             <li><Link to="/custom-quiz">Quiz</Link></li>
-            <li><Link to="#/flashcards">Flashcards</Link></li>
+            <li><Link to="/flashcards">Flashcards</Link></li>
             <li className="theme-toggle-wrapper">
               <button 
                 className="theme-toggle-btn" 
