@@ -8,3 +8,4 @@ db.sqlite3
 # Legacy setup files with hardcoded passwords
 setup_postgres.sql
 setup_postgres.bat
+test_chatbot_fixes.py
