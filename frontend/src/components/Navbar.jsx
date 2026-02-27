@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
@@ -6,11 +6,25 @@ import "../App.css";
 
 const Navbar = ({ user }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const { isAuthenticated, user: authUser } = useAuth();
 
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 50) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
-    <header className="main-header">
+    <header className={`main-header ${isScrolled ? 'scrolled' : ''}`}>
       <div className="container header-container">
         <Link to="/" className="logo">
           <img src="/assets/lamla_logo.png" alt="Lamla AI Logo" className="logo-img" />

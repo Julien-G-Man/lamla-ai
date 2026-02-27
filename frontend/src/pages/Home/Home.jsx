@@ -225,71 +225,33 @@ const Home = ({ user }) => {
             </div>
         </section>
 
-        {/* About/Principles Section */}
+        {/* About Section - Image Left, Text Right */}
         <section id="principles" className="principles-section">
             <div className="container">
-                <div className="section-header principles-header">
-                    <h2>About <span className="brand-highlight">Lamla AI</span></h2>
-                    <p className="section-intro">
-                        A smart exam preparation platform designed to help you study with intention, not panic. 
-                        We replace guesswork with guided, personalized study by combining AI-generated quizzes, real-time feedback, and performance insights.
-                    </p>
-                </div>
-
                 {isVisible.principles && (
                   <div className="principles-grid">
-                    {/* Mission */}
-                    <div className="principle-card mission-card">
-                      <div className="principle-icon">🎯</div>
-                      <h3>Our Mission</h3>
-                      <p>To empower students to learn deeply, track their understanding, and focus on what matters most across their academic journey.</p>
-                      <ul className="principle-list">
-                        <li><i className="fas fa-check-circle"></i> Replace guesswork with guided study</li>
-                        <li><i className="fas fa-check-circle"></i> Assess knowledge and strengthen weak areas</li>
-                        <li><i className="fas fa-check-circle"></i> Build mastery through active recall</li>
-                        <li><i className="fas fa-check-circle"></i> Prepare with intention, not panic</li>
-                      </ul>
+                    {/* Image Card - Left */}
+                    <div className="principle-card">
+                      <img 
+                        src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Screenshot%202026-02-27%20121446-oxg1xAA2KtzNtZuRzaoad3Lpjjmzxr.png" 
+                        alt="Excellence in Science Education" 
+                      />
+                      <div className="principle-icon">Excellence in Science</div>
                     </div>
 
-                    {/* Vision */}
-                    <div className="principle-card vision-card">
-                      <div className="principle-icon">🚀</div>
-                      <h3>Our Vision</h3>
-                      <p>To redefine academic readiness by making purposeful, AI-powered study accessible to every student globally.</p>
-                      <ul className="principle-list">
-                        <li><i className="fas fa-check-circle"></i> Enable students to prepare smarter</li>
-                        <li><i className="fas fa-check-circle"></i> Support mastery, not just survival</li>
-                        <li><i className="fas fa-check-circle"></i> Scale globally with accessible tools</li>
-                        <li><i className="fas fa-check-circle"></i> Transform how students prepare</li>
-                      </ul>
-                    </div>
-
-                    {/* Values */}
-                    <div className="principle-card values-card">
-                      <div className="principle-icon">🧭</div>
-                      <h3>Our Values</h3>
-                      <p>We're committed to clarity, growth, focus, and integrity in every aspect of what we build.</p>
-                      <ul className="principle-list">
-                        <li><i className="fas fa-check-circle"></i> Clarity over confusion</li>
-                        <li><i className="fas fa-check-circle"></i> Growth over shortcuts</li>
-                        <li><i className="fas fa-check-circle"></i> Focus over panic</li>
-                        <li><i className="fas fa-check-circle"></i> Integrity above all else</li>
-                      </ul>
+                    {/* Text Content - Right */}
+                    <div className="principle-card">
+                      <h3>Excellence in Science Education & Research</h3>
+                      <p>The College of Science at Kwame Nkrumah University of Science and Technology (KNUST) has been at the forefront of scientific education and research in Ghana since its establishment.</p>
+                      <p>Our commitment to academic excellence and innovation has produced generations of scientists, researchers, and industry leaders who are making a global impact.</p>
+                      <p>With state-of-the-art facilities, world-class faculty, and a vibrant research ecosystem, we provide students with the tools and opportunities to explore, discover, and innovate.</p>
+                      <div className="hero-btns">
+                        <a href="#read-more" className="hero-btn primary">Read More About Us →</a>
+                        <a href="#research" className="hero-btn secondary">Our Research</a>
+                      </div>
                     </div>
                   </div>
                 )}
-
-                <div className="cta-section">
-                    <h2>Study Smarter. <span className="brand-highlight">Perform Better.</span></h2>
-                    <p>Join students who are preparing with purpose, not panic.</p>
-                    <div className="hero-btns">
-                      {!user ? (
-                        <a href="#/account/signup" className="hero-btn primary">Get Started Free</a>
-                      ) : (
-                        <a href="/custom-quiz" className="hero-btn primary">Start Practicing</a>
-                      )}
-                    </div>
-                </div>
             </div>
         </section>
 
