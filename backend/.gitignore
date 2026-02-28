@@ -5,7 +5,7 @@ fastapi_service/fastenv/
 .cache_ggshield
 db.sqlite3
 
-# Legacy setup files with hardcoded passwords
+# Legacy setup files 
 setup_postgres.sql
 setup_postgres.bat
 test_chatbot_fixes.py
