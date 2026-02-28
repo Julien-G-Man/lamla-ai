@@ -1,14 +1,20 @@
 import axios from "axios";
 
-const DJANGO_API_URL = process.env.REACT_APP_DJANGO_API_URL; // Django API endpoint 
-const FASTAPI_URL = process.env.REACT_APP_FASTAPI_URL;
+const DJANGO_API_URL =
+  process.env.REACT_APP_DJANGO_API_URL || process.env.VITE_DJANGO_API_URL;
+const FASTAPI_URL =
+  process.env.REACT_APP_FASTAPI_URL || process.env.VITE_FASTAPI_URL;
 
 if (!DJANGO_API_URL) {
-  throw new Error("VITE_DJANGO_API_URL is not defined");
+  throw new Error(
+    "Missing API URL: set REACT_APP_DJANGO_API_URL (or VITE_DJANGO_API_URL)"
+  );
 }
 
 if (!FASTAPI_URL) {
-  throw new Error("VITE_FASTAPI_URL is not defined");
+  throw new Error(
+    "Missing API URL: set REACT_APP_FASTAPI_URL (or VITE_FASTAPI_URL)"
+  );
 }
 
 const DJANGO_ROOT_URL = DJANGO_API_URL.replace(/\/api\/?$/, ""); // strip /api 
