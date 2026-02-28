@@ -22,7 +22,6 @@ load_dotenv()
 env = environ.Env()
 env.read_env()
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY')
@@ -39,7 +38,7 @@ ALLOWED_HOSTS = [
     "https://lamla-ai.netlify.app"
 ]
 
-RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+RENDER_EXTERNAL_HOSTNAME = os.getenv('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
@@ -55,6 +54,7 @@ INSTALLED_APPS = [
     
     # third party
     'rest_framework',
+    'rest_framework.authtoken',
     'channels',
     'corsheaders',
     
@@ -117,6 +117,19 @@ if DB_SSL_REQUIRE:
     DATABASES['default']['OPTIONS']['sslmode'] = 'require'
 
 
+AUTH_USER_MODEL = "accounts.User"
+
+# Add Token authentication to REST framework
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.TokenAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+    # Return clean 401s instead of redirecting to login page
+    "UNAUTHENTICATED_USER": None,
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -167,6 +180,8 @@ SEARCH_ENGINE_ID=""
 SEARCH_TIMEOUT_SECONDS=5
 
 SERPAPI_API_KEY = os.getenv("SERPAPI_API_KEY")
+
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
 
 # Auth emails (confirmations, password resets)
 AUTH_EMAIL_HOST_USER = os.getenv("AUTH_EMAIL_HOST_USER")
