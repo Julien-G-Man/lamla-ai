@@ -23,9 +23,9 @@ const Flashcards = () => {
   const { isAuthenticated } = useAuth();
 
   useEffect(() => {
-    // if (!isAuthenticated) {
-    //   navigate('/auth/login');
-    // }
+    if (!isAuthenticated) {
+       navigate('/auth/login');
+     }
   }, [isAuthenticated, navigate]);
 
   const [uploadState, setUploadState] = useState('idle');

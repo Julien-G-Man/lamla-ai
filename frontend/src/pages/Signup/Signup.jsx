@@ -25,8 +25,7 @@ const BRAND_FEATURES = [
 ];
 
 const validate = (fields) => ({
-  firstNameOk: fields.first_name.trim().length > 0,
-  lastNameOk:  fields.last_name.trim().length > 0,
+  userNameOk: fields.username.trim().length > 0,
   emailOk:     EMAIL_RE.test(fields.email),
   lengthOk:    fields.password.length >= 8,
   matchOk:     fields.password !== '' && fields.password === fields.confirmPassword,
@@ -34,7 +33,7 @@ const validate = (fields) => ({
 
 const Signup = () => {
   const [fields, setFields] = useState({
-    first_name: '', last_name: '', email: '', password: '', confirmPassword: '',
+    username: '', email: '', password: '', confirmPassword: '',
   });
   const [showPw,        setShowPw]        = useState(false);
   const [showConfirmPw, setShowConfirmPw] = useState(false);
@@ -45,10 +44,10 @@ const Signup = () => {
   const { signup } = useAuth();
 
   const v         = validate(fields);
-  const formValid = v.firstNameOk && v.lastNameOk && v.emailOk && v.lengthOk && v.matchOk;
+  const formValid = v.userNameOk && v.emailOk && v.lengthOk && v.matchOk;
 
   const progressStep =
-    (v.firstNameOk && v.lastNameOk ? 1 : 0) +
+    (v.userNameOk ? 1 : 0) +
     (v.emailOk ? 1 : 0) +
     (v.lengthOk && v.matchOk ? 1 : 0);
 
@@ -66,7 +65,7 @@ const Signup = () => {
     }
     setIsLoading(true);
     try {
-      await signup(fields.email.trim(), fields.password, fields.first_name.trim(), fields.last_name.trim());
+      await signup(fields.email.trim(), fields.password, fields.username.trim());
       navigate('/dashboard');
     } catch (err) {
       const msg =
@@ -137,7 +136,7 @@ const Signup = () => {
 
           <div className="auth-form-header">
             <h1>Create your account</h1>
-            <p>Join thousands of students studying smarter with Lamla AI.</p>
+            <p>Join hundreds of students studying smarter with Lamla AI.</p>
           </div>
 
           {error && (
@@ -151,40 +150,21 @@ const Signup = () => {
 
             <div className="auth-name-row">
               <div className="auth-field">
-                <label htmlFor="signup-first-name">First name</label>
+                <label htmlFor="signup-username">Username</label>
                 <div className="auth-input-wrap">
                   <FontAwesomeIcon icon={faUser} className="auth-input-icon" />
                   <input
-                    id="signup-first-name"
-                    name="first_name"
+                    id="signup-username"
+                    name="username"
                     type="text"
-                    placeholder="John"
-                    value={fields.first_name}
+                    placeholder="Brilla"
+                    value={fields.username}
                     onChange={handleChange}
-                    autoComplete="given-name"
+                    autoComplete="username"
                     disabled={isLoading}
                     required
                   />
-                  {v.firstNameOk && <FontAwesomeIcon icon={faCheckCircle} className="auth-input-check" />}
-                </div>
-              </div>
-
-              <div className="auth-field">
-                <label htmlFor="signup-last-name">Last name</label>
-                <div className="auth-input-wrap">
-                  <FontAwesomeIcon icon={faUser} className="auth-input-icon" />
-                  <input
-                    id="signup-last-name"
-                    name="last_name"
-                    type="text"
-                    placeholder="Doe"
-                    value={fields.last_name}
-                    onChange={handleChange}
-                    autoComplete="family-name"
-                    disabled={isLoading}
-                    required
-                  />
-                  {v.lastNameOk && <FontAwesomeIcon icon={faCheckCircle} className="auth-input-check" />}
+                  {v.userNameOk && <FontAwesomeIcon icon={faCheckCircle} className="auth-input-check" />}
                 </div>
               </div>
             </div>

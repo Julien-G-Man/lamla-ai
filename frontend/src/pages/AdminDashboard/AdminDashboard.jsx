@@ -43,7 +43,7 @@ const AdminDashboard = () => {
         <aside className="admin-sidebar">
           <div className="admin-user">
             <div className="admin-avatar">
-              {user?.first_name?.[0]}{user?.last_name?.[0]}
+              {user?.username?.[0]}
             </div>
             <h3>Admin Panel</h3>
             <p>{user?.email}</p>

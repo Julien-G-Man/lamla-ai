@@ -22,13 +22,12 @@ authApi.interceptors.request.use((config) => {
 // Auth API endpoints
 export const authService = {
   // User signup
-  signup: async (email, password, first_name, last_name) => {
+  signup: async (email, password, username) => {
     try {
       const response = await authApi.post("/auth/signup/", {
         email,
         password,
-        first_name,
-        last_name,
+        username,
       });
       return response.data;
     } catch (error) {
@@ -111,11 +110,10 @@ export const authService = {
   },
 
   // Update user profile
-  updateProfile: async (first_name, last_name, email) => {
+  updateProfile: async (username, email) => {
     try {
       const response = await authApi.post("/auth/update-profile/", {
-        first_name,
-        last_name,
+        username,
         email,
       });
       

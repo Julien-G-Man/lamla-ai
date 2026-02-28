@@ -14,6 +14,7 @@ import Quiz from "./pages/Quiz/Quiz";
 import QuizResults from "./pages/QuizResults/QuizResults";
 import Flashcards from "./pages/Flashcards/Flashcards";
 import Chatbot from "./pages/Chatbot/Chatbot";
+import Profile from "./pages/UserProfile/Profile";
 import NotFound from "./pages/NotFound/NotFound";
 
 function App() {
@@ -39,13 +40,16 @@ function App() {
             <Route path="/auth/login"  element={<Login />} />
             <Route path="/auth/signup" element={<Signup />} />
 
-            {/* Legacy redirects — keeps old bookmarks working */}
+            {/* Legacy redirects */}
             <Route path="/login"  element={<Navigate to="/auth/login"  replace />} />
             <Route path="/signup" element={<Navigate to="/auth/signup" replace />} />
 
             {/* Protected */}
             <Route path="/dashboard"       element={<Dashboard />} />
             <Route path="/admin-dashboard" element={<AdminDashboard />} />
+            <Route path="/profile"         element={<Profile />} />
+
+            {/* General*/}
             <Route path="/custom-quiz"     element={<CustomQuiz />} />
             <Route path="/quiz"            element={<Quiz />} />
             <Route path="/quiz/results"    element={<QuizResults />} />

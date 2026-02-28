@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -19,7 +19,7 @@ import './Dashboard.css';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, logout, getUserRole } = useAuth();
+  const { user, isAuthenticated, isLoading, logout, getUserRole } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   
   const stats = {
@@ -30,17 +30,19 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isLoading && !isAuthenticated) {
       navigate('/login');
       return;
     }
 
-    // Check if user is admin - redirect to admin dashboard
-    const role = getUserRole();
-    if (role === 'admin') {
-      navigate('/admin-dashboard');
+    if (isAuthenticated) {
+      // Check if user is admin - redirect to admin dashboard
+      const role = getUserRole();
+      if (role === 'admin') {
+        navigate('/admin-dashboard');
+      }
     }
-  }, [isAuthenticated, navigate, getUserRole]);
+  }, [isLoading, isAuthenticated, navigate, getUserRole]);
 
   const handleLogout = async () => {
     await logout();
@@ -55,9 +57,9 @@ const Dashboard = () => {
         <aside className="dashboard-sidebar">
           <div className="sidebar-user">
             <div className="user-avatar">
-              {user?.first_name?.[0]}{user?.last_name?.[0]}
+              {user?.username?.[0]}
             </div>
-            <h3>{user?.first_name} {user?.last_name}</h3>
+            <h3>{user?.username}</h3>
             <p>{user?.email}</p>
           </div>
 
@@ -299,30 +301,14 @@ const Dashboard = () => {
               <div className="profile-section">
                 <div className="profile-avatar-section">
                   <div className="profile-avatar">
-                    {user?.first_name?.[0]}{user?.last_name?.[0]}
+                    {user?.username?.[0]}
                   </div>
                   <button className="change-avatar-btn">Change Photo</button>
                 </div>
-
-                <form className="profile-form">
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>First Name</label>
-                      <input type="text" defaultValue={user?.first_name} />
-                    </div>
-                    <div className="form-group">
-                      <label>Last Name</label>
-                      <input type="text" defaultValue={user?.last_name} />
-                    </div>
-                  </div>
-
-                  <div className="form-group">
-                    <label>Email</label>
-                    <input type="email" defaultValue={user?.email} />
-                  </div>
-
-                  <button type="submit" className="save-btn">Save Changes</button>
-                </form>
+                <div className="profile-cta">
+                  <p>Manage your full account settings on your profile page.</p>
+                  <button className="btn btn-primary" onClick={() => navigate('/profile')}>Open Profile</button>
+                </div>
               </div>
             </div>
           )}

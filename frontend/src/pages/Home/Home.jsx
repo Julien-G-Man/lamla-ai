@@ -63,7 +63,7 @@ const Home = ({ user }) => {
 
             <div className="hero-btns">
               {!user ? (
-                <a href="#/account/signup" className="hero-btn primary">Get Started Free</a>
+                <a href="/auth/signup" className="hero-btn primary">Get Started Free</a>
               ) : (
                 <a href="/custom-quiz" className="hero-btn primary">Start Practicing</a>
               )}
@@ -173,7 +173,7 @@ const Home = ({ user }) => {
                   </div>
                 </a>
 
-                <a href="#/exam-analyzer" className="feature-card">
+                <a href="/#exam-analyzer" className="feature-card">
                   <div className="feature-image">
                     <img src="/assets/uni_exams.jpg" alt="Exam Analyzer" />
                   </div>
@@ -184,7 +184,7 @@ const Home = ({ user }) => {
                   </div>
                 </a>
 
-                <a href="#/dashboard" className="feature-card">
+                <a href="/dashboard" className="feature-card">
                   <div className="feature-image">
                     <img src="/assets/improve-performance.jpg" alt="Performance Analytics" />
                   </div>

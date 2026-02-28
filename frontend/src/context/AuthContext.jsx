@@ -54,10 +54,10 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const signup = async (email, password, first_name, last_name) => {
+  const signup = async (email, password, username) => {
     setIsLoading(true);
     try {
-      const response = await authService.signup(email, password, first_name, last_name);
+      const response = await authService.signup(email, password, username);
       setUser(response.user);
       setIsAuthenticated(true);
       return response;
@@ -82,9 +82,9 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const updateProfile = async (first_name, last_name, email) => {
+  const updateProfile = async (username, email) => {
     try {
-      const response = await authService.updateProfile(first_name, last_name, email);
+      const response = await authService.updateProfile(username, email);
       setUser(response.user);
       return response;
     } catch (error) {
