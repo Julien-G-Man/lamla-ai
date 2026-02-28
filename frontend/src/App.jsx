@@ -41,6 +41,7 @@ function App() {
             <Route path="/auth/signup" element={<Signup />} />
 
             {/* Legacy redirects */}
+            <Route path="/auth"  element={<Navigate to="/auth/login"  replace />} />
             <Route path="/login"  element={<Navigate to="/auth/login"  replace />} />
             <Route path="/signup" element={<Navigate to="/auth/signup" replace />} />
 
