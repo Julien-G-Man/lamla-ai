@@ -41,7 +41,7 @@ const Login = () => {
 
     setIsLoading(true);
     try {
-      const response = await login(email.trim(), password);
+      const response = await login(email.trim().toLowerCase(), password);
       const isAdmin  = response?.user?.is_admin;
       navigate(isAdmin ? '/admin-dashboard' : '/dashboard');
     } catch (err) {

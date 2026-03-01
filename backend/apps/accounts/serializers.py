@@ -1,3 +1,4 @@
+import logging
 from django.contrib.auth import authenticate, password_validation
 from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import ValidationError
@@ -8,6 +9,7 @@ from rest_framework import serializers
 
 from .models import User
 
+logger = logging.getLogger(__name__)
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -69,6 +71,7 @@ class LoginSerializer(serializers.Serializer):
     def validate(self, data):
         email    = data.get("email", "").strip().lower()
         password = data.get("password", "")
+        logger.debug("Login attempt for email=%s password=%s", email, "****")
 
         if not email or not password:
             raise serializers.ValidationError("Both email and password are required.")

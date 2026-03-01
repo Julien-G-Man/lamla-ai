@@ -162,6 +162,8 @@ USE_TZ = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+SITE_NAME="Lamla AI"
+
 FASTAPI_BASE_URL = os.getenv("FASTAPI_BASE_URL", "http://localhost:8001")
 FASTAPI_SECRET = os.getenv("FASTAPI_SECRET")
 
@@ -181,6 +183,11 @@ SERPAPI_API_KEY = os.getenv("SERPAPI_API_KEY")
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
 
 # Auth emails (confirmations, password resets)
+EMAIL_BACKEND_TYPE = os.getenv("EMAIL_BACKEND_TYPE")   # "smtp" or "mailjet"
+SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
+MAILJET_API_KEY_PUBLIC = os.getenv("MAILJET_API_KEY_PUBLIC")
+MAILJET_API_SECRET_KEY = os.getenv("MAILJET_API_SECRET_KEY")
+
 AUTH_EMAIL_HOST_USER = os.getenv("AUTH_EMAIL_HOST_USER")
 AUTH_EMAIL_HOST_PASSWORD = os.getenv("AUTH_EMAIL_HOST_PASSWORD")
 
@@ -192,7 +199,8 @@ WELCOME_EMAIL_HOST_PASSWORD = os.getenv("WELCOME_EMAIL_HOST_PASSWORD")
 
 
 if not DEBUG:
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    pass
+    #EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 

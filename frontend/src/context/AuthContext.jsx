@@ -1,13 +1,12 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authService } from '../services/auth';
+// src/context/AuthContext.js
+import React, { createContext, useContext, useState, useEffect } from "react";
+import authService from "../services/auth";
 
 const AuthContext = createContext();
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
+  if (!context) throw new Error("useAuth must be used within AuthProvider");
   return context;
 };
 
@@ -18,50 +17,47 @@ export const AuthProvider = ({ children }) => {
 
   // Rehydrate auth state on mount
   useEffect(() => {
-    const initializeAuth = () => {
-      const token      = localStorage.getItem('auth_token');
-      const storedUser = localStorage.getItem('user');
+    const storedUser = authService.getCurrentUser();
+    const token = localStorage.getItem("auth_token");
 
-      if (token && storedUser) {
-        try {
-          setUser(JSON.parse(storedUser));
-          setIsAuthenticated(true);
-        } catch {
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('user');
-        }
-      }
-      setIsLoading(false);
-    };
-    initializeAuth();
+    if (storedUser && token) {
+      setUser(storedUser);
+      setIsAuthenticated(true);
+    } else {
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("user");
+    }
+
+    setIsLoading(false);
   }, []);
+
+  // ── Auth actions ───────────────────────────────────────────────────────────
 
   const login = async (email, password) => {
     setIsLoading(true);
     try {
-      const response = await authService.login(email, password);
-      setUser(response.user);
+      const { user } = await authService.login(email, password);
+      setUser(user);
       setIsAuthenticated(true);
-      return response;
-    } catch (error) {
+      return { user };
+    } catch (err) {
       setIsAuthenticated(false);
-      throw error;
+      throw err;
     } finally {
       setIsLoading(false);
     }
   };
 
-  // AuthContext.signup(email, password, username)
   const signup = async (email, password, username) => {
     setIsLoading(true);
     try {
-      const response = await authService.signup(email, password, username);
-      setUser(response.user);
+      const { user } = await authService.signup(email, password, username);
+      setUser(user);
       setIsAuthenticated(true);
-      return response;
-    } catch (error) {
+      return { user };
+    } catch (err) {
       setIsAuthenticated(false);
-      throw error;
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -71,8 +67,6 @@ export const AuthProvider = ({ children }) => {
     setIsLoading(true);
     try {
       await authService.logout();
-    } catch (error) {
-      console.error('Logout error:', error);
     } finally {
       setUser(null);
       setIsAuthenticated(false);
@@ -80,27 +74,25 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Called by the VerifyEmail page after a successful /auth/verify-email/ POST
   const markEmailVerified = (updatedUser) => {
     setUser(updatedUser);
-    localStorage.setItem('user', JSON.stringify(updatedUser));
+    localStorage.setItem("user", JSON.stringify(updatedUser));
   };
 
-  // Called by the resend-verification banner button
   const resendVerificationEmail = async () => {
     return authService.resendVerificationEmail();
   };
 
   const updateProfile = async (username, email) => {
-    const response = await authService.updateProfile(username, email);
-    setUser(response.user);
-    return response;
+    const { user } = await authService.updateProfile(username, email);
+    setUser(user);
+    return { user };
   };
 
   const uploadProfileImage = async (file) => {
-    const response = await authService.uploadProfileImage(file);
-    setUser(response.user);
-    return response;
+    const { user } = await authService.uploadProfileImage(file);
+    setUser(user);
+    return { user };
   };
 
   const changePassword = async (old_password, new_password) => {
@@ -109,14 +101,14 @@ export const AuthProvider = ({ children }) => {
 
   const getUserRole = () => {
     if (!user) return null;
-    return user.is_admin ? 'admin' : 'user';
+    return user.is_admin ? "admin" : "user";
   };
 
+  // ── Context value ─────────────────────────────────────────────────────────
   const value = {
     user,
     isLoading,
     isAuthenticated,
-    // Derived convenience flag — use this to show/hide the verification banner
     isEmailVerified: user?.is_email_verified ?? false,
     login,
     signup,
@@ -129,9 +121,5 @@ export const AuthProvider = ({ children }) => {
     getUserRole,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

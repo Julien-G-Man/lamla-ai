@@ -1,12 +1,5 @@
-"""
-accounts/services.py
-
-All email-sending logic lives here — views stay thin.
-Uses Django's built-in email tools (no third-party libraries).
-"""
-
 import logging
-
+import requests
 from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import EmailMultiAlternatives
@@ -18,69 +11,73 @@ logger = logging.getLogger(__name__)
 
 
 def _get_uid(user) -> str:
-    """URL-safe base64-encoded user PK."""
     return urlsafe_base64_encode(force_bytes(user.pk))
 
 
 def _get_token(user) -> str:
-    """One-time token tied to the user's current password hash + last_login."""
     return default_token_generator.make_token(user)
 
 
-def _send_email(subject: str, to_email: str, text_body: str, html_body: str) -> None:
-    """Low-level helper — send a plain+HTML email."""
-    msg = EmailMultiAlternatives(
-        subject=subject,
-        body=text_body,
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        to=[to_email],
-        reply_to=[settings.DEFAULT_FROM_EMAIL],
-    )
-    msg.attach_alternative(html_body, "text/html")
-    msg.send()
-
-
-def send_templated_email(
-    *,
-    subject: str,
-    to_email: str,
-    template_prefix: str,
-    context: dict,
-) -> None:
+def _send_email(subject: str, to_email: str, html_body: str, text_body: str = None) -> None:
     """
-    Generic helper for sending templated emails.
-
-    template_prefix example:
-        accounts/emails/verification_email
-
-    This will render:
-        accounts/emails/verification_email.txt
-        accounts/emails/verification_email.html
+    Sends email via selected backend:
+    - mailjet (production)
+    - smtp (development)
     """
+    backend_type = getattr(settings, "EMAIL_BACKEND_TYPE", "smtp").lower()
+    text_body = text_body or html_body
 
+    if backend_type == "mailjet":
+        api_key = getattr(settings, "MAILJET_API_KEY_PUBLIC", None)
+        secret = getattr(settings, "MAILJET_API_SECRET_KEY", None)
+        if not api_key or not secret:
+            raise ValueError("Mailjet API keys not set in environment.")
+
+        data = {
+            "Messages": [
+                {
+                    "From": {"Email": settings.DEFAULT_FROM_EMAIL.split('<')[-1].strip('>'), "Name": settings.SITE_NAME},
+                    "To": [{"Email": to_email}],
+                    "Subject": subject,
+                    "TextPart": text_body,
+                    "HTMLPart": html_body,
+                }
+            ]
+        }
+
+        try:
+            resp = requests.post(
+                "https://api.mailjet.com/v3.1/send",
+                json=data,
+                auth=(api_key, secret),
+                timeout=10,
+            )
+            resp.raise_for_status()
+            logger.info("Mailjet: Sent email to %s", to_email)
+        except Exception as e:
+            logger.exception("Mailjet failed to send email: %s", e)
+            raise
+
+    else:
+        # Local/Smtp fallback
+        try:
+            msg = EmailMultiAlternatives(subject, text_body, settings.DEFAULT_FROM_EMAIL, [to_email])
+            msg.attach_alternative(html_body, "text/html")
+            msg.send()
+            logger.info("SMTP: Sent email to %s", to_email)
+        except Exception as e:
+            logger.exception("SMTP failed to send email: %s", e)
+            raise
+
+
+def send_templated_email(*, subject: str, to_email: str, template_prefix: str, context: dict) -> None:
     text_body = render_to_string(f"{template_prefix}.txt", context)
     html_body = render_to_string(f"{template_prefix}.html", context)
 
-    _send_email(
-        subject=subject,
-        to_email=to_email,
-        text_body=text_body,
-        html_body=html_body,
-    )
+    _send_email(subject=subject, to_email=to_email, html_body=html_body, text_body=text_body)
 
-
-# ── Email Verification ────────────────────────────────────────────────────────
 
 def send_verification_email(user) -> None:
-    """
-    Send an account-verification email to `user`.
-    The link points at the React frontend, which then POSTs uid+token to the API.
-
-    Template paths:
-        accounts/emails/verification_email.txt
-        accounts/emails/verification_email.html
-    """
-
     uid = _get_uid(user)
     token = _get_token(user)
 
@@ -92,7 +89,6 @@ def send_verification_email(user) -> None:
         "verify_link": verify_link,
         "site_name": getattr(settings, "SITE_NAME", "Lamla AI"),
     }
-
     try:
         send_templated_email(
             subject=f"Verify your email – {context['site_name']}",
@@ -100,25 +96,11 @@ def send_verification_email(user) -> None:
             template_prefix="accounts/emails/verification_email",
             context=context,
         )
-
-        logger.info("Verification email sent to %s", user.email)
-
     except Exception:
-        # Log but don't crash signup — user can request a resend
         logger.exception("Failed to send verification email to %s", user.email)
 
 
-# ── Password Reset ────────────────────────────────────────────────────────────
-
 def send_password_reset_email(user) -> None:
-    """
-    Send a password-reset email to `user`.
-
-    Template paths:
-        accounts/emails/password_reset_email.txt
-        accounts/emails/password_reset_email.html
-    """
-
     uid = _get_uid(user)
     token = _get_token(user)
 
@@ -130,7 +112,6 @@ def send_password_reset_email(user) -> None:
         "reset_link": reset_link,
         "site_name": getattr(settings, "SITE_NAME", "Lamla AI"),
     }
-
     try:
         send_templated_email(
             subject=f"Reset your password – {context['site_name']}",
@@ -138,8 +119,5 @@ def send_password_reset_email(user) -> None:
             template_prefix="accounts/emails/password_reset_email",
             context=context,
         )
-
-        logger.info("Password reset email sent to %s", user.email)
-
     except Exception:
         logger.exception("Failed to send password reset email to %s", user.email)

@@ -1,59 +1,70 @@
+// src/services/auth.js
 import axios from "axios";
 
-const DJANGO_API_URL =
-  process.env.REACT_APP_DJANGO_API_URL || process.env.VITE_DJANGO_API_URL;
+const API_URL = process.env.REACT_APP_DJANGO_API_URL || process.env.VITE_DJANGO_API_URL;
 
-if (!DJANGO_API_URL) {
+if (!API_URL) {
   throw new Error(
-    "Missing API URL: set REACT_APP_DJANGO_API_URL (or VITE_DJANGO_API_URL)"
+    "Missing API URL: set REACT_APP_DJANGO_API_URL or VITE_DJANGO_API_URL"
   );
 }
 
 const authApi = axios.create({
-  baseURL: DJANGO_API_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
-  withCredentials: true,
+  baseURL: API_URL,
+  headers: { "Content-Type": "application/json" },
+  withCredentials: true, // for cookies if using DRF auth
 });
 
-// Attach token to every request if available
+// Request interceptor: attach token if present
 authApi.interceptors.request.use((config) => {
   const token = localStorage.getItem("auth_token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
+
+// Centralized error parser
+const parseError = (error) => {
+  if (!error) return "An unknown error occurred.";
+  return (
+    error.response?.data?.detail ||
+    error.response?.data?.non_field_errors?.[0] ||
+    error.response?.data?.message ||
+    error.message ||
+    "An unexpected error occurred."
+  );
+};
 
 export const authService = {
   // ── Signup ────────────────────────────────────────────────────────────────
   signup: async (email, password, username) => {
     try {
       const response = await authApi.post("/auth/signup/", {
-        email,
+        email: email.trim().toLowerCase(),
         password,
-        username,
+        username: username.trim(),
       });
       const { token, user } = response.data;
       if (token) localStorage.setItem("auth_token", token);
-      if (user)  localStorage.setItem("user", JSON.stringify(user));
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
+      if (user) localStorage.setItem("user", JSON.stringify(user));
+      return { token, user };
+    } catch (err) {
+      throw parseError(err);
     }
   },
 
   // ── Login ─────────────────────────────────────────────────────────────────
   login: async (email, password) => {
     try {
-      const response = await authApi.post("/auth/login/", { email, password });
+      const response = await authApi.post("/auth/login/", {
+        email: email.trim().toLowerCase(),
+        password,
+      });
       const { token, user } = response.data;
       if (token) localStorage.setItem("auth_token", token);
-      if (user)  localStorage.setItem("user", JSON.stringify(user));
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
+      if (user) localStorage.setItem("user", JSON.stringify(user));
+      return { token, user };
+    } catch (err) {
+      throw parseError(err);
     }
   },
 
@@ -61,8 +72,8 @@ export const authService = {
   logout: async () => {
     try {
       await authApi.post("/auth/logout/");
-    } catch (error) {
-      console.error("Logout error:", error);
+    } catch (err) {
+      console.error("Logout error:", parseError(err));
     } finally {
       localStorage.removeItem("auth_token");
       localStorage.removeItem("user");
@@ -73,13 +84,11 @@ export const authService = {
   verifyEmail: async (uid, token) => {
     try {
       const response = await authApi.post("/auth/verify-email/", { uid, token });
-      // Update stored user so the banner disappears immediately
-      if (response.data.user) {
+      if (response.data.user)
         localStorage.setItem("user", JSON.stringify(response.data.user));
-      }
       return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
+    } catch (err) {
+      throw parseError(err);
     }
   },
 
@@ -87,8 +96,50 @@ export const authService = {
     try {
       const response = await authApi.post("/auth/resend-verification/");
       return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
+    } catch (err) {
+      throw parseError(err);
+    }
+  },
+
+  // ── Profile / Password ───────────────────────────────────────────────────
+  updateProfile: async (username, email) => {
+    try {
+      const response = await authApi.post("/auth/update-profile/", {
+        username: username.trim(),
+        email: email.trim().toLowerCase(),
+      });
+      if (response.data.user)
+        localStorage.setItem("user", JSON.stringify(response.data.user));
+      return response.data;
+    } catch (err) {
+      throw parseError(err);
+    }
+  },
+
+  uploadProfileImage: async (file) => {
+    try {
+      const formData = new FormData();
+      formData.append("profile_image", file);
+      const response = await authApi.post("/auth/upload-profile-image/", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      if (response.data.user)
+        localStorage.setItem("user", JSON.stringify(response.data.user));
+      return response.data;
+    } catch (err) {
+      throw parseError(err);
+    }
+  },
+
+  changePassword: async (old_password, new_password) => {
+    try {
+      const response = await authApi.post("/auth/change-password/", {
+        old_password,
+        new_password,
+      });
+      return response.data;
+    } catch (err) {
+      throw parseError(err);
     }
   },
 
@@ -110,50 +161,6 @@ export const authService = {
       return null;
     }
   },
-
-  // ── Profile ───────────────────────────────────────────────────────────────
-  changePassword: async (old_password, new_password) => {
-    try {
-      const response = await authApi.post("/auth/change-password/", {
-        old_password,
-        new_password,
-      });
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
-    }
-  },
-
-  updateProfile: async (username, email) => {
-    try {
-      const response = await authApi.post("/auth/update-profile/", {
-        username,
-        email,
-      });
-      if (response.data.user) {
-        localStorage.setItem("user", JSON.stringify(response.data.user));
-      }
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
-    }
-  },
-
-  uploadProfileImage: async (file) => {
-    try {
-      const formData = new FormData();
-      formData.append("profile_image", file);
-      const response = await authApi.post("/auth/upload-profile-image/", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      if (response.data.user) {
-        localStorage.setItem("user", JSON.stringify(response.data.user));
-      }
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
-    }
-  },
 };
 
-export default authApi;
+export default authService;
