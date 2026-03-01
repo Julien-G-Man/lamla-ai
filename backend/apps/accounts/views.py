@@ -280,3 +280,11 @@ def _get_client_ip(request) -> str | None:
     if x_forwarded_for:
         return x_forwarded_for.split(",")[0].strip()
     return request.META.get("REMOTE_ADDR")
+
+class DebugUsers(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        from .models import User
+        users = User.objects.all().values("email", "username", "is_email_verified")
+        return Response(list(users))

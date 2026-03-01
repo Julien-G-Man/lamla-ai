@@ -9,6 +9,7 @@ from .views import (
     UpdateProfileView,
     ChangePasswordView,
     UploadProfileImageView,
+    DebugUsers
 )
 
 urlpatterns = [
@@ -28,4 +29,6 @@ urlpatterns = [
     path("auth/update-profile/",       UpdateProfileView.as_view(),       name="auth-update-profile"),
     path("auth/change-password/",      ChangePasswordView.as_view(),      name="auth-change-password"),
     path("auth/upload-profile-image/", UploadProfileImageView.as_view(),  name="auth-upload-image"),
+    path("debug/users", DebugUsers.as_view(), name="debug-users")
+    
 ]
