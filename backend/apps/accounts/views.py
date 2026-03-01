@@ -11,10 +11,13 @@ from rest_framework.views import APIView
 from .serializers import (
     SignupSerializer,
     LoginSerializer,
+    VerifyEmailSerializer,
+    ResendVerificationSerializer,
     UpdateProfileSerializer,
     ChangePasswordSerializer,
     user_to_dict,
 )
+from .services import send_verification_email
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +25,7 @@ logger = logging.getLogger(__name__)
 # ── Signup ────────────────────────────────────────────────────────────────────
 
 class SignupView(APIView):
-    """POST /api/auth/signup/ — public, creates user, returns token + user."""
+    """POST /api/auth/signup/ — public, creates user, sends verification email, returns token + user."""
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -33,6 +36,10 @@ class SignupView(APIView):
         try:
             user     = serializer.save()
             token, _ = Token.objects.get_or_create(user=user)
+
+            # Fire verification email (non-blocking — failure is logged, not raised)
+            send_verification_email(user)
+
             logger.info("New user registered: %s (admin=%s)", user.email, user.is_admin)
             return Response(
                 {"token": token.key, "user": user_to_dict(user)},
@@ -49,7 +56,7 @@ class SignupView(APIView):
 # ── Login ─────────────────────────────────────────────────────────────────────
 
 class LoginView(APIView):
-    """POST /api/auth/login/ — public, returns token + user."""
+    """POST /api/auth/login/ — public, returns token + user (including is_email_verified)."""
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -63,8 +70,10 @@ class LoginView(APIView):
         user     = serializer.validated_data["user"]
         token, _ = Token.objects.get_or_create(user=user)
 
-        user.last_login = timezone.now()
-        user.save(update_fields=["last_login"])
+        # Update last_login and last_login_ip
+        user.last_login    = timezone.now()
+        user.last_login_ip = _get_client_ip(request)
+        user.save(update_fields=["last_login", "last_login_ip"])
 
         logger.info("User logged in: %s (admin=%s)", user.email, user.is_admin)
         return Response(
@@ -96,6 +105,57 @@ class MeView(APIView):
 
     def get(self, request):
         return Response({"user": user_to_dict(request.user)}, status=status.HTTP_200_OK)
+
+
+# ── Email Verification ────────────────────────────────────────────────────────
+
+class VerifyEmailView(APIView):
+    """
+    POST /api/auth/verify-email/
+    Public — React sends uid + token extracted from the link in the verification email.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = VerifyEmailSerializer(data=request.data)
+        if not serializer.is_valid():
+            errors     = serializer.errors
+            non_field  = errors.get("non_field_errors", [])
+            detail     = non_field[0] if non_field else "Verification failed."
+            return Response({"detail": detail}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = serializer.save()
+        logger.info("Email verified for: %s", user.email)
+        return Response(
+            {"detail": "Email verified successfully.", "user": user_to_dict(user)},
+            status=status.HTTP_200_OK,
+        )
+
+
+class ResendVerificationEmailView(APIView):
+    """
+    POST /api/auth/resend-verification/
+    Authenticated — lets unverified users request a new verification email.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = ResendVerificationSerializer(
+            data={}, context={"request": request}
+        )
+        if not serializer.is_valid():
+            errors    = serializer.errors
+            non_field = errors.get("non_field_errors", [])
+            detail    = non_field[0] if non_field else "Could not resend email."
+            return Response({"detail": detail}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = serializer.validated_data["user"]
+        send_verification_email(user)
+        logger.info("Verification email resent to: %s", user.email)
+        return Response(
+            {"detail": "Verification email sent. Please check your inbox."},
+            status=status.HTTP_200_OK,
+        )
 
 
 # ── Update profile ────────────────────────────────────────────────────────────
@@ -210,3 +270,13 @@ class UploadProfileImageView(APIView):
 
         # Local dev placeholder
         return f"/media/profile_images/{user.id}/avatar"
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _get_client_ip(request) -> str | None:
+    """Extract the real client IP, handling proxies."""
+    x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
+    if x_forwarded_for:
+        return x_forwarded_for.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR")

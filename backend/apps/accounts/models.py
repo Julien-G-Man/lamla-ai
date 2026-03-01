@@ -18,6 +18,9 @@ class UserManager(BaseUserManager):
             extra_fields.setdefault("is_admin", True)
             extra_fields.setdefault("is_staff", True)
             extra_fields.setdefault("is_superuser", True)
+            # Auto-verify the admin account
+            extra_fields.setdefault("is_email_verified", True)
+            extra_fields.setdefault("email_verified_at", timezone.now())
         else:
             extra_fields.setdefault("is_admin", False)
 
@@ -30,6 +33,8 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
         extra_fields.setdefault("is_admin", True)
+        extra_fields.setdefault("is_email_verified", True)
+        extra_fields.setdefault("email_verified_at", timezone.now())
 
         if extra_fields.get("is_staff") is not True:
             raise ValueError("Superuser must have is_staff=True.")
@@ -58,6 +63,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff  = models.BooleanField(default=False)
 
     profile_image = models.URLField(blank=True, null=True)
+
+    # Email verification
+    is_email_verified  = models.BooleanField(default=False)
+    email_verified_at  = models.DateTimeField(null=True, blank=True)
+
+    # Audit / security
+    last_login_ip = models.GenericIPAddressField(null=True, blank=True)
 
     date_joined = models.DateTimeField(default=timezone.now)
     last_login  = models.DateTimeField(null=True, blank=True)

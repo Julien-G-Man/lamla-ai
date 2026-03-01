@@ -117,8 +117,6 @@ if DB_SSL_REQUIRE:
     DATABASES['default']['OPTIONS']['sslmode'] = 'require'
 
 
-AUTH_USER_MODEL = "accounts.User"
-
 # Add Token authentication to REST framework
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
@@ -186,9 +184,24 @@ ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
 AUTH_EMAIL_HOST_USER = os.getenv("AUTH_EMAIL_HOST_USER")
 AUTH_EMAIL_HOST_PASSWORD = os.getenv("AUTH_EMAIL_HOST_PASSWORD")
 
+AUTH_USER_MODEL = "accounts.User"
+
 # Welcome and general emails
 WELCOME_EMAIL_HOST_USER = os.getenv("WELCOME_EMAIL_HOST_USER")
 WELCOME_EMAIL_HOST_PASSWORD = os.getenv("WELCOME_EMAIL_HOST_PASSWORD")
+
+
+if not DEBUG:
+    EMAIL_BACKEND = 'django.core.backends.smtp.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = AUTH_EMAIL_HOST_USER
+EMAIL_HOST_PASSWORD = AUTH_EMAIL_HOST_PASSWORD
+
 
 # CORS / CSRF configuration to allow React frontend
 CORS_ALLOWED_ORIGINS = [

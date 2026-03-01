@@ -1,5 +1,9 @@
 from django.contrib.auth import authenticate, password_validation
+from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import ValidationError
+from django.utils import timezone
+from django.utils.encoding import force_str
+from django.utils.http import urlsafe_base64_decode
 from rest_framework import serializers
 
 from .models import User
@@ -10,12 +14,13 @@ from .models import User
 def user_to_dict(user):
     """Minimal safe user payload sent to the frontend."""
     return {
-        "id":            user.id,
-        "email":         user.email,
-        "username":      user.username,
-        "is_admin":      user.is_admin,
-        "profile_image": user.profile_image,
-        "date_joined":   user.date_joined.isoformat(),
+        "id":                user.id,
+        "email":             user.email,
+        "username":          user.username,
+        "is_admin":          user.is_admin,
+        "is_email_verified": user.is_email_verified,
+        "profile_image":     user.profile_image,
+        "date_joined":       user.date_joined.isoformat(),
     }
 
 
@@ -80,6 +85,54 @@ class LoginSerializer(serializers.Serializer):
         if not user.is_active:
             raise serializers.ValidationError("This account has been deactivated.")
 
+        data["user"] = user
+        return data
+
+
+# ── Email Verification ────────────────────────────────────────────────────────
+
+class VerifyEmailSerializer(serializers.Serializer):
+    uid   = serializers.CharField()
+    token = serializers.CharField()
+
+    def validate(self, data):
+        # Decode the uid back to a user PK
+        try:
+            pk   = force_str(urlsafe_base64_decode(data["uid"]))
+            user = User.objects.get(pk=pk)
+        except (User.DoesNotExist, ValueError, TypeError, OverflowError):
+            raise serializers.ValidationError("Invalid or expired verification link.")
+
+        # Validate the token
+        if not default_token_generator.check_token(user, data["token"]):
+            raise serializers.ValidationError("Invalid or expired verification link.")
+
+        if user.is_email_verified:
+            raise serializers.ValidationError("This email has already been verified.")
+
+        data["user"] = user
+        return data
+
+    def save(self):
+        user = self.validated_data["user"]
+        user.is_email_verified = True
+        user.email_verified_at = timezone.now()
+        user.save(update_fields=["is_email_verified", "email_verified_at"])
+        return user
+
+
+# ── Resend Verification Email ─────────────────────────────────────────────────
+
+class ResendVerificationSerializer(serializers.Serializer):
+    """
+    Used by authenticated users who haven't verified yet.
+    No input fields needed — we use request.user from the view.
+    """
+
+    def validate(self, data):
+        user = self.context["request"].user
+        if user.is_email_verified:
+            raise serializers.ValidationError("Your email is already verified.")
         data["user"] = user
         return data
 

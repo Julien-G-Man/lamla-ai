@@ -6,6 +6,8 @@ fastapi_service/fastenv/
 db.sqlite3
 
 # Legacy setup files 
+tests/
 setup_postgres.sql
 setup_postgres.bat
 test_chatbot_fixes.py
+test_bot.py

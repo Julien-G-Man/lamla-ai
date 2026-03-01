@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 origins_env = os.getenv(
     "FASTAPI_ALLOWED_ORIGINS",
-    "http://127.0.0.1:8000, http://localhost:3000, https://lamla-api.onrender.com, https://lamla.vercel.app, https://lamla-fastapi.onrender.com",
+    "http://127.0.0.1:8000, http://localhost:3000, https://lamla-api.onrender.com, https://lamla-ai.vercel.app, https://lamla-fastapi.onrender.com",
 )
 origins = [o.strip() for o in origins_env.split(",") if o.strip()]
 
