@@ -35,7 +35,7 @@ Place the templates at:
 ```
 templates/
   accounts/
-    auth-email-templates/
+    emails/
       verification_email.txt
       verification_email.html
 ```

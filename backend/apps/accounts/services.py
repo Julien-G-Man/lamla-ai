@@ -34,9 +34,39 @@ def _send_email(subject: str, to_email: str, text_body: str, html_body: str) -> 
         body=text_body,
         from_email=settings.DEFAULT_FROM_EMAIL,
         to=[to_email],
+        reply_to=[settings.DEFAULT_FROM_EMAIL],
     )
     msg.attach_alternative(html_body, "text/html")
     msg.send()
+
+
+def send_templated_email(
+    *,
+    subject: str,
+    to_email: str,
+    template_prefix: str,
+    context: dict,
+) -> None:
+    """
+    Generic helper for sending templated emails.
+
+    template_prefix example:
+        accounts/emails/verification_email
+
+    This will render:
+        accounts/emails/verification_email.txt
+        accounts/emails/verification_email.html
+    """
+
+    text_body = render_to_string(f"{template_prefix}.txt", context)
+    html_body = render_to_string(f"{template_prefix}.html", context)
+
+    _send_email(
+        subject=subject,
+        to_email=to_email,
+        text_body=text_body,
+        html_body=html_body,
+    )
 
 
 # ── Email Verification ────────────────────────────────────────────────────────
@@ -47,78 +77,69 @@ def send_verification_email(user) -> None:
     The link points at the React frontend, which then POSTs uid+token to the API.
 
     Template paths:
-        accounts/auth-email-templates/verification_email.txt
-        accounts/auth-email-templates/verification_email.html
+        accounts/emails/verification_email.txt
+        accounts/emails/verification_email.html
     """
-    uid   = _get_uid(user)
+
+    uid = _get_uid(user)
     token = _get_token(user)
 
     frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
-    verify_link  = f"{frontend_url}/verify-email?uid={uid}&token={token}"
+    verify_link = f"{frontend_url}/verify-email?uid={uid}&token={token}"
 
     context = {
-        "user":        user,
+        "user": user,
         "verify_link": verify_link,
-        "site_name":   getattr(settings, "SITE_NAME", "Lamla AI"),
+        "site_name": getattr(settings, "SITE_NAME", "Lamla AI"),
     }
 
-    text_body = render_to_string(
-        "accounts/auth-email-templates/verification_email.txt", context
-    )
-    html_body = render_to_string(
-        "accounts/auth-email-templates/verification_email.html", context
-    )
-
     try:
-        _send_email(
+        send_templated_email(
             subject=f"Verify your email – {context['site_name']}",
             to_email=user.email,
-            text_body=text_body,
-            html_body=html_body,
+            template_prefix="accounts/emails/verification_email",
+            context=context,
         )
+
         logger.info("Verification email sent to %s", user.email)
+
     except Exception:
         # Log but don't crash signup — user can request a resend
         logger.exception("Failed to send verification email to %s", user.email)
 
 
 # ── Password Reset ────────────────────────────────────────────────────────────
-# (Stub — implement when password-reset flow is in scope)
 
 def send_password_reset_email(user) -> None:
     """
     Send a password-reset email to `user`.
 
     Template paths:
-        accounts/auth-email-templates/password_reset_email.txt
-        accounts/auth-email-templates/password_reset_email.html
+        accounts/emails/password_reset_email.txt
+        accounts/emails/password_reset_email.html
     """
-    uid   = _get_uid(user)
+
+    uid = _get_uid(user)
     token = _get_token(user)
 
     frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
-    reset_link   = f"{frontend_url}/reset-password?uid={uid}&token={token}"
+    reset_link = f"{frontend_url}/reset-password?uid={uid}&token={token}"
 
     context = {
-        "user":       user,
+        "user": user,
         "reset_link": reset_link,
-        "site_name":  getattr(settings, "SITE_NAME", "Lamla AI"),
+        "site_name": getattr(settings, "SITE_NAME", "Lamla AI"),
     }
 
-    text_body = render_to_string(
-        "accounts/auth-email-templates/password_reset_email.txt", context
-    )
-    html_body = render_to_string(
-        "accounts/auth-email-templates/password_reset_email.html", context
-    )
-
     try:
-        _send_email(
+        send_templated_email(
             subject=f"Reset your password – {context['site_name']}",
             to_email=user.email,
-            text_body=text_body,
-            html_body=html_body,
+            template_prefix="accounts/emails/password_reset_email",
+            context=context,
         )
+
         logger.info("Password reset email sent to %s", user.email)
+
     except Exception:
         logger.exception("Failed to send password reset email to %s", user.email)
