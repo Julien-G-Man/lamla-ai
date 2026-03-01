@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -11,79 +11,103 @@ import {
   faCheckCircle,
   faTriangleExclamation,
 } from '@fortawesome/free-solid-svg-icons';
-
 import '../Login/Login.css';
-import './Signup.css';
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-const BRAND_FEATURES = [
+// ── Brand-panel feature list ──────────────────────────────────────────────────
+const FEATURES = [
   { icon: '⚡', label: 'AI-powered quiz generation from any document' },
   { icon: '🃏', label: 'Smart flashcards with spaced repetition' },
   { icon: '📊', label: 'Progress analytics & performance insights' },
   { icon: '🤖', label: 'Personal AI tutor, available 24/7' },
 ];
 
-const validate = (fields) => ({
-  userNameOk: fields.username.trim().length > 0,
-  emailOk:     EMAIL_RE.test(fields.email),
-  lengthOk:    fields.password.length >= 8,
-  matchOk:     fields.password !== '' && fields.password === fields.confirmPassword,
-});
-
+// ── Component ─────────────────────────────────────────────────────────────────
 const Signup = () => {
-  const [fields, setFields] = useState({
-    username: '', email: '', password: '', confirmPassword: '',
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
   });
-  const [showPw,        setShowPw]        = useState(false);
-  const [showConfirmPw, setShowConfirmPw] = useState(false);
-  const [isLoading,     setIsLoading]     = useState(false);
-  const [error,         setError]         = useState('');
+  const [showPassword, setShowPassword]               = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading]                     = useState(false);
+  const [error, setError]                             = useState('');
+  const [validations, setValidations]                 = useState({
+    passwordLength:   false,
+    passwordMatch:    false,
+    emailValid:       false,
+    usernameProvided: false,
+  });
 
-  const navigate   = useNavigate();
+  const navigate = useNavigate();
   const { signup } = useAuth();
 
-  const v         = validate(fields);
-  const formValid = v.userNameOk && v.emailOk && v.lengthOk && v.matchOk;
-
-  const progressStep =
-    (v.userNameOk ? 1 : 0) +
-    (v.emailOk ? 1 : 0) +
-    (v.lengthOk && v.matchOk ? 1 : 0);
-
-  const handleChange = useCallback((e) => {
+  const handleChange = (e) => {
     const { name, value } = e.target;
-    setFields((prev) => ({ ...prev, [name]: value }));
-  }, []);
+    setFormData(prev => ({ ...prev, [name]: value }));
+    validateField(name, value, { ...formData, [name]: value });
+  };
+
+  const validateField = (name, value, currentForm) => {
+    switch (name) {
+      case 'password':
+        setValidations(prev => ({
+          ...prev,
+          passwordLength: value.length >= 8,
+          passwordMatch:  value === currentForm.confirmPassword || currentForm.confirmPassword === '',
+        }));
+        break;
+      case 'confirmPassword':
+        setValidations(prev => ({ ...prev, passwordMatch: value === currentForm.password }));
+        break;
+      case 'email': {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        setValidations(prev => ({ ...prev, emailValid: emailRegex.test(value) }));
+        break;
+      }
+      case 'username':
+        setValidations(prev => ({ ...prev, usernameProvided: value.trim().length > 0 }));
+        break;
+      default:
+        break;
+    }
+  };
+
+  const isFormValid = () =>
+    validations.passwordLength &&
+    validations.passwordMatch &&
+    validations.emailValid &&
+    validations.usernameProvided;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    if (!formValid) {
-      setError('Please complete all fields correctly before continuing.');
+
+    if (!isFormValid()) {
+      setError('Please fill in all fields correctly.');
       return;
     }
+
     setIsLoading(true);
     try {
-      await signup(fields.email.trim(), fields.password, fields.username.trim());
+      await signup(formData.email, formData.password, formData.username);
       navigate('/dashboard');
     } catch (err) {
-      const msg =
-        err?.email?.[0]            ||
-        err?.password?.[0]         ||
-        err?.non_field_errors?.[0] ||
-        err?.detail                ||
-        err?.message               ||
-        'Something went wrong. Please try again.';
-      setError(msg);
+      const message =
+        err?.email?.[0]    ||
+        err?.username?.[0] ||
+        err?.detail        ||
+        err?.message       ||
+        'Signup failed. Please try again.';
+      setError(message);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="auth-page auth-page--signup">
-
+    <div className="auth-page">
       {/* ── Left: Brand panel ── */}
       <aside className="auth-brand-panel">
         <div className="brand-glow" aria-hidden="true" />
@@ -105,7 +129,7 @@ const Signup = () => {
         </div>
 
         <div className="auth-features">
-          {BRAND_FEATURES.map(({ icon, label }) => (
+          {FEATURES.map(({ icon, label }) => (
             <div className="auth-feature-item" key={label}>
               <div className="auth-feature-icon" aria-hidden="true">{icon}</div>
               <span className="auth-feature-text">{label}</span>
@@ -117,28 +141,12 @@ const Signup = () => {
       {/* ── Right: Form panel ── */}
       <main className="auth-form-panel">
         <div className="auth-form-inner">
-
-          {/* Progress dots */}
-          <div className="auth-progress" aria-label="Form completion progress">
-            {[0, 1, 2].map((step) => (
-              <div
-                key={step}
-                className={`auth-progress-dot ${
-                  progressStep > step
-                    ? 'auth-progress-dot--done'
-                    : progressStep === step
-                    ? 'auth-progress-dot--active'
-                    : ''
-                }`}
-              />
-            ))}
-          </div>
-
           <div className="auth-form-header">
             <h1>Create your account</h1>
-            <p>Join hundreds of students studying smarter with Lamla AI.</p>
+            <p>Join thousands of students studying smarter with Lamla AI.</p>
           </div>
 
+          {/* Error banner */}
           {error && (
             <div className="auth-error-banner" role="alert">
               <FontAwesomeIcon icon={faTriangleExclamation} />
@@ -146,29 +154,32 @@ const Signup = () => {
             </div>
           )}
 
+          {/* Form */}
           <form onSubmit={handleSubmit} className="auth-form" noValidate>
 
-            <div className="auth-name-row">
-              <div className="auth-field">
-                <label htmlFor="signup-username">Username</label>
-                <div className="auth-input-wrap">
-                  <FontAwesomeIcon icon={faUser} className="auth-input-icon" />
-                  <input
-                    id="signup-username"
-                    name="username"
-                    type="text"
-                    placeholder="Brilla"
-                    value={fields.username}
-                    onChange={handleChange}
-                    autoComplete="username"
-                    disabled={isLoading}
-                    required
-                  />
-                  {v.userNameOk && <FontAwesomeIcon icon={faCheckCircle} className="auth-input-check" />}
-                </div>
+            {/* Username */}
+            <div className="auth-field">
+              <label htmlFor="signup-username">Username</label>
+              <div className="auth-input-wrap">
+                <FontAwesomeIcon icon={faUser} className="auth-input-icon" />
+                <input
+                  id="signup-username"
+                  name="username"
+                  type="text"
+                  placeholder="coolstudent42"
+                  value={formData.username}
+                  onChange={handleChange}
+                  autoComplete="username"
+                  disabled={isLoading}
+                  required
+                />
+                {validations.usernameProvided && (
+                  <FontAwesomeIcon icon={faCheckCircle} className="auth-input-check" />
+                )}
               </div>
             </div>
 
+            {/* Email */}
             <div className="auth-field">
               <label htmlFor="signup-email">Email address</label>
               <div className="auth-input-wrap">
@@ -178,16 +189,19 @@ const Signup = () => {
                   name="email"
                   type="email"
                   placeholder="you@example.com"
-                  value={fields.email}
+                  value={formData.email}
                   onChange={handleChange}
                   autoComplete="email"
                   disabled={isLoading}
                   required
                 />
-                {v.emailOk && <FontAwesomeIcon icon={faCheckCircle} className="auth-input-check" />}
+                {validations.emailValid && (
+                  <FontAwesomeIcon icon={faCheckCircle} className="auth-input-check" />
+                )}
               </div>
             </div>
 
+            {/* Password */}
             <div className="auth-field">
               <label htmlFor="signup-password">Password</label>
               <div className="auth-input-wrap">
@@ -195,23 +209,30 @@ const Signup = () => {
                 <input
                   id="signup-password"
                   name="password"
-                  type={showPw ? 'text' : 'password'}
+                  type={showPassword ? 'text' : 'password'}
                   placeholder="Min. 8 characters"
-                  value={fields.password}
+                  value={formData.password}
                   onChange={handleChange}
                   autoComplete="new-password"
                   disabled={isLoading}
                   required
                 />
-                <button type="button" className="auth-pw-toggle" onClick={() => setShowPw((v) => !v)} disabled={isLoading} aria-label={showPw ? 'Hide password' : 'Show password'}>
-                  <FontAwesomeIcon icon={showPw ? faEyeSlash : faEye} />
+                <button
+                  type="button"
+                  className="auth-pw-toggle"
+                  onClick={() => setShowPassword(v => !v)}
+                  disabled={isLoading}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
                 </button>
               </div>
-              <p className={`auth-hint ${v.lengthOk ? 'auth-hint--valid' : ''}`}>
-                <span className="auth-hint-dot" /> At least 8 characters
+              <p className={`auth-hint ${validations.passwordLength ? 'auth-hint--valid' : ''}`}>
+                <span className="auth-hint-dot">•</span> At least 8 characters
               </p>
             </div>
 
+            {/* Confirm Password */}
             <div className="auth-field">
               <label htmlFor="signup-confirm-password">Confirm password</label>
               <div className="auth-input-wrap">
@@ -219,31 +240,47 @@ const Signup = () => {
                 <input
                   id="signup-confirm-password"
                   name="confirmPassword"
-                  type={showConfirmPw ? 'text' : 'password'}
+                  type={showConfirmPassword ? 'text' : 'password'}
                   placeholder="Repeat your password"
-                  value={fields.confirmPassword}
+                  value={formData.confirmPassword}
                   onChange={handleChange}
                   autoComplete="new-password"
                   disabled={isLoading}
                   required
                 />
-                <button type="button" className="auth-pw-toggle" onClick={() => setShowConfirmPw((v) => !v)} disabled={isLoading} aria-label={showConfirmPw ? 'Hide password' : 'Show password'}>
-                  <FontAwesomeIcon icon={showConfirmPw ? faEyeSlash : faEye} />
+                <button
+                  type="button"
+                  className="auth-pw-toggle"
+                  onClick={() => setShowConfirmPassword(v => !v)}
+                  disabled={isLoading}
+                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                >
+                  <FontAwesomeIcon icon={showConfirmPassword ? faEyeSlash : faEye} />
                 </button>
               </div>
-              <p className={`auth-hint ${v.matchOk ? 'auth-hint--valid' : ''}`}>
-                <span className="auth-hint-dot" /> Passwords match
+              <p className={`auth-hint ${validations.passwordMatch ? 'auth-hint--valid' : ''}`}>
+                <span className="auth-hint-dot">•</span> Passwords match
               </p>
             </div>
 
-            <button type="submit" className="auth-submit-btn" disabled={!formValid || isLoading}>
-              {isLoading
-                ? <><span className="auth-spinner" aria-hidden="true" /> Creating account…</>
-                : 'Create Account'
-              }
+            {/* Submit */}
+            <button
+              type="submit"
+              className="auth-submit-btn"
+              disabled={!isFormValid() || isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <span className="auth-spinner" aria-hidden="true" />
+                  Creating account…
+                </>
+              ) : (
+                'Create Account'
+              )}
             </button>
           </form>
 
+          {/* Footer */}
           <footer className="auth-form-footer">
             <p>
               Already have an account?{' '}
@@ -251,7 +288,6 @@ const Signup = () => {
             </p>
             <Link to="/" className="auth-link-muted">← Back to home</Link>
           </footer>
-
         </div>
       </main>
     </div>

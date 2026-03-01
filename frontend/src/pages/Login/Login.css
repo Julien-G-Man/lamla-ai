@@ -278,6 +278,33 @@
   cursor: not-allowed;
 }
 
+/* ── Signup additions (shared via Login.css) ── */
+.auth-input-check {
+  position: absolute;
+  right: 14px;
+  color: #10b981;
+  font-size: 0.875rem;
+  pointer-events: none;
+}
+
+.auth-hint {
+  margin: 6px 0 0 0;
+  font-size: 0.8rem;
+  color: #4a5568;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.25s ease;
+}
+
+.auth-hint--valid {
+  color: #10b981;
+}
+
+.auth-hint-dot {
+  font-weight: 700;
+}
+
 /* Password toggle */
 .auth-pw-toggle {
   position: absolute;

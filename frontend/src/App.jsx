@@ -7,6 +7,7 @@ import { DJANGO_WARMUP_ENDPOINT, FASTAPI_HEALTH_ENDPOINT } from "./services/api"
 import Home from "./pages/Home/Home";
 import Login from "./pages/Login/Login";
 import Signup from "./pages/Signup/Signup";
+import VerifyEmail from "./pages/Auth/VerifyEmail";
 import Dashboard from "./pages/Dashboard/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard/AdminDashboard";
 import CustomQuiz from "./pages/CustomQuiz/CustomQuiz";
@@ -37,13 +38,15 @@ function App() {
             <Route path="/" element={<Home />} />
 
             {/* Auth routes */}
-            <Route path="/auth/login"  element={<Login />} />
-            <Route path="/auth/signup" element={<Signup />} />
+            <Route path="/auth/login"    element={<Login />} />
+            <Route path="/auth/signup"   element={<Signup />} />
+            <Route path="/auth/verify-email"   element={<VerifyEmail />} />
 
             {/* Legacy redirects */}
-            <Route path="/auth"  element={<Navigate to="/auth/login"  replace />} />
-            <Route path="/login"  element={<Navigate to="/auth/login"  replace />} />
-            <Route path="/signup" element={<Navigate to="/auth/signup" replace />} />
+            <Route path="/auth"           element={<Navigate to="/auth/login"  replace />} />
+            <Route path="/login"          element={<Navigate to="/auth/login"  replace />} />
+            <Route path="/signup"         element={<Navigate to="/auth/signup" replace />} />
+            <Route path="/verify-email"   element={<Navigate to="/auth/verify-email" replace />} />
 
             {/* Protected */}
             <Route path="/dashboard"       element={<Dashboard />} />

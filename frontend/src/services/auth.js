@@ -7,10 +7,10 @@ const authApi = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  withCredentials: true, // Important for session-based auth
+  withCredentials: true,
 });
 
-// Add token to requests if available
+// Attach token to every request if available
 authApi.interceptors.request.use((config) => {
   const token = localStorage.getItem("auth_token");
   if (token) {
@@ -19,9 +19,8 @@ authApi.interceptors.request.use((config) => {
   return config;
 });
 
-// Auth API endpoints
 export const authService = {
-  // User signup
+  // ── Signup ────────────────────────────────────────────────────────────────
   signup: async (email, password, username) => {
     try {
       const response = await authApi.post("/auth/signup/", {
@@ -29,74 +28,83 @@ export const authService = {
         password,
         username,
       });
+      const { token, user } = response.data;
+      if (token) localStorage.setItem("auth_token", token);
+      if (user)  localStorage.setItem("user", JSON.stringify(user));
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
     }
   },
 
-  // User login
+  // ── Login ─────────────────────────────────────────────────────────────────
   login: async (email, password) => {
     try {
-      const response = await authApi.post("/auth/login/", {
-        email,
-        password,
-      });
+      const response = await authApi.post("/auth/login/", { email, password });
       const { token, user } = response.data;
-      
-      // Store token in localStorage
-      if (token) {
-        localStorage.setItem("auth_token", token);
-      }
-      
-      // Store user data
-      if (user) {
-        localStorage.setItem("user", JSON.stringify(user));
-      }
-      
+      if (token) localStorage.setItem("auth_token", token);
+      if (user)  localStorage.setItem("user", JSON.stringify(user));
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
     }
   },
 
-  // User logout
+  // ── Logout ────────────────────────────────────────────────────────────────
   logout: async () => {
     try {
       await authApi.post("/auth/logout/");
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
-      // Clear local storage regardless of API response
       localStorage.removeItem("auth_token");
       localStorage.removeItem("user");
     }
   },
 
-  // Get current user
+  // ── Email Verification ────────────────────────────────────────────────────
+  verifyEmail: async (uid, token) => {
+    try {
+      const response = await authApi.post("/auth/verify-email/", { uid, token });
+      // Update stored user so the banner disappears immediately
+      if (response.data.user) {
+        localStorage.setItem("user", JSON.stringify(response.data.user));
+      }
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  resendVerificationEmail: async () => {
+    try {
+      const response = await authApi.post("/auth/resend-verification/");
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
   getCurrentUser: () => {
     const user = localStorage.getItem("user");
     return user ? JSON.parse(user) : null;
   },
 
-  // Check if user is authenticated
-  isAuthenticated: () => {
-    return !!localStorage.getItem("auth_token");
-  },
+  isAuthenticated: () => !!localStorage.getItem("auth_token"),
 
-  // Get user role (admin or user)
   getUserRole: () => {
     const user = localStorage.getItem("user");
     if (!user) return null;
     try {
-      const parsedUser = JSON.parse(user);
-      return parsedUser.role || parsedUser.is_admin ? "admin" : "user";
+      const parsed = JSON.parse(user);
+      return parsed.is_admin ? "admin" : "user";
     } catch {
       return null;
     }
   },
 
-  // Change password
+  // ── Profile ───────────────────────────────────────────────────────────────
   changePassword: async (old_password, new_password) => {
     try {
       const response = await authApi.post("/auth/change-password/", {
@@ -109,40 +117,31 @@ export const authService = {
     }
   },
 
-  // Update user profile
   updateProfile: async (username, email) => {
     try {
       const response = await authApi.post("/auth/update-profile/", {
         username,
         email,
       });
-      
-      // Update stored user data
       if (response.data.user) {
         localStorage.setItem("user", JSON.stringify(response.data.user));
       }
-      
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
     }
   },
 
-  // Upload profile image
   uploadProfileImage: async (file) => {
     try {
       const formData = new FormData();
       formData.append("profile_image", file);
-      
       const response = await authApi.post("/auth/upload-profile-image/", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      
-      // Update stored user data
       if (response.data.user) {
         localStorage.setItem("user", JSON.stringify(response.data.user));
       }
-      
       return response.data;
     } catch (error) {
       throw error.response?.data || error;

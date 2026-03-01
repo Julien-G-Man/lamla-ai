@@ -16,26 +16,23 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Initialize auth state on mount
+  // Rehydrate auth state on mount
   useEffect(() => {
     const initializeAuth = () => {
-      const token = localStorage.getItem('auth_token');
+      const token      = localStorage.getItem('auth_token');
       const storedUser = localStorage.getItem('user');
-      
+
       if (token && storedUser) {
         try {
-          const parsedUser = JSON.parse(storedUser);
-          setUser(parsedUser);
+          setUser(JSON.parse(storedUser));
           setIsAuthenticated(true);
-        } catch (error) {
-          console.error('Failed to parse stored user:', error);
+        } catch {
           localStorage.removeItem('auth_token');
           localStorage.removeItem('user');
         }
       }
       setIsLoading(false);
     };
-
     initializeAuth();
   }, []);
 
@@ -54,6 +51,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // AuthContext.signup(email, password, username)
   const signup = async (email, password, username) => {
     setIsLoading(true);
     try {
@@ -73,42 +71,40 @@ export const AuthProvider = ({ children }) => {
     setIsLoading(true);
     try {
       await authService.logout();
-      setUser(null);
-      setIsAuthenticated(false);
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
+      setUser(null);
+      setIsAuthenticated(false);
       setIsLoading(false);
     }
   };
 
+  // Called by the VerifyEmail page after a successful /auth/verify-email/ POST
+  const markEmailVerified = (updatedUser) => {
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+  };
+
+  // Called by the resend-verification banner button
+  const resendVerificationEmail = async () => {
+    return authService.resendVerificationEmail();
+  };
+
   const updateProfile = async (username, email) => {
-    try {
-      const response = await authService.updateProfile(username, email);
-      setUser(response.user);
-      return response;
-    } catch (error) {
-      throw error;
-    }
+    const response = await authService.updateProfile(username, email);
+    setUser(response.user);
+    return response;
   };
 
   const uploadProfileImage = async (file) => {
-    try {
-      const response = await authService.uploadProfileImage(file);
-      setUser(response.user);
-      return response;
-    } catch (error) {
-      throw error;
-    }
+    const response = await authService.uploadProfileImage(file);
+    setUser(response.user);
+    return response;
   };
 
   const changePassword = async (old_password, new_password) => {
-    try {
-      const response = await authService.changePassword(old_password, new_password);
-      return response;
-    } catch (error) {
-      throw error;
-    }
+    return authService.changePassword(old_password, new_password);
   };
 
   const getUserRole = () => {
@@ -120,9 +116,13 @@ export const AuthProvider = ({ children }) => {
     user,
     isLoading,
     isAuthenticated,
+    // Derived convenience flag — use this to show/hide the verification banner
+    isEmailVerified: user?.is_email_verified ?? false,
     login,
     signup,
     logout,
+    markEmailVerified,
+    resendVerificationEmail,
     updateProfile,
     uploadProfileImage,
     changePassword,
