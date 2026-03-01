@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import "./App.css";
 import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider } from "./context/AuthContext";
-import { DJANGO_WARMUP_ENDPOINT } from "./services/api";
+import { DJANGO_WARMUP_ENDPOINT, FASTAPI_HEALTH_ENDPOINT } from "./services/api";
 import Home from "./pages/Home/Home";
 import Login from "./pages/Login/Login";
 import Signup from "./pages/Signup/Signup";
@@ -22,6 +22,13 @@ function App() {
   useEffect(() => {
     // Wake Django
     fetch(DJANGO_WARMUP_ENDPOINT).catch(() => {});
+    
+    // Wake FastAPI
+    // Bro, this is needed to wake the FastAPI server in production
+    // Please don't remove it
+    fetch(FASTAPI_HEALTH_ENDPOINT)
+      .then((res) => res.json())
+      .catch((err) => console.warn("FastAPI not reachable: ", err));
   }, []);
 
   return (
