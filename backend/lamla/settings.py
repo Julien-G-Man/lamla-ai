@@ -192,7 +192,7 @@ WELCOME_EMAIL_HOST_PASSWORD = os.getenv("WELCOME_EMAIL_HOST_PASSWORD")
 
 
 if not DEBUG:
-    EMAIL_BACKEND = 'django.core.backends.smtp.EmailBackend'
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
