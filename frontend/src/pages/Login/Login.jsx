@@ -21,7 +21,7 @@ const FEATURES = [
 
 // ── Component ─────────────────────────────────────────────────────────────────
 const Login = () => {
-  const [email, setEmail]               = useState('');
+  const [identifier, setIdentifier]               = useState('');
   const [password, setPassword]         = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading]       = useState(false);
@@ -34,14 +34,14 @@ const Login = () => {
     e.preventDefault();
     setError('');
 
-    if (!email.trim() || !password) {
+    if (!identifier.trim() || !password) {
       setError('Please enter your email and password.');
       return;
     }
 
     setIsLoading(true);
     try {
-      const response = await login(email.trim().toLowerCase(), password);
+      const response = await login(identifier.trim().toLowerCase(), password);
       const isAdmin  = response?.user?.is_admin;
       navigate(isAdmin ? '/admin-dashboard' : '/dashboard');
     } catch (err) {
@@ -109,16 +109,16 @@ const Login = () => {
           <form onSubmit={handleSubmit} className="auth-form" noValidate>
             {/* Email */}
             <div className="auth-field">
-              <label htmlFor="login-email">Email address</label>
+              <label htmlFor="login-email">Email / Username</label>
               <div className="auth-input-wrap">
                 <FontAwesomeIcon icon={faEnvelope} className="auth-input-icon" />
                 <input
                   id="login-email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  autoComplete="email"
+                  type="text"
+                  placeholder="Email or Username"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  autoComplete="username"
                   disabled={isLoading}
                   required
                 />

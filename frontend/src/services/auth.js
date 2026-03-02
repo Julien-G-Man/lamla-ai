@@ -18,7 +18,7 @@ const authApi = axios.create({
 // Request interceptor: attach token if present
 authApi.interceptors.request.use((config) => {
   const token = localStorage.getItem("auth_token");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (token) config.headers.Authorization = `Token ${token}`;
   return config;
 });
 
@@ -53,10 +53,10 @@ export const authService = {
   },
 
   // ── Login ─────────────────────────────────────────────────────────────────
-  login: async (email, password) => {
+  login: async (identifier, password) => {
     try {
       const response = await authApi.post("/auth/login/", {
-        email: email.trim().toLowerCase(),
+        identifier: identifier.trim().toLowerCase(),
         password,
       });
       const { token, user } = response.data;

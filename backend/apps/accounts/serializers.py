@@ -65,25 +65,25 @@ class SignupSerializer(serializers.Serializer):
 # ── Login ─────────────────────────────────────────────────────────────────────
 
 class LoginSerializer(serializers.Serializer):
-    email    = serializers.EmailField()
+    identifier = serializers.CharField() # accepts email or username
     password = serializers.CharField(write_only=True)
 
     def validate(self, data):
-        email    = data.get("email", "").strip().lower()
+        identifier    = data.get("identifier", "").strip().lower()
         password = data.get("password", "")
-        logger.debug("Login attempt for email=%s password=%s", email, "****")
+        logger.debug("Login attempt for email/username=%s password=%s", identifier, "****")
 
-        if not email or not password:
-            raise serializers.ValidationError("Both email and password are required.")
+        if not identifier or not password:
+            raise serializers.ValidationError("Both email/username and password are required.")
 
         user = authenticate(
             request=self.context.get("request"),
-            username=email,   # Django's authenticate uses USERNAME_FIELD
+            username=identifier,   # backend receives it as 'username'
             password=password,
         )
 
         if user is None:
-            raise serializers.ValidationError("Incorrect email or password.")
+            raise serializers.ValidationError("Incorrect credentials")
 
         if not user.is_active:
             raise serializers.ValidationError("This account has been deactivated.")

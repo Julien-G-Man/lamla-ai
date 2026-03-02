@@ -33,10 +33,10 @@ export const AuthProvider = ({ children }) => {
 
   // ── Auth actions ───────────────────────────────────────────────────────────
 
-  const login = async (email, password) => {
+  const login = async (identifier, password) => {
     setIsLoading(true);
     try {
-      const { user } = await authService.login(email, password);
+      const { user } = await authService.login(identifier, password);
       setUser(user);
       setIsAuthenticated(true);
       return { user };
