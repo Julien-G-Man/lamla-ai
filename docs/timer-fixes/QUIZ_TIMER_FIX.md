@@ -4,7 +4,7 @@
 **The Issue**: Quiz was showing "Time's up!" immediately upon entering, redirecting users to results page before they could start.
 
 **Expected Behavior**: 
-1. User sets quiz time in CustomQuiz (e.g., 10 minutes)
+1. User sets quiz time in CreateQuiz (e.g., 10 minutes)
 2. User navigates to Quiz page 
 3. Timer starts with full allocated time and counts down
 4. When time actually reaches 0, quiz auto-submits
@@ -38,7 +38,7 @@ quiz_data['time_limit'] = int(data.get('quiz_time', 10))
 - Correctly sends time_limit as integer (minutes)
 - Defaults to 10 minutes if not provided
 
-✅ **CustomQuiz.jsx (line 128)**
+✅ **CreateQuiz.jsx (line 128)**
 ```jsx
 quiz_time: quizTime,  // state variable, default 10
 ```
@@ -136,7 +136,7 @@ if (timeRemaining === undefined || timeRemaining === null || isNaN(timeRemaining
 ## Testing Checklist
 
 ### Test 1: Basic Timer Start
-1. Go to CustomQuiz page
+1. Go to CreateQuiz page
 2. Set quiz parameters (subject, text, 10 minutes time)
 3. Click Generate Quiz
 4. Click Start Quiz
@@ -213,7 +213,7 @@ JSON.parse(localStorage.getItem('lamla_quiz_temp')).endTime - Date.now();
 
 ## Related Files
 - Backend: [async_views.py](backend/apps/quiz/async_views.py#L186)
-- Frontend: [CustomQuiz.jsx](frontend/src/pages/CustomQuiz.jsx#L128)
+- Frontend: [CreateQuiz.jsx](frontend/src/pages/CreateQuiz.jsx#L128)
 - Frontend: [QuizResults.jsx](frontend/src/pages/QuizResults.jsx)
 - Styles: [Quiz.css](frontend/src/styles/Quiz.css)
 

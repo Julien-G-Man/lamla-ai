@@ -142,7 +142,7 @@ const About = ({ user }) => {
                                     {!user ? (
                                         <a href="/account/signup" className="hero-btn primary">Get Started</a>
                                     ) : (
-                                        <a href="/custom-quiz" className="hero-btn primary">Start Practicing</a>
+                                        <a href="/quiz/create" className="hero-btn primary">Start Practicing</a>
                                     )}
                                 </div>
                             )}

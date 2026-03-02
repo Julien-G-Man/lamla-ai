@@ -8,7 +8,7 @@
 String values (e.g., "10") passed instead of numbers through the system, causing `"10" * 60 = NaN`, which triggered immediate auto-submit.
 
 ## 3 Files Modified
-1. **frontend/src/pages/CustomQuiz.jsx** - Parse input to integer
+1. **frontend/src/pages/CreateQuiz.jsx** - Parse input to integer
 2. **backend/apps/quiz/async_views.py** - Ensure integer conversion
 3. **frontend/src/pages/Quiz.jsx** - Parse time & add visual timer bar
 4. **frontend/src/styles/Quiz.css** - Add timer bar styling
@@ -17,7 +17,7 @@ String values (e.g., "10") passed instead of numbers through the system, causing
 
 ### Test Setup
 ```
-1. Open CustomQuiz page
+1. Open CreateQuiz page
 2. Fill form:
    - Subject: "Python"
    - Text: "Python is a programming language..."
@@ -38,7 +38,7 @@ String values (e.g., "10") passed instead of numbers through the system, causing
 
 ### If Any Step Fails
 - Check browser console (F12) for errors
-- Verify CustomQuiz form sends integer (not string)
+- Verify CreateQuiz form sends integer (not string)
 - Verify backend response includes `time_limit` as number
 
 ## Features Added
@@ -47,7 +47,7 @@ String values (e.g., "10") passed instead of numbers through the system, causing
 - 📊 **Smooth animation:** Bar shrinks smoothly each second
 
 ## To Test Different Times
-Edit CustomQuiz.jsx line 287 temporarily:
+Edit CreateQuiz.jsx line 287 temporarily:
 ```javascript
 // Test with 2 minutes
 setQuizTime(Math.max(1, 2))  

@@ -8,7 +8,7 @@ const Quiz = () => {
     const navigate = useNavigate();
     
     const { quizData } = location.state || { quizData: null };
-    const REDIRECT_PATH = '/custom-quiz'; 
+    const REDIRECT_PATH = '/quiz/create'; 
 
     const [currentIndex, setCurrentIndex] = useState(0);
     const [userAnswers, setUserAnswers] = useState({});

@@ -93,7 +93,7 @@ npm start
    Dictionaries store key-value pairs.
    Functions are defined using the def keyword.
    ```
-2. In CustomQuiz, click "Upload Study Material" tab
+2. In CreateQuiz, click "Upload Study Material" tab
 3. Select "Programming" subject
 4. Upload the file
 5. Verify text appears in study area

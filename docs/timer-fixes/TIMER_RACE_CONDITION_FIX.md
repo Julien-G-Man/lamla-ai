@@ -154,7 +154,7 @@ const currentQ = allQuestions[currentIndex];
 
 ### User Experience (FIXED)
 ```
-1. CustomQuiz: User selects 10 minutes
+1. CreateQuiz: User selects 10 minutes
    quiz_time: 10 (sent to backend)
 
 2. Backend converts: int(10) = 10 ✓
@@ -194,7 +194,7 @@ const currentQ = allQuestions[currentIndex];
 ## Testing
 
 ### Test Setup
-1. Open CustomQuiz
+1. Open CreateQuiz
 2. Fill form with time: **5 minutes**
 3. Generate quiz
 4. **Verify:** Quiz page loads with timer at 5:00 (not instantly auto-submitted)

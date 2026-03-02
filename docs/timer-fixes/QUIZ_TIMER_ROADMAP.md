@@ -154,7 +154,7 @@ Discovery     → Analysis      → Implementation → Testing → Deployment
 
 ### How It Works Now
 ```
-CustomQuiz (sets time)
+CreateQuiz (sets time)
     ↓
 Backend (sends time)
     ↓
@@ -225,7 +225,7 @@ Results (shown correctly)
 ## 🧪 How to Test (Quick Version)
 
 **5-Minute Test:**
-1. Go to CustomQuiz
+1. Go to CreateQuiz
 2. Create quiz with 2 minutes
 3. Start quiz
 4. Verify timer shows "0:02:00" ✅

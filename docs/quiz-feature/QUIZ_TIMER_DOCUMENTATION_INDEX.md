@@ -148,7 +148,7 @@ QUIZ_TIMER_TESTING_CHECKLIST (QA procedures)
 
 ### Verified (No Changes)
 - **[backend/apps/quiz/async_views.py](backend/apps/quiz/async_views.py#L186)** - Backend correct
-- **[frontend/src/pages/CustomQuiz.jsx](frontend/src/pages/CustomQuiz.jsx#L128)** - Input correct
+- **[frontend/src/pages/CreateQuiz.jsx](frontend/src/pages/CreateQuiz.jsx#L128)** - Input correct
 - **[frontend/src/pages/QuizResults.jsx](frontend/src/pages/QuizResults.jsx)** - Output correct
 
 ---

@@ -10,7 +10,7 @@ import Signup from "./pages/Signup/Signup";
 import VerifyEmail from "./pages/Auth/VerifyEmail";
 import Dashboard from "./pages/Dashboard/Dashboard";
 import AdminDashboard from "./pages/Dashboard/AdminDashboard";
-import CustomQuiz from "./pages/CustomQuiz/CustomQuiz";
+import CreateQuiz from "./pages/CreateQuiz/CreateQuiz";
 import Quiz from "./pages/Quiz/Quiz";
 import QuizResults from "./pages/QuizResults/QuizResults";
 import Flashcards from "./pages/Flashcards/Flashcards";
@@ -56,8 +56,8 @@ function App() {
             <Route path="/profile"         element={<Profile />} />
 
             {/* General*/}
-            <Route path="/custom-quiz"     element={<CustomQuiz />} />
-            <Route path="/quiz"            element={<Quiz />} />
+            <Route path="/quiz/create"     element={<CreateQuiz />} />
+            <Route path="/quiz/play"            element={<Quiz />} />
             <Route path="/quiz/results"    element={<QuizResults />} />
             <Route path="/flashcards"      element={<Flashcards />} />
             <Route path="/ai-tutor"        element={<Chatbot />} />

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import djangoApi from '../../services/api';
-import './CustomQuiz.css'; 
+import './CreateQuiz.css'; 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
     faKeyboard, 
@@ -16,7 +16,7 @@ import {
     faInfoCircle
 } from '@fortawesome/free-solid-svg-icons';
 
-const CustomQuiz = ({ user }) => {
+const CreateQuiz = ({ user }) => {
     const navigate = useNavigate();
 
     // --- State Variables ---
@@ -330,4 +330,4 @@ const CustomQuiz = ({ user }) => {
     );
 };
 
-export default CustomQuiz;
+export default CreateQuiz;

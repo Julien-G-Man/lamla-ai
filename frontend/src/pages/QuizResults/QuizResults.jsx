@@ -101,7 +101,7 @@ const QuizResults = () => {
     // Redirect if no results found
     useEffect(() => {
         if (!results) {
-            navigate('/custom-quiz');
+            navigate('/quiz/create');
         }
     }, [results, navigate]);
 
@@ -251,7 +251,7 @@ const QuizResults = () => {
                         <i className="fas fa-file-word mr-2" /> DOCX
                     </button>
                     
-                    <Link to="/custom-quiz" className="btn primary">
+                    <Link to="/quiz/create" className="btn primary">
                         Generate New Quiz
                     </Link>
                 </div>

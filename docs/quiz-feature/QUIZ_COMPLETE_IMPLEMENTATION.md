@@ -6,7 +6,7 @@ The quiz feature now has a complete end-to-end workflow with proper evaluation a
 
 ### 1. **Parameter Flow** ✅
 ```
-CustomQuiz.jsx
+CreateQuiz.jsx
   ├─ subject: "Computer Science"
   ├─ extractedText: "..."
   ├─ num_mcq: 5
@@ -67,7 +67,7 @@ Respond in JSON format ONLY:
 ```
 
 ### 3. **Results Display Styling** ✅
-Updated QuizResults.css to match CustomQuiz design system:
+Updated QuizResults.css to match CreateQuiz design system:
 
 **Design System Alignment:**
 - ✅ Dark theme colors (from CSS variables)
@@ -121,7 +121,7 @@ Updated QuizResults.css to match CustomQuiz design system:
 ### 3. `frontend/src/styles/QuizResults.css`
 
 **Completely Rewritten:**
-- Added root CSS variables (matching CustomQuiz)
+- Added root CSS variables (matching CreateQuiz)
 - Complete dark theme implementation
 - Card styling with shadows and borders
 - Gradient text for headers
@@ -146,7 +146,7 @@ Updated QuizResults.css to match CustomQuiz design system:
 ### Complete Quiz Generation Flow
 ```
 ┌─ Frontend ──────────────────────────────────────────┐
-│  CustomQuiz.jsx                                      │
+│  CreateQuiz.jsx                                      │
 │  User selects:                                       │
 │  - Subject: "Physics"                                │
 │  - Study text or file                                │
@@ -214,7 +214,7 @@ Updated QuizResults.css to match CustomQuiz design system:
 │    ✓ LLM reasoning (for short answers)               │
 │    ✓ Quiz explanation                                │
 │  - Show visual status (✅ / ❌ / ⊙)                 │
-│  - Styled to match CustomQuiz design                 │
+│  - Styled to match CreateQuiz design                 │
 └──────────────────────────────────────────────────────┘
 ```
 
@@ -266,7 +266,7 @@ Display explanation for teaching
 - No design system alignment
 
 ### After
-- ✅ Matches CustomQuiz design system
+- ✅ Matches CreateQuiz design system
 - ✅ Dark theme with yellow accents
 - ✅ Gradient text and buttons
 - ✅ Consistent shadows and borders
@@ -322,7 +322,7 @@ Result: ✅ Shows as incorrect with explanation
 ### Test 5: Results Styling ✅
 ```
 Expected:
-- Dark background matching CustomQuiz
+- Dark background matching CreateQuiz
 - Yellow gradient header
 - Progress bar with glow
 - Status indicators with colors

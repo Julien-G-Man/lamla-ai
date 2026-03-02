@@ -5,7 +5,7 @@
 ### Step 1: Quiz Setup
 ```
 ┌─────────────────────────────────────┐
-│ CustomQuiz Form                     │
+│ CreateQuiz Form                     │
 ├─────────────────────────────────────┤
 │ Subject: [Physics]                  │
 │ Study Text: [Lorem ipsum...]        │

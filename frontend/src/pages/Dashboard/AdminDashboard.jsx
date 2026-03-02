@@ -1,42 +1,46 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
+import Sidebar from '../../components/sidebar/Sidebar';
 import { useAuth } from '../../context/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faUsers, faChartBar, faFileAlt, faRightFromBracket,
+  faUsers, faChartBar, faFileAlt,
   faCog, faTriangleExclamation, faTrophy,
 } from '@fortawesome/free-solid-svg-icons';
 import './AdminDashboard.css';
 import { dashboardService } from '../../services/dashboard';
 
+const NAV_ITEMS = [
+  { id: 'overview', icon: faChartBar, label: 'Overview' },
+  { id: 'users',    icon: faUsers,    label: 'Users'    },
+  { id: 'content',  icon: faFileAlt,  label: 'Content'  },
+  { id: 'settings', icon: faCog,      label: 'Settings' },
+];
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout, getUserRole } = useAuth();
-  const [activeTab, setActiveTab]   = useState('overview');
-  const [adminStats, setAdminStats] = useState({});
-  const [users, setUsers]           = useState([]);
+  const [activeTab, setActiveTab]       = useState('overview');
+  const [adminStats, setAdminStats]     = useState({});
+  const [users, setUsers]               = useState([]);
   const [loadingStats, setLoadingStats] = useState(true);
   const [loadingUsers, setLoadingUsers] = useState(true);
 
-  // Auth guard
   useEffect(() => {
     if (!isAuthenticated) { navigate('/auth/login'); return; }
     if (getUserRole() !== 'admin') navigate('/dashboard');
   }, [isAuthenticated, navigate, getUserRole]);
 
-  // Fetch data
   useEffect(() => {
     if (!isAuthenticated || getUserRole() !== 'admin') return;
 
     dashboardService.getAdminStats()
-      .then(setAdminStats)
-      .catch(console.error)
+      .then(setAdminStats).catch(console.error)
       .finally(() => setLoadingStats(false));
 
     dashboardService.getAdminUsers()
-      .then(setUsers)
-      .catch(console.error)
+      .then(setUsers).catch(console.error)
       .finally(() => setLoadingUsers(false));
   }, [isAuthenticated, getUserRole]);
 
@@ -52,18 +56,12 @@ const AdminDashboard = () => {
     }
   };
 
-  const navItems = [
-    { id: 'overview', icon: faChartBar, label: 'Overview' },
-    { id: 'users',    icon: faUsers,    label: 'Users'    },
-    { id: 'content',  icon: faFileAlt,  label: 'Content'  },
-    { id: 'settings', icon: faCog,      label: 'Settings' },
-  ];
-
   const statCards = [
     { icon: faUsers,    label: 'Total Users',        value: adminStats.total_users     },
     { icon: faChartBar, label: 'Quizzes Created',    value: adminStats.total_quizzes   },
     { icon: faFileAlt,  label: 'Materials Uploaded', value: adminStats.total_materials },
-    { icon: faTrophy,   label: 'Avg. Score',         value: adminStats.average_score != null ? `${adminStats.average_score}%` : undefined },
+    { icon: faTrophy,   label: 'Avg. Score',
+      value: adminStats.average_score != null ? `${adminStats.average_score}%` : undefined },
   ];
 
   return (
@@ -71,35 +69,15 @@ const AdminDashboard = () => {
       <Navbar />
       <div className="db-wrapper">
 
-        {/* ── Sidebar ── */}
-        <aside className="db-sidebar">
-          <div className="db-sidebar-user">
-            <div className="db-avatar" style={{ background: 'linear-gradient(135deg, #ef4444, #dc2626)', color: '#fff' }}>
-              {user?.username?.[0]?.toUpperCase()}
-            </div>
-            <h3>{user?.username}</h3>
-            <p>{user?.email}</p>
-            <span className="db-role-badge admin">Admin</span>
-          </div>
+        <Sidebar
+          user={user}
+          navItems={NAV_ITEMS}
+          activeId={activeTab}
+          onNavigate={setActiveTab}
+          onLogout={handleLogout}
+          variant="admin"
+        />
 
-          <nav className="db-nav">
-            {navItems.map(({ id, icon, label }) => (
-              <button
-                key={id}
-                className={`db-nav-item ${activeTab === id ? 'active' : ''}`}
-                onClick={() => setActiveTab(id)}
-              >
-                <FontAwesomeIcon icon={icon} /> {label}
-              </button>
-            ))}
-          </nav>
-
-          <button className="db-logout-btn" onClick={handleLogout}>
-            <FontAwesomeIcon icon={faRightFromBracket} /> Logout
-          </button>
-        </aside>
-
-        {/* ── Main ── */}
         <main className="db-main">
 
           {/* ── Overview ── */}
@@ -151,32 +129,19 @@ const AdminDashboard = () => {
                 <h1>User Management</h1>
                 <p>Monitor and manage user accounts.</p>
               </div>
-
               <div className="db-table-wrap">
                 <table className="db-table">
                   <thead>
                     <tr>
-                      <th>Username</th>
-                      <th>Email</th>
-                      <th>Joined</th>
-                      <th>Quizzes</th>
-                      <th>Status</th>
-                      <th>Actions</th>
+                      <th>Username</th><th>Email</th><th>Joined</th>
+                      <th>Quizzes</th><th>Status</th><th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loadingUsers ? (
-                      <tr>
-                        <td colSpan={6} style={{ textAlign: 'center', padding: 32, color: 'var(--text-secondary)' }}>
-                          Loading users…
-                        </td>
-                      </tr>
+                      <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32, color: 'var(--text-secondary)' }}>Loading users…</td></tr>
                     ) : users.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} style={{ textAlign: 'center', padding: 32, color: 'var(--text-secondary)' }}>
-                          No users found.
-                        </td>
-                      </tr>
+                      <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32, color: 'var(--text-secondary)' }}>No users found.</td></tr>
                     ) : (
                       users.map((u) => (
                         <tr key={u.email}>
@@ -192,12 +157,7 @@ const AdminDashboard = () => {
                           <td>
                             <div style={{ display: 'flex', gap: 6 }}>
                               <button className="db-btn db-btn-ghost db-btn-sm">View</button>
-                              <button
-                                className="db-btn db-btn-danger db-btn-sm"
-                                onClick={() => handleRemoveUser(u.id)}
-                              >
-                                Remove
-                              </button>
+                              <button className="db-btn db-btn-danger db-btn-sm" onClick={() => handleRemoveUser(u.id)}>Remove</button>
                             </div>
                           </td>
                         </tr>
@@ -251,17 +211,12 @@ const AdminDashboard = () => {
                     <label>Quiz Time Limit (min)</label>
                     <input type="number" defaultValue="30" />
                   </div>
-                  <div>
-                    <button type="submit" className="db-btn db-btn-primary">Save Settings</button>
-                  </div>
+                  <button type="submit" className="db-btn db-btn-primary">Save Settings</button>
                 </form>
               </div>
 
               <div className="db-card danger">
-                <h2>
-                  <FontAwesomeIcon icon={faTriangleExclamation} style={{ marginRight: 8 }} />
-                  Danger Zone
-                </h2>
+                <h2><FontAwesomeIcon icon={faTriangleExclamation} style={{ marginRight: 8 }} />Danger Zone</h2>
                 <p style={{ color: 'var(--text-secondary)', marginBottom: 16, fontSize: '0.9rem' }}>
                   Irreversible system actions. Proceed with caution.
                 </p>

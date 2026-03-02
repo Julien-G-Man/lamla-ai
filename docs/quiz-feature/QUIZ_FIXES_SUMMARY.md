@@ -122,7 +122,7 @@ short_questions = data.get("short_questions", []) if data else []
 
 ### ✅ Data Flow Verified
 ```
-CustomQuiz.jsx
+CreateQuiz.jsx
     ↓ POST /api/quiz/generate/
 Django async_views
     ↓ POST /quiz/ (to FastAPI)

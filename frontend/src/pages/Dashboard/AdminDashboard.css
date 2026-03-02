@@ -1,17 +1,15 @@
 @import './dashboard-shared.css';
 
-/* Admin accent: red */
-.db-nav-item.active {
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.1);
-}
-
+/* ── Admin accent: red ───────────────────────────────────────── */
 .db-stat-card:hover {
   border-color: #ef4444;
   box-shadow: 0 6px 20px rgba(239, 68, 68, 0.08);
 }
 
-.db-stat-icon { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+.db-stat-icon {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
 
 .db-action-card:hover {
   border-color: #ef4444;
@@ -19,12 +17,13 @@
 }
 
 .db-field input:focus,
-.db-field select:focus {
+.db-field select:focus,
+.db-field textarea:focus {
   border-color: #ef4444;
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
 }
 
-/* Timeline */
+/* ── Timeline ────────────────────────────────────────────────── */
 .db-timeline { display: flex; flex-direction: column; gap: 20px; }
 
 .db-timeline-item {
@@ -53,14 +52,13 @@
   position: absolute;
   left: 0;
   top: 3px;
-  flex-shrink: 0;
 }
 
-.db-timeline-body h4    { font-weight: 700; color: var(--text-primary); margin: 0 0 3px; font-size: 0.9rem; }
-.db-timeline-body p     { color: var(--text-secondary); margin: 0 0 3px; font-size: 0.85rem; }
-.db-timeline-body span  { font-size: 0.78rem; color: var(--text-muted, #666); }
+.db-timeline-body h4   { font-weight: 700; color: var(--text-primary); margin: 0 0 3px; font-size: 0.9rem; }
+.db-timeline-body p    { color: var(--text-secondary); margin: 0 0 3px; font-size: 0.85rem; }
+.db-timeline-body span { font-size: 0.78rem; color: var(--text-muted, #666); }
 
-/* Content items */
+/* ── Content items ───────────────────────────────────────────── */
 .db-content-item {
   display: flex;
   align-items: center;

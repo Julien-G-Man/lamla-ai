@@ -8,7 +8,7 @@ The quiz timer was immediately showing "time is up" and auto-submitting with all
 
 **Issue Chain:**
 ```
-CustomQuiz.jsx
+CreateQuiz.jsx
   └─ quizTime input: setQuizTime(e.target.value)  ❌ STRING (e.g., "10")
        │
        ▼
@@ -42,9 +42,9 @@ timeRemaining = 600  // Correct countdown
 
 ## Solution Implemented
 
-### Fix 1: CustomQuiz.jsx - Parse Input to Integer
+### Fix 1: CreateQuiz.jsx - Parse Input to Integer
 
-**File:** `frontend/src/pages/CustomQuiz.jsx` (Line 287)
+**File:** `frontend/src/pages/CreateQuiz.jsx` (Line 287)
 
 **Before:**
 ```jsx
@@ -189,7 +189,7 @@ const timerColor = timePercent > 33 ? '#03903e' : timePercent > 10 ? '#FF9800' :
 
 ```
 ┌─ Frontend ──────────────────────────────────────────┐
-│  CustomQuiz.jsx                                      │
+│  CreateQuiz.jsx                                      │
 │  quizTime: 10 (INTEGER)                              │
 └────────┬────────────────────────────────────────────┘
          │ POST /api/quiz/generate/
@@ -266,7 +266,7 @@ const timerColor = timePercent > 33 ? '#03903e' : timePercent > 10 ? '#FF9800' :
 ## Testing Checklist
 
 ### Test 1: Timer Initialization ✅
-- [ ] Set quiz_time to 1 minute in CustomQuiz form
+- [ ] Set quiz_time to 1 minute in CreateQuiz form
 - [ ] Generate quiz
 - [ ] Verify Quiz page shows timer starting at 1:00
 - [ ] Verify progress bar is at 100% green
@@ -320,7 +320,7 @@ const timerColor = timePercent > 33 ? '#03903e' : timePercent > 10 ? '#FF9800' :
 
 | File | Changes | Lines |
 |------|---------|-------|
-| CustomQuiz.jsx | Add parseInt() to input handler | 287 |
+| CreateQuiz.jsx | Add parseInt() to input handler | 287 |
 | async_views.py | Add int() wrapper for time_limit | 180 |
 | Quiz.jsx | Parse time_limit & add progress bar | 66 + ~20 |
 | Quiz.css | Add timer progress bar styles | +15 |
@@ -345,7 +345,7 @@ NaN <= 0 = true  // NaN comparisons are always problematic
 ```
 
 ### The Fix Ensures Type Safety
-1. **Input layer:** CustomQuiz parses to integer immediately
+1. **Input layer:** CreateQuiz parses to integer immediately
 2. **API layer:** Backend ensures integer in response
 3. **Display layer:** Quiz.jsx re-parses defensively
 4. This triple redundancy prevents any NaN from reaching calculations
@@ -360,7 +360,7 @@ NaN <= 0 = true  // NaN comparisons are always problematic
 
 ## Next: Test the Complete Flow
 
-1. Open CustomQuiz page
+1. Open CreateQuiz page
 2. Select subject, upload/enter text
 3. **Set Quiz Time to 1-2 minutes** (for quick testing)
 4. Select MCQ + Short Answer questions

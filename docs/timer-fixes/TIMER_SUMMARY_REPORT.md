@@ -14,7 +14,7 @@
 
 ## Files Modified
 
-### 1. `frontend/src/pages/CustomQuiz.jsx` - Line 287
+### 1. `frontend/src/pages/CreateQuiz.jsx` - Line 287
 ```javascript
 // Parse quiz time input to integer
 onChange={(e) => setQuizTime(Math.max(1, parseInt(e.target.value) || 10))}
@@ -115,7 +115,7 @@ Result: Exit code 0 ✅ (no syntax errors)
 ## Test Recommendations
 
 ### Quick Test (5 minutes)
-1. Open CustomQuiz
+1. Open CreateQuiz
 2. Set Quiz Time to 1 minute
 3. Generate quiz
 4. Verify timer starts at 1:00

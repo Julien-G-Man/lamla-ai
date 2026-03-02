@@ -49,7 +49,7 @@ if isinstance(raw, dict):
 ### Test 1: Text-Based Quiz Generation ✅
 
 **Steps:**
-1. Go to http://localhost:3000/custom-quiz
+1. Go to http://localhost:3000/quiz/create
 2. Select "Computer Science" as subject
 3. Paste study text:
    ```
@@ -83,7 +83,7 @@ if isinstance(raw, dict):
 ### Test 2: File Upload & Quiz Generation ✅
 
 **Steps:**
-1. Go to http://localhost:3000/custom-quiz
+1. Go to http://localhost:3000/quiz/create
 2. Click "Upload Study Material" tab
 3. Select "Engineering" subject
 4. Create a simple PDF or DOCX file with content about:
@@ -278,7 +278,7 @@ Django passes to Frontend → SUCCESS ✅
 
 ## Integration Points
 
-### CustomQuiz.jsx → Django
+### CreateQuiz.jsx → Django
 ```javascript
 POST /api/quiz/generate/ {
   subject: "Computer Science",
@@ -348,7 +348,7 @@ Response: {
 - ✅ Displays each question with user answer vs correct answer
 - ✅ Shows score percentage with conditional message
 
-### CustomQuiz.jsx ✅
+### CreateQuiz.jsx ✅
 - ✅ Validates form before submission
 - ✅ Sends correct payload structure
 - ✅ Navigates to Quiz page with quizData

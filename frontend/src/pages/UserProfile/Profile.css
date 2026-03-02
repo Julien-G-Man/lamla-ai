@@ -1,91 +1,118 @@
-:root{
-  --surface: #1e1e1e;
-  --input-bg: rgba(255,255,255,0.03);
-  --muted: #9ca3af;
-  --accent: var(--primary-color);
-}
+@import '../Dashboard/dashboard-shared.css';
 
-.profile-page{
-  max-width: 940px;
-  margin: 28px auto;
-  padding: 24px;
+/* Profile page uses the full dashboard shell.
+   Only profile-specific styles below. */
+
+/* ── Profile hero card ───────────────────────────────────────── */
+.db-profile-hero {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 28px;
   background: var(--surface);
-  border-radius: 12px;
-  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  margin-bottom: 22px;
 }
 
-.profile-header{
-  display:flex;
-  gap:16px;
-  align-items:center;
-  margin-bottom:20px;
+.db-profile-avatar-xl {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary-color, #FFD600), var(--primary-dark, #e6c000));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #121212;
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
-.profile-avatar-large{
-  width:72px;
-  height:72px;
-  border-radius:12px;
-  background:linear-gradient(135deg,var(--primary-color),#FFA500);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-weight:700;
-  font-size:28px;
-  color:#111;
+.db-profile-avatar-xl img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
 }
 
-.profile-section{
-  margin-top:18px;
-  padding-top:12px;
-  border-top:1px solid var(--border);
+.db-profile-hero-info h2 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 3px;
 }
 
-.profile-section h3{
-  margin:0 0 12px 0;
+.db-profile-hero-info p {
+  color: var(--text-secondary);
+  margin: 0 0 8px;
+  font-size: 0.88rem;
 }
 
-.form-group{
-  margin-bottom:12px;
-  display:flex;
-  flex-direction:column;
+.db-profile-hero-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-.form-group label{
-  font-size:0.9rem;
-  color:var(--text-secondary);
-  margin-bottom:6px;
+/* ── Section label ───────────────────────────────────────────── */
+.db-section-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin: 0 0 16px;
 }
 
-.form-group input[type="text"],
-.form-group input[type="email"],
-.form-group input[type="password"],
-.form-group input[type="file"]{
-  background:var(--input-bg);
-  border:1px solid var(--border);
-  padding:10px 12px;
-  border-radius:8px;
-  color:var(--text-primary);
+/* ── File input styling ──────────────────────────────────────── */
+.db-file-input-wrap {
+  position: relative;
 }
 
-.save-btn{
-  background:var(--accent);
-  color:var(--secondary-color);
-  border:none;
-  padding:10px 14px;
-  border-radius:10px;
-  font-weight:600;
+.db-file-input-wrap input[type="file"] {
+  background: var(--background-gray, #1e1e1e);
+  border: 1px dashed var(--border);
+  color: var(--text-secondary);
+  padding: 12px 14px;
+  border-radius: 9px;
+  font-size: 0.88rem;
+  font-family: inherit;
+  width: 100%;
+  cursor: pointer;
+  transition: border-color 0.2s;
 }
 
-.profile-ctas{ display:flex; gap:12px; align-items:center}
-
-.validation-error{
-  color:#f87171;
-  font-size:0.9rem;
-  margin-top:6px;
+.db-file-input-wrap input[type="file"]:hover {
+  border-color: var(--primary-color, #FFD600);
 }
 
-.validation-ok{
-  color:#34d399;
-  font-size:0.9rem;
-  margin-top:6px;
+.db-file-meta {
+  margin-top: 6px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* ── Theme toggle ────────────────────────────────────────────── */
+.db-theme-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.db-theme-row:last-child { border-bottom: none; }
+
+.db-theme-row span {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .db-profile-hero { flex-direction: column; text-align: center; }
+  .db-profile-hero-meta { justify-content: center; }
 }

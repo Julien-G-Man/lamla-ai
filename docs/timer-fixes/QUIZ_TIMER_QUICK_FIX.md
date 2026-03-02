@@ -44,7 +44,7 @@ Multiple checks before rendering:
 
 ## 📊 Data Flow (Verified Working)
 ```
-CustomQuiz.jsx (quiz_time: 10)
+CreateQuiz.jsx (quiz_time: 10)
     ↓
 Backend (time_limit: 10 as integer)
     ↓
@@ -68,7 +68,7 @@ QuizResults.jsx (shows results)
 - ✏️ [Quiz.jsx](frontend/src/pages/Quiz.jsx) - Main fix
 - 📖 [QUIZ_TIMER_FIX.md](QUIZ_TIMER_FIX.md) - Detailed explanation
 - ✅ [async_views.py](backend/apps/quiz/async_views.py) - Verified correct (no changes needed)
-- ✅ [CustomQuiz.jsx](frontend/src/pages/CustomQuiz.jsx) - Verified correct (no changes needed)
+- ✅ [CreateQuiz.jsx](frontend/src/pages/CreateQuiz.jsx) - Verified correct (no changes needed)
 
 ## 🔍 DevTools Console Logs to Watch
 ```

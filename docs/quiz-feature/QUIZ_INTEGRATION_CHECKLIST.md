@@ -18,7 +18,7 @@
 
 ## Integration Points
 
-### CustomQuiz.jsx → Django
+### CreateQuiz.jsx → Django
 ```
 ✅ POST /api/quiz/generate/
 ✅ Headers: Content-Type: application/json
@@ -128,7 +128,7 @@
 ## Testing Flow
 
 ### Test 1: Happy Path (Text-based)
-1. Go to CustomQuiz
+1. Go to CreateQuiz
 2. Select "Mathematics"
 3. Enter study text (~500 chars)
 4. Set MCQ=5, Short=2
@@ -137,7 +137,7 @@
 
 ### Test 2: Happy Path (File-based)
 1. Create test PDF with 1-2 pages
-2. Upload in CustomQuiz
+2. Upload in CreateQuiz
 3. Confirm text extraction success
 4. Generate quiz
 5. **Expected:** Quiz generates from file content

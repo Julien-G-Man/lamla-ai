@@ -5,7 +5,7 @@
 ### ❌ BEFORE (Broken)
 ```
 User Flow:
-1. CustomQuiz: Select subject, text, MCQ=5, Short=0, Time=10 min ← quizTime = "10" (STRING)
+1. CreateQuiz: Select subject, text, MCQ=5, Short=0, Time=10 min ← quizTime = "10" (STRING)
                 ↓
 2. Backend receives: { quiz_time: "10" } 
    Returns: { time_limit: "10" } ← Still a string!
@@ -27,7 +27,7 @@ User Flow:
 ### ✅ AFTER (Fixed)
 ```
 User Flow:
-1. CustomQuiz: Select subject, text, MCQ=5, Short=0, Time=10 min ← quizTime = 10 (NUMBER)
+1. CreateQuiz: Select subject, text, MCQ=5, Short=0, Time=10 min ← quizTime = 10 (NUMBER)
                 ↓
 2. Backend receives: { quiz_time: 10 }
    Returns: { time_limit: 10 } ← Confirmed as integer
@@ -67,7 +67,7 @@ User Flow:
 
 ## Code Changes - Side by Side
 
-### Change 1: CustomQuiz Input Handler
+### Change 1: CreateQuiz Input Handler
 
 ```javascript
 // ❌ BEFORE

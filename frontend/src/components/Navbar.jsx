@@ -44,7 +44,7 @@ const Navbar = ({ user }) => {
             <ul className="nav-links nav-links--desktop">
               <li><Link to="/">Home</Link></li>
               <li><Link to="/ai-tutor">AI Tutor</Link></li>
-              <li><Link to="/custom-quiz">Quiz</Link></li>
+              <li><Link to="/quiz/create">Quiz</Link></li>
               <li><Link to="/flashcards">Flashcards</Link></li>
               {isAuthenticated || user ? (
                 <li className="nav-item-cta">
@@ -88,7 +88,7 @@ const Navbar = ({ user }) => {
       <ul className={`nav-links nav-links--mobile ${isOpen ? "open" : ""}`}>
         <li><Link to="/" onClick={closeMenu}>Home</Link></li>
         <li><Link to="/ai-tutor" onClick={closeMenu}>AI Tutor</Link></li>
-        <li><Link to="/custom-quiz" onClick={closeMenu}>Quiz</Link></li>
+        <li><Link to="/quiz/create" onClick={closeMenu}>Quiz</Link></li>
         <li><Link to="/flashcards" onClick={closeMenu}>Flashcards</Link></li>
         {isAuthenticated || user ? (
           <li className="nav-item-cta">

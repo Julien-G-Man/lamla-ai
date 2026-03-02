@@ -59,7 +59,7 @@ Added logging and ensured proper submission sequence.
 ## Data Flow Verified ✅
 
 ```
-CustomQuiz.jsx
+CreateQuiz.jsx
   └─→ quiz_time: 10 (minutes)
       
 Backend (async_views.py)
@@ -128,7 +128,7 @@ QuizResults.jsx
 
 ## Expected Outcome After Fix
 
-✅ Timer initializes with correct time from CustomQuiz
+✅ Timer initializes with correct time from CreateQuiz
 ✅ Timer counts down smoothly without jumps
 ✅ Users can complete full quiz before time runs out
 ✅ Quiz auto-submits when time reaches 0
@@ -144,7 +144,7 @@ QuizResults.jsx
 
 ## Files Verified (No Changes Needed)
 - ✅ [backend/apps/quiz/async_views.py](backend/apps/quiz/async_views.py#L186) - Backend correct
-- ✅ [frontend/src/pages/CustomQuiz.jsx](frontend/src/pages/CustomQuiz.jsx#L128) - Input correct
+- ✅ [frontend/src/pages/CreateQuiz.jsx](frontend/src/pages/CreateQuiz.jsx#L128) - Input correct
 - ✅ [frontend/src/pages/QuizResults.jsx](frontend/src/pages/QuizResults.jsx) - Output ready
 
 ---

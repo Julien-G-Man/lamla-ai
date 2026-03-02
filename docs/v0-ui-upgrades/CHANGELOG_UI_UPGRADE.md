@@ -178,7 +178,7 @@
 <ul className={`nav-links ${isOpen ? "open" : ""}`}>
     <li><Link to="/">Home</Link></li>
     <li><Link to="/ai-tutor">AI Tutor</Link></li>
-    <li><Link to="/custom-quiz">Quiz</Link></li>
+    <li><Link to="/quiz/create">Quiz</Link></li>
     <li><Link to="#/flashcards">Flashcards</Link></li>
     <li className="theme-toggle-wrapper">
         <button 

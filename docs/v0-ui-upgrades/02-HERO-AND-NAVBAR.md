@@ -238,7 +238,7 @@ The hero section uses centered flex layout:
 ```html
 <div className="hero-btns">
     <a href="/signup" className="hero-btn primary">Get Started</a>
-    <a href="/custom-quiz" className="hero-btn secondary">Try Now</a>
+    <a href="/quiz/create" className="hero-btn secondary">Try Now</a>
 </div>
 ```
 

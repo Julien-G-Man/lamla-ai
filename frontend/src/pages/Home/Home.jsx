@@ -65,7 +65,7 @@ const Home = ({ user }) => {
               {!user ? (
                 <a href="/auth/signup" className="hero-btn primary">Get Started Free</a>
               ) : (
-                <a href="/custom-quiz" className="hero-btn primary">Start Practicing</a>
+                <a href="/quiz/create" className="hero-btn primary">Start Practicing</a>
               )}
               <a href="#features" className="hero-btn secondary">Explore Features</a>
             </div>
@@ -118,7 +118,7 @@ const Home = ({ user }) => {
                   <p>Whether you're preparing for finals or just reviewing before a test — Lamla AI turns your slides and notes into quizzes, flashcards, and instant AI-powered explanations.</p>
                   <p>Built by students, for students. Our platform evolves with your feedback so you can walk into every exam with confidence.</p>
                   <div className="hero-btns about-btns">
-                    <a href="/custom-quiz" className="hero-btn primary">Start Studying →</a>
+                    <a href="/quiz/create" className="hero-btn primary">Start Studying →</a>
                     <a href="#features" className="hero-btn secondary">Our Features</a>
                   </div>
                 </div>
@@ -140,7 +140,7 @@ const Home = ({ user }) => {
             {isVisible.features && (
               <div className="features-grid">
 
-                <a href="/custom-quiz" className="feature-card">
+                <a href="/quiz/create" className="feature-card">
                   <div className="feature-image">
                     <img src="/assets/quizzes.jpg" alt="Quiz Mode" />
                   </div>
@@ -195,7 +195,7 @@ const Home = ({ user }) => {
                   </div>
                 </a>
 
-                <a href="/custom-quiz" className="feature-card">
+                <a href="/quiz/create" className="feature-card">
                   <div className="feature-image">
                     <img src="/assets/steam.jpg" alt="Subject Selection" />
                   </div>

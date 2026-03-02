@@ -9,7 +9,7 @@
 
 ┌──────────────────────┐
 │   React Frontend     │ (Port 3000)
-│   - CustomQuiz.jsx   │
+│   - CreateQuiz.jsx   │
 │   - Quiz.jsx         │
 │   - QuizResults.jsx  │
 └──────────┬───────────┘
@@ -65,7 +65,7 @@ Database (PostgreSQL):
 │ STEP 1: USER INTERACTION (Frontend)                                     │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                           │
-│  CustomQuiz.jsx:                                                         │
+│  CreateQuiz.jsx:                                                         │
 │  ┌─────────────────────────────┐                                        │
 │  │ User fills form:            │                                        │
 │  │ - Subject: "Physics"        │                                        │
@@ -231,7 +231,7 @@ Database (PostgreSQL):
 │ STEP 7: FRONTEND DISPLAY                                                │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
-│  CustomQuiz.jsx:                                                        │
+│  CreateQuiz.jsx:                                                        │
 │  → Receives quiz_data ✅                                                │
 │  → navigate('/quiz', { state: { quizData: response.data } })            │
 │                                                                          │

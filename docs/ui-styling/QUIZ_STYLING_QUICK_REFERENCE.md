@@ -1,6 +1,6 @@
 # Quiz Styling - Quick Reference Guide 🎨
 
-## Color Palette (CustomQuiz Theme)
+## Color Palette (CreateQuiz Theme)
 
 ```css
 /* Primary Colors */

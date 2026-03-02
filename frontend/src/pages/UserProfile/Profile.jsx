@@ -1,233 +1,358 @@
 import React, { useEffect, useState } from 'react';
+import Navbar from '../../components/Navbar';
+import Sidebar from '../../components/sidebar/Sidebar';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faHome, faHistory, faCloudUploadAlt, faLock, faUser,
+  faCheckCircle, faExclamationCircle,
+} from '@fortawesome/free-solid-svg-icons';
 import './Profile.css';
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Same nav items as Dashboard — profile is active here
+const NAV_ITEMS = [
+  { id: 'overview', icon: faHome,          label: 'Dashboard'    },
+  { id: 'history',  icon: faHistory,        label: 'Past Quizzes' },
+  { id: 'uploads',  icon: faCloudUploadAlt, label: 'Materials'    },
+  { id: 'profile',  icon: faUser,           label: 'Profile'      },
+  { id: 'security', icon: faLock,           label: 'Security'     },
+];
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, isLoading, updateProfile, uploadProfileImage, changePassword } = useAuth();
+  const { user, isAuthenticated, isLoading, logout, updateProfile, uploadProfileImage, changePassword } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
-  const [form, setForm] = useState({ username: '', email: '' });
-  const [status, setStatus] = useState({ msg: '', err: '' });
-  const [saving, setSaving] = useState(false);
-  const [errors, setErrors] = useState({ username: '', email: '' });
-  const [dirty, setDirty] = useState(false);
+  // ── Profile form ────────────────────────────────────────────
+  const [form,     setForm]     = useState({ username: '', email: '' });
+  const [errors,   setErrors]   = useState({ username: '', email: '' });
+  const [dirty,    setDirty]    = useState(false);
+  const [saving,   setSaving]   = useState(false);
+  const [profMsg,  setProfMsg]  = useState({ ok: '', err: '' });
 
-  const [pwForm, setPwForm] = useState({ old_password: '', new_password: '', confirm: '' });
-  const [pwStatus, setPwStatus] = useState({ msg: '', err: '' });
-  const [pwSaving, setPwSaving] = useState(false);
-
-  const [imageFile, setImageFile] = useState(null);
-  const [imgStatus, setImgStatus] = useState({ msg: '', err: '' });
+  // ── Image upload ────────────────────────────────────────────
+  const [imageFile,    setImageFile]    = useState(null);
   const [imgUploading, setImgUploading] = useState(false);
+  const [imgMsg,       setImgMsg]       = useState({ ok: '', err: '' });
 
-  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  // ── Password form ────────────────────────────────────────────
+  const [pwForm,  setPwForm]  = useState({ old_password: '', new_password: '', confirm: '' });
+  const [pwSaving, setPwSaving] = useState(false);
+  const [pwMsg,   setPwMsg]   = useState({ ok: '', err: '' });
 
-
+  // ── Auth guard ───────────────────────────────────────────────
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      navigate('/login');
-      return;
-    }
-    if (isAuthenticated) {
-      const initial = { username: user?.username || '', email: user?.email || '' };
-      setForm(initial);
+    if (!isLoading && !isAuthenticated) navigate('/auth/login');
+  }, [isLoading, isAuthenticated, navigate]);
+
+  // ── Seed form from user ──────────────────────────────────────
+  useEffect(() => {
+    if (user) {
+      setForm({ username: user.username || '', email: user.email || '' });
       setErrors({ username: '', email: '' });
       setDirty(false);
     }
-  }, [user, isAuthenticated, isLoading, navigate]);
+  }, [user]);
 
+  // ── Track dirty state ────────────────────────────────────────
   useEffect(() => {
-    const isDirty = (form.username.trim() !== (user?.username || '')) || (form.email.trim() !== (user?.email || ''));
-    setDirty(!!isDirty);
+    setDirty(
+      form.username.trim() !== (user?.username || '') ||
+      form.email.trim()    !== (user?.email    || '')
+    );
   }, [form, user]);
 
-  const validateField = (name, value) => {
+  // ── Sidebar navigation ───────────────────────────────────────
+  // Non-profile items go back to dashboard with the requested tab
+  const handleNavigate = (id) => {
+    if (id === 'profile') return; // already here
+    navigate('/dashboard', { state: { tab: id } });
+  };
+
+  const handleLogout = async () => { await logout(); navigate('/'); };
+
+  // ── Validation ───────────────────────────────────────────────
+  const validate = (name, value) => {
     if (name === 'username') {
-      if (!value.trim()) return 'Username cannot be blank.';
-      if (value.trim().length > 50) return 'Username is too long.';
-      return '';
+      if (!value.trim())          return 'Username cannot be blank.';
+      if (value.trim().length > 50) return 'Username is too long (max 50 chars).';
     }
     if (name === 'email') {
       if (!EMAIL_RE.test(value.trim())) return 'Enter a valid email address.';
-      return '';
     }
     return '';
   };
 
-  const handleChange = (e) => {
+  const handleFormChange = (e) => {
     const { name, value } = e.target;
-    setForm((s) => ({ ...s, [name]: value }));
-    setErrors((err) => ({ ...err, [name]: validateField(name, value) }));
+    setForm(s => ({ ...s, [name]: value }));
+    setErrors(s => ({ ...s, [name]: validate(name, value) }));
   };
 
-  const isFormValid = () => {
-    return !validateField('username', form.username) && !validateField('email', form.email);
-  };
+  const formValid = !validate('username', form.username) && !validate('email', form.email);
 
-  const handleSubmit = async (e) => {
+  // ── Submit handlers ──────────────────────────────────────────
+  const handleProfileSubmit = async (e) => {
     e.preventDefault();
-    const usernameErr = validateField('username', form.username);
-    const emailErr = validateField('email', form.email);
+    const usernameErr = validate('username', form.username);
+    const emailErr    = validate('email',    form.email);
     setErrors({ username: usernameErr, email: emailErr });
     if (usernameErr || emailErr) return;
 
-    setStatus({ msg: '', err: '' });
     setSaving(true);
+    setProfMsg({ ok: '', err: '' });
     try {
       await updateProfile(form.username.trim(), form.email.trim());
-      setStatus({ msg: 'Profile updated successfully.', err: '' });
+      setProfMsg({ ok: 'Profile updated successfully.', err: '' });
       setDirty(false);
     } catch (err) {
-      const message = err?.email?.[0] || err?.detail || err?.message || JSON.stringify(err) || 'Update failed.';
-      setStatus({ msg: '', err: message });
+      const msg = err?.email?.[0] || err?.detail || err?.message || 'Update failed.';
+      setProfMsg({ ok: '', err: msg });
     } finally {
       setSaving(false);
     }
   };
 
-  const handlePwChange = (e) => {
-    const { name, value } = e.target;
-    setPwForm((s) => ({ ...s, [name]: value }));
-  };
-
-  const handlePwSubmit = async (e) => {
-    e.preventDefault();
-    setPwStatus({ msg: '', err: '' });
-    if (pwForm.new_password.length < 8) {
-      setPwStatus({ msg: '', err: 'New password must be at least 8 characters.' });
-      return;
-    }
-    if (pwForm.new_password !== pwForm.confirm) {
-      setPwStatus({ msg: '', err: 'Passwords do not match.' });
-      return;
-    }
-    setPwSaving(true);
-    try {
-      const res = await changePassword(pwForm.old_password, pwForm.new_password);
-      if (res?.token) {
-        localStorage.setItem('auth_token', res.token);
-      }
-      setPwStatus({ msg: 'Password changed successfully.', err: '' });
-      setPwForm({ old_password: '', new_password: '', confirm: '' });
-    } catch (err) {
-      const message = err?.detail || err?.message || JSON.stringify(err) || 'Password change failed.';
-      setPwStatus({ msg: '', err: message });
-    } finally {
-      setPwSaving(false);
-    }
-  };
-
-  const handleImageSelect = (e) => {
-    setImageFile(e.target.files?.[0] || null);
-  };
-
   const handleImageUpload = async (e) => {
     e.preventDefault();
-    if (!imageFile) return setImgStatus({ msg: '', err: 'No image selected.' });
-    setImgStatus({ msg: '', err: '' });
+    if (!imageFile) { setImgMsg({ ok: '', err: 'No image selected.' }); return; }
     setImgUploading(true);
+    setImgMsg({ ok: '', err: '' });
     try {
       await uploadProfileImage(imageFile);
-      setImgStatus({ msg: 'Profile image uploaded.', err: '' });
+      setImgMsg({ ok: 'Photo updated.', err: '' });
       setImageFile(null);
     } catch (err) {
-      const message = err?.detail || err?.message || JSON.stringify(err) || 'Upload failed.';
-      setImgStatus({ msg: '', err: message });
+      setImgMsg({ ok: '', err: err?.detail || err?.message || 'Upload failed.' });
     } finally {
       setImgUploading(false);
     }
   };
 
-  if (isLoading || (!isAuthenticated && !isLoading)) {
-    return null;
-  }
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+    setPwMsg({ ok: '', err: '' });
+    if (pwForm.new_password.length < 8) {
+      setPwMsg({ ok: '', err: 'New password must be at least 8 characters.' }); return;
+    }
+    if (pwForm.new_password !== pwForm.confirm) {
+      setPwMsg({ ok: '', err: 'Passwords do not match.' }); return;
+    }
+    setPwSaving(true);
+    try {
+      const res = await changePassword(pwForm.old_password, pwForm.new_password);
+      if (res?.token) localStorage.setItem('auth_token', res.token);
+      setPwMsg({ ok: 'Password changed successfully.', err: '' });
+      setPwForm({ old_password: '', new_password: '', confirm: '' });
+    } catch (err) {
+      setPwMsg({ ok: '', err: err?.detail || err?.message || 'Password change failed.' });
+    } finally {
+      setPwSaving(false);
+    }
+  };
+
+  if (isLoading || !isAuthenticated) return null;
 
   return (
-    <div className="profile-page">
-      <div className="profile-header">
-        <div className="profile-avatar-large">{user?.username?.[0] || 'U'}</div>
-        <div>
-          <h2>{user?.username}</h2>
-          <p>{user?.email}</p>
-        </div>
+    <div className="db-container">
+      <Navbar />
+      <div className="db-wrapper">
+
+        <Sidebar
+          user={user}
+          navItems={NAV_ITEMS}
+          activeId="profile"
+          onNavigate={handleNavigate}
+          onLogout={handleLogout}
+          variant="user"
+        />
+
+        <main className="db-main">
+          <div className="db-tab">
+
+            <div className="db-page-header">
+              <h1>My Profile</h1>
+              <p>Manage your account information and security.</p>
+            </div>
+
+            {/* ── Hero ── */}
+            <div className="db-profile-hero">
+              <div className="db-profile-avatar-xl">
+                {user?.profile_image
+                  ? <img src={user.profile_image} alt="avatar" />
+                  : user?.username?.[0]?.toUpperCase()}
+              </div>
+              <div className="db-profile-hero-info">
+                <h2>{user?.username}</h2>
+                <p>{user?.email}</p>
+                <div className="db-profile-hero-meta">
+                  <span className="db-badge db-badge-yellow">Student</span>
+                  {user?.is_email_verified
+                    ? <span className="db-badge db-badge-green">✓ Verified</span>
+                    : <span className="db-badge db-badge-gray">Unverified</span>}
+                </div>
+              </div>
+            </div>
+
+            {/* ── Account info ── */}
+            <div className="db-card">
+              <p className="db-section-label">Account Information</p>
+              <form className="db-form" onSubmit={handleProfileSubmit}>
+                <div className="db-form-row">
+                  <div className="db-field">
+                    <label>Username</label>
+                    <input
+                      name="username"
+                      type="text"
+                      value={form.username}
+                      onChange={handleFormChange}
+                    />
+                    {errors.username
+                      ? <span className="db-feedback db-feedback-err"><FontAwesomeIcon icon={faExclamationCircle} /> {errors.username}</span>
+                      : form.username.trim() && <span className="db-feedback db-feedback-ok"><FontAwesomeIcon icon={faCheckCircle} /> Looks good</span>}
+                  </div>
+                  <div className="db-field">
+                    <label>Email Address</label>
+                    <input
+                      name="email"
+                      type="email"
+                      value={form.email}
+                      onChange={handleFormChange}
+                    />
+                    {errors.email
+                      ? <span className="db-feedback db-feedback-err"><FontAwesomeIcon icon={faExclamationCircle} /> {errors.email}</span>
+                      : form.email.trim() && <span className="db-feedback db-feedback-ok"><FontAwesomeIcon icon={faCheckCircle} /> Valid email</span>}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+                  <button
+                    type="submit"
+                    className="db-btn db-btn-primary"
+                    disabled={saving || !dirty || !formValid}
+                  >
+                    {saving ? 'Saving…' : 'Save Changes'}
+                  </button>
+                  {profMsg.ok  && <span className="db-feedback db-feedback-ok"><FontAwesomeIcon icon={faCheckCircle} /> {profMsg.ok}</span>}
+                  {profMsg.err && <span className="db-feedback db-feedback-err"><FontAwesomeIcon icon={faExclamationCircle} /> {profMsg.err}</span>}
+                </div>
+              </form>
+            </div>
+
+            {/* ── Profile photo ── */}
+            <div className="db-card">
+              <p className="db-section-label">Profile Photo</p>
+              <form onSubmit={handleImageUpload} className="db-form">
+                <div className="db-field">
+                  <label>Upload new photo (JPEG, PNG, WebP, GIF — max 5 MB)</label>
+                  <div className="db-file-input-wrap">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => { setImageFile(e.target.files?.[0] || null); setImgMsg({ ok: '', err: '' }); }}
+                    />
+                  </div>
+                  {imageFile && (
+                    <span className="db-file-meta">
+                      {imageFile.name} · {(imageFile.size / 1024 / 1024).toFixed(2)} MB
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+                  <button
+                    type="submit"
+                    className="db-btn db-btn-primary"
+                    disabled={imgUploading || !imageFile}
+                  >
+                    {imgUploading ? 'Uploading…' : 'Upload Photo'}
+                  </button>
+                  {imgMsg.ok  && <span className="db-feedback db-feedback-ok"><FontAwesomeIcon icon={faCheckCircle} /> {imgMsg.ok}</span>}
+                  {imgMsg.err && <span className="db-feedback db-feedback-err"><FontAwesomeIcon icon={faExclamationCircle} /> {imgMsg.err}</span>}
+                </div>
+              </form>
+            </div>
+
+            {/* ── Password ── */}
+            <div className="db-card">
+              <p className="db-section-label">Change Password</p>
+              <form className="db-form" onSubmit={handlePasswordSubmit}>
+                <div className="db-field">
+                  <label>Current Password</label>
+                  <input
+                    name="old_password"
+                    type="password"
+                    value={pwForm.old_password}
+                    placeholder="••••••••"
+                    onChange={(e) => setPwForm(s => ({ ...s, old_password: e.target.value }))}
+                  />
+                </div>
+                <div className="db-form-row">
+                  <div className="db-field">
+                    <label>New Password</label>
+                    <input
+                      name="new_password"
+                      type="password"
+                      value={pwForm.new_password}
+                      placeholder="Min 8 characters"
+                      onChange={(e) => setPwForm(s => ({ ...s, new_password: e.target.value }))}
+                    />
+                  </div>
+                  <div className="db-field">
+                    <label>Confirm New Password</label>
+                    <input
+                      name="confirm"
+                      type="password"
+                      value={pwForm.confirm}
+                      placeholder="••••••••"
+                      onChange={(e) => setPwForm(s => ({ ...s, confirm: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+                  <button type="submit" className="db-btn db-btn-primary" disabled={pwSaving}>
+                    {pwSaving ? 'Updating…' : 'Change Password'}
+                  </button>
+                  {pwMsg.ok  && <span className="db-feedback db-feedback-ok"><FontAwesomeIcon icon={faCheckCircle} /> {pwMsg.ok}</span>}
+                  {pwMsg.err && <span className="db-feedback db-feedback-err"><FontAwesomeIcon icon={faExclamationCircle} /> {pwMsg.err}</span>}
+                </div>
+              </form>
+            </div>
+
+            {/* ── Preferences ── */}
+            <div className="db-card">
+              <p className="db-section-label">Preferences</p>
+              <div className="db-theme-row">
+                <span>Theme</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span className="db-badge db-badge-gray">{theme}</span>
+                  <button
+                    className="db-btn db-btn-ghost db-btn-sm"
+                    onClick={toggleTheme}
+                  >
+                    Toggle
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Danger zone ── */}
+            <div className="db-card danger">
+              <h2>Danger Zone</h2>
+              <p style={{ color: 'var(--text-secondary)', marginBottom: 16, fontSize: '0.9rem' }}>
+                Permanently delete your account and all associated data. This cannot be undone.
+              </p>
+              <button className="db-btn db-btn-danger">Delete My Account</button>
+            </div>
+
+          </div>
+        </main>
       </div>
-
-      <section className="profile-section">
-        <h3>Account</h3>
-        <form className="profile-form" onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Username</label>
-            <input name="username" type="text" value={form.username} onChange={handleChange} />
-          </div>
-          <div className="form-group">
-            <label>Email</label>
-            <input name="email" type="email" value={form.email} onChange={handleChange} />
-          </div>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <button type="submit" className="save-btn" disabled={saving || !dirty || !isFormValid()}>{saving ? 'Saving…' : 'Save Changes'}</button>
-            {status.msg && <div className="message-item message-success" style={{ position: 'static' }}>{status.msg}</div>}
-            {status.err && <div className="message-item message-error" style={{ position: 'static' }}>{status.err}</div>}
-          </div>
-+          {errors.username && <div className="validation-error">{errors.username}</div>}
-+          {!errors.username && form.username.trim().length > 0 && <div className="validation-ok">Looks good</div>}
-+          {errors.email && <div className="validation-error">{errors.email}</div>}
-+          {!errors.email && form.email.trim().length > 0 && <div className="validation-ok">Valid email</div>}
-
-        </form>
-      </section>
-
-      <section className="profile-section">
-        <h3>Profile Photo</h3>
-        <form onSubmit={handleImageUpload}>
-          <div className="form-group">
-            <input type="file" accept="image/*" onChange={handleImageSelect} />
-          </div>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <button type="submit" className="save-btn" disabled={imgUploading || !imageFile}>{imgUploading ? 'Uploading…' : 'Upload Image'}</button>
-            {imgStatus.msg && <div className="message-item message-success" style={{ position: 'static' }}>{imgStatus.msg}</div>}
-            {imgStatus.err && <div className="message-item message-error" style={{ position: 'static' }}>{imgStatus.err}</div>}
-          </div>
-+          {imageFile && <div style={{ marginTop: 8, color: 'var(--text-muted)' }}>{imageFile.name} • {(imageFile.size / 1024 / 1024).toFixed(2)} MB</div>}
-
-        </form>
-      </section>
-
-      <section className="profile-section">
-        <h3>Security</h3>
-        <form className="password-form" onSubmit={handlePwSubmit}>
-          <div className="form-group">
-            <label>Current Password</label>
-            <input name="old_password" type="password" value={pwForm.old_password} onChange={handlePwChange} />
-          </div>
-          <div className="form-group">
-            <label>New Password</label>
-            <input name="new_password" type="password" value={pwForm.new_password} onChange={handlePwChange} />
-          </div>
-          <div className="form-group">
-            <label>Confirm New Password</label>
-            <input name="confirm" type="password" value={pwForm.confirm} onChange={handlePwChange} />
-          </div>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <button type="submit" className="save-btn" disabled={pwSaving}>{pwSaving ? 'Updating…' : 'Change Password'}</button>
-            {pwStatus.msg && <div className="message-item message-success" style={{ position: 'static' }}>{pwStatus.msg}</div>}
-            {pwStatus.err && <div className="message-item message-error" style={{ position: 'static' }}>{pwStatus.err}</div>}
-          </div>
-        </form>
-      </section>
-
-      <section className="profile-section">
-        <h3>Preferences</h3>
-        <div className="form-group">
-          <label>Theme</label>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <span>Current: {theme}</span>
-            <button className="btn" onClick={(e) => { e.preventDefault(); toggleTheme(); }}>Toggle Theme</button>
-          </div>
-        </div>
-      </section>
     </div>
   );
 };

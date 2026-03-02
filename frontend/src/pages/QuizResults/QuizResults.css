@@ -1,7 +1,7 @@
-/* Quiz Results Styles - Consistent with CustomQuiz & Quiz */
+/* Quiz Results Styles - Consistent with CreateQuiz & Quiz */
 
 :root {
-  /* Primary Colors - CustomQuiz Consistency */
+  /* Primary Colors - CreateQuiz Consistency */
   --primary-color: #FFD600;
   --primary-dark: #E6C200;
   --secondary-color: #1a1a1a;

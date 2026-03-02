@@ -1,0 +1,193 @@
+/* ── Sidebar shell ───────────────────────────────────────────── */
+.db-sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 28px 20px;
+  position: fixed;
+  left: 0;
+  top: var(--navbar-height);
+  width: 260px;
+  height: calc(100vh - var(--navbar-height));
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  scrollbar-width: thin;
+}
+
+/* ── User card ───────────────────────────────────────────────── */
+.db-sidebar-user {
+  text-align: center;
+  padding-bottom: 24px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.db-avatar {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #121212;
+  background: linear-gradient(135deg, var(--primary-color, #FFD600), var(--primary-dark, #e6c000));
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.db-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.db-sidebar-user h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.db-sidebar-user p {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin: 0;
+  word-break: break-word;
+}
+
+.db-role-badge {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: rgba(255, 214, 0, 0.12);
+  color: var(--primary-color, #FFD600);
+}
+
+.db-role-badge.admin {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+/* ── Nav ─────────────────────────────────────────────────────── */
+.db-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.db-nav-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 10px 0;
+}
+
+.db-nav-item {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  padding: 10px 12px;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: background 0.15s, color 0.15s;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.88rem;
+  width: 100%;
+  font-family: inherit;
+}
+
+.db-nav-item svg  { width: 15px; flex-shrink: 0; opacity: 0.65; transition: opacity 0.15s; }
+.db-nav-item:hover { color: var(--text-primary); background: rgba(255,255,255,0.04); }
+.db-nav-item:hover svg { opacity: 1; }
+
+/* ── Variant: user (yellow) ──────────────────────────────────── */
+.db-sidebar--user .db-nav-item.active {
+  color: var(--primary-color, #FFD600);
+  background: rgba(255, 214, 0, 0.1);
+  font-weight: 600;
+}
+.db-sidebar--user .db-nav-item.active svg { opacity: 1; }
+
+/* ── Variant: admin (red) ────────────────────────────────────── */
+.db-sidebar--admin .db-avatar {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+}
+
+.db-sidebar--admin .db-nav-item.active {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  font-weight: 600;
+}
+.db-sidebar--admin .db-nav-item.active svg { opacity: 1; }
+
+/* ── Logout ──────────────────────────────────────────────────── */
+.db-logout-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 600;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+  width: 100%;
+  font-family: inherit;
+}
+
+.db-logout-btn:hover {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #ef4444;
+}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .db-sidebar { width: 220px; }
+}
+
+@media (max-width: 768px) {
+  .db-sidebar {
+    position: relative;
+    top: 0;
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    flex-direction: row;
+    align-items: center;
+    padding: 10px 14px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 8px;
+  }
+
+  .db-sidebar-user { display: none; }
+  .db-nav-divider  { display: none; }
+
+  .db-nav       { flex-direction: row; flex-wrap: nowrap; flex: 1; gap: 3px; }
+  .db-nav-item  { white-space: nowrap; padding: 8px 10px; font-size: 0.8rem; gap: 5px; justify-content: center; }
+  .db-logout-btn { margin-top: 0; min-width: auto; padding: 8px 10px; }
+}

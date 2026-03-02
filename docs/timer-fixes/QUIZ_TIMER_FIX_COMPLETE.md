@@ -22,7 +22,7 @@ All 6 initialization and timer management issues have been resolved with compreh
 
 ### Files Verified (No Issues)
 - **[backend/apps/quiz/async_views.py](backend/apps/quiz/async_views.py#L186)** - Correctly sends time_limit as integer
-- **[frontend/src/pages/CustomQuiz.jsx](frontend/src/pages/CustomQuiz.jsx#L128)** - Correctly passes quiz_time to backend
+- **[frontend/src/pages/CreateQuiz.jsx](frontend/src/pages/CreateQuiz.jsx#L128)** - Correctly passes quiz_time to backend
 - **[frontend/src/pages/QuizResults.jsx](frontend/src/pages/QuizResults.jsx)** - Results page ready for use
 
 ### Changes Made to Quiz.jsx
@@ -143,7 +143,7 @@ const timeLimitMinutes = parseInt(quizData.time_limit, 10) || 10;
 ## 🧪 Testing Instructions
 
 ### Quick Test (2 minutes)
-1. Open CustomQuiz page
+1. Open CreateQuiz page
 2. Enter subject, text, set time to **2 minutes**
 3. Generate quiz
 4. Click Start Quiz
@@ -219,7 +219,7 @@ console.log('Time remaining:', remaining, 'seconds');
 ## 📊 Data Flow (CONFIRMED WORKING)
 
 ```
-User (CustomQuiz.jsx)
+User (CreateQuiz.jsx)
   ↓ sets quiz_time: 10 (minutes)
   ↓
 Backend (async_views.py)
@@ -264,7 +264,7 @@ Created two detailed documentation files:
 
 The fix is **complete and ready for QA testing**. All edge cases have been considered and handled. The quiz should now:
 
-1. ✅ Start with the correct time from CustomQuiz settings
+1. ✅ Start with the correct time from CreateQuiz settings
 2. ✅ Count down properly without showing "time up" immediately
 3. ✅ Allow users to answer all questions
 4. ✅ Auto-submit when time actually reaches zero

@@ -57,7 +57,7 @@ else:
 ### Complete Quiz Generation Flow
 
 ```
-1. Frontend (CustomQuiz.jsx)
+1. Frontend (CreateQuiz.jsx)
    ↓ POST /api/quiz/generate/
    {subject, extractedText, num_mcq, num_short, quiz_time, difficulty}
 
@@ -194,7 +194,7 @@ Every question is normalized to:
 | `fastapi_service/core/ai_client.py` | Line 133: Return extracted content | ✅ Fixes Azure response handling |
 | `fastapi_service/routes/quiz.py` | Lines 83-123: Azure response extraction | ✅ Fixes quiz data parsing |
 | *(No changes needed)* | `apps/quiz/async_views.py` | ✅ Already correct |
-| *(No changes needed)* | `frontend/src/pages/CustomQuiz.jsx` | ✅ Already correct |
+| *(No changes needed)* | `frontend/src/pages/CreateQuiz.jsx` | ✅ Already correct |
 | *(No changes needed)* | `frontend/src/pages/Quiz.jsx` | ✅ Already correct |
 | *(No changes needed)* | `frontend/src/pages/QuizResults.jsx` | ✅ Already correct |
 

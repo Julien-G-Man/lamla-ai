@@ -69,7 +69,7 @@
 
 ### Test 1.1: Quiz Starts with Correct Time
 **Setup**: 
-- Go to CustomQuiz
+- Go to CreateQuiz
 - Enter: Subject, Text, Time = 10 minutes
 - Click "Generate Quiz"
 
@@ -372,7 +372,7 @@ If tests fail:
 
 For critical issues:
 - Check that backend is sending correct `time_limit`
-- Verify CustomQuiz is sending `quiz_time` properly
+- Verify CreateQuiz is sending `quiz_time` properly
 - Confirm React DevTools shows correct state values
 
 ---
