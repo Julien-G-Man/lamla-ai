@@ -211,9 +211,7 @@ ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
 
 # Auth emails (confirmations, password resets)
 EMAIL_BACKEND_TYPE = os.getenv("EMAIL_BACKEND_TYPE")   # "smtp" or "mailjet"
-SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
-MAILJET_API_KEY_PUBLIC = os.getenv("MAILJET_API_KEY_PUBLIC")
-MAILJET_API_SECRET_KEY = os.getenv("MAILJET_API_SECRET_KEY")
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 
 AUTH_EMAIL_HOST_USER = os.getenv("AUTH_EMAIL_HOST_USER")
 AUTH_EMAIL_HOST_PASSWORD = os.getenv("AUTH_EMAIL_HOST_PASSWORD")

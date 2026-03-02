@@ -1,5 +1,6 @@
 import logging
 import requests
+import resend
 from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import EmailMultiAlternatives
@@ -21,50 +22,51 @@ def _get_token(user) -> str:
 def _send_email(subject: str, to_email: str, html_body: str, text_body: str = None) -> None:
     """
     Sends email via selected backend:
-    - mailjet (production)
+    - resend (production)
     - smtp (development)
     """
+
     backend_type = getattr(settings, "EMAIL_BACKEND_TYPE", "smtp").lower()
     text_body = text_body or html_body
 
-    if backend_type == "mailjet":
-        api_key = getattr(settings, "MAILJET_API_KEY_PUBLIC", None)
-        secret = getattr(settings, "MAILJET_API_SECRET_KEY", None)
-        if not api_key or not secret:
-            raise ValueError("Mailjet API keys not set in environment.")
+    if backend_type == "resend":
+        api_key = getattr(settings, "RESEND_API_KEY", None)
 
-        data = {
-            "Messages": [
-                {
-                    "From": {"Email": settings.DEFAULT_FROM_EMAIL.split('<')[-1].strip('>'), "Name": settings.SITE_NAME},
-                    "To": [{"Email": to_email}],
-                    "Subject": subject,
-                    "TextPart": text_body,
-                    "HTMLPart": html_body,
-                }
-            ]
-        }
+        if not api_key:
+            raise ValueError("RESEND_API_KEY not set.")
+
+        resend.api_key = api_key
 
         try:
-            resp = requests.post(
-                "https://api.mailjet.com/v3.1/send",
-                json=data,
-                auth=(api_key, secret),
-                timeout=10,
-            )
-            resp.raise_for_status()
-            logger.info("Mailjet: Sent email to %s", to_email)
+            resend.Emails.send({
+                "from": settings.DEFAULT_FROM_EMAIL,
+                "to": [to_email],
+                "subject": subject,
+                "html": html_body,
+                "text": text_body,
+            })
+
+            logger.info("Resend: Sent email to %s", to_email)
+
         except Exception as e:
-            logger.exception("Mailjet failed to send email: %s", e)
+            logger.exception("Resend failed to send email: %s", e)
             raise
 
     else:
-        # Local/Smtp fallback
+        # SMTP / Console fallback
         try:
-            msg = EmailMultiAlternatives(subject, text_body, settings.DEFAULT_FROM_EMAIL, [to_email])
+            msg = EmailMultiAlternatives(
+                subject,
+                text_body,
+                settings.DEFAULT_FROM_EMAIL,
+                [to_email]
+            )
+
             msg.attach_alternative(html_body, "text/html")
             msg.send()
+
             logger.info("SMTP: Sent email to %s", to_email)
+
         except Exception as e:
             logger.exception("SMTP failed to send email: %s", e)
             raise
