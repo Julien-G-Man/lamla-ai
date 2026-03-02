@@ -1,2 +1,4 @@
 context_files/
 docker-compose.yml
+# Added by ggshield
+.cache_ggshield

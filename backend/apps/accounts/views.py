@@ -162,6 +162,31 @@ class ResendVerificationEmailView(APIView):
 
 # ── Update profile ────────────────────────────────────────────────────────────
 
+class ProfileView(APIView):
+    """GET /api/profile/ — full profile data including stats summary"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from apps.quiz.models import QuizAttempt
+        from apps.flashcards.models import FlashcardSet
+        from django.db import models as dm
+
+        user  = request.user
+        stats = QuizAttempt.objects.filter(user=user).aggregate(
+            total=dm.Count('id'),
+            avg=dm.Avg('score_percent'),
+        )
+
+        return Response({
+            'user':  user_to_dict(user),
+            'stats': {
+                'total_quizzes':        stats['total'] or 0,
+                'average_score':        round(stats['avg'] or 0, 1),
+                'total_flashcard_sets': FlashcardSet.objects.filter(user=user).count(),
+            }
+        })
+        
+        
 class UpdateProfileView(APIView):
     """POST /api/auth/update-profile/ — update username and/or email."""
     permission_classes = [IsAuthenticated]

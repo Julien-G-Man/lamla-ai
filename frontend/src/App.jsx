@@ -9,7 +9,7 @@ import Login from "./pages/Login/Login";
 import Signup from "./pages/Signup/Signup";
 import VerifyEmail from "./pages/Auth/VerifyEmail";
 import Dashboard from "./pages/Dashboard/Dashboard";
-import AdminDashboard from "./pages/AdminDashboard/AdminDashboard";
+import AdminDashboard from "./pages/Dashboard/AdminDashboard";
 import CustomQuiz from "./pages/CustomQuiz/CustomQuiz";
 import Quiz from "./pages/Quiz/Quiz";
 import QuizResults from "./pages/QuizResults/QuizResults";

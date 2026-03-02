@@ -104,7 +104,7 @@ export const authService = {
   // ── Profile / Password ───────────────────────────────────────────────────
   updateProfile: async (username, email) => {
     try {
-      const response = await authApi.post("/auth/update-profile/", {
+      const response = await authApi.post("/profile/update-profile/", {
         username: username.trim(),
         email: email.trim().toLowerCase(),
       });
@@ -120,7 +120,7 @@ export const authService = {
     try {
       const formData = new FormData();
       formData.append("profile_image", file);
-      const response = await authApi.post("/auth/upload-profile-image/", formData, {
+      const response = await authApi.post("/profile/upload-profile-image/", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       if (response.data.user)

@@ -23,6 +23,12 @@ from django.utils.decorators import sync_and_async_middleware
 from asgiref.sync import sync_to_async
 from apps.core.async_client import get_async_client, build_fastapi_headers
 
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from .models import QuizSession
+
+    
 try:
     from reportlab.lib.pagesizes import letter
     from reportlab.pdfgen import canvas as rl_canvas
@@ -388,7 +394,25 @@ IMPORTANT: Return ONLY the JSON object, nothing else. No markdown formatting, no
             "score": 1.0 if is_correct else 0.0
         }
 
+class QuizHistoryView(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def get(self, request):
+        sessions = QuizSession.objects.filter(
+            user=request.user
+        ).order_by('-created_at')[:20]
+
+        data = [{
+            'id':             s.id,
+            'subject':        s.subject,
+            'total_questions': s.total_questions,
+            'correct_answers': s.correct_answers,
+            'score_percent':  float(s.score_percentage),
+            'created_at':     s.created_at.isoformat(),
+        } for s in sessions]
+
+        return Response({'history': data})
+    
 # --- Download Helpers ---
 
 def _safe_filename(name: str, max_len: int = 180) -> str:

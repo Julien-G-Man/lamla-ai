@@ -1,0 +1,80 @@
+@import './dashboard-shared.css';
+
+/* Admin accent: red */
+.db-nav-item.active {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.db-stat-card:hover {
+  border-color: #ef4444;
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.08);
+}
+
+.db-stat-icon { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+
+.db-action-card:hover {
+  border-color: #ef4444;
+  box-shadow: 0 6px 18px rgba(239, 68, 68, 0.08);
+}
+
+.db-field input:focus,
+.db-field select:focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+/* Timeline */
+.db-timeline { display: flex; flex-direction: column; gap: 20px; }
+
+.db-timeline-item {
+  display: flex;
+  gap: 14px;
+  position: relative;
+  padding-left: 28px;
+}
+
+.db-timeline-item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 9px;
+  top: 28px;
+  width: 2px;
+  height: calc(100% + 20px);
+  background: var(--border);
+}
+
+.db-timeline-dot {
+  width: 20px;
+  height: 20px;
+  background: #ef4444;
+  border: 3px solid var(--surface);
+  border-radius: 50%;
+  position: absolute;
+  left: 0;
+  top: 3px;
+  flex-shrink: 0;
+}
+
+.db-timeline-body h4    { font-weight: 700; color: var(--text-primary); margin: 0 0 3px; font-size: 0.9rem; }
+.db-timeline-body p     { color: var(--text-secondary); margin: 0 0 3px; font-size: 0.85rem; }
+.db-timeline-body span  { font-size: 0.78rem; color: var(--text-muted, #666); }
+
+/* Content items */
+.db-content-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 11px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.02);
+  margin-bottom: 10px;
+  transition: background 0.15s;
+}
+
+.db-content-item:hover { background: rgba(255,255,255,0.04); }
+.db-content-item h4    { font-weight: 700; color: var(--text-primary); margin: 0 0 4px; font-size: 0.9rem; }
+.db-content-item p     { font-size: 0.8rem; color: var(--text-secondary); margin: 0; }
+.db-content-item-actions { display: flex; gap: 8px; flex-shrink: 0; }

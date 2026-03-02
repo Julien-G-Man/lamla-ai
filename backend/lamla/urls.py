@@ -26,6 +26,6 @@ urlpatterns = [
     path('api/', include("apps.chatbot.urls")),
     path('api/', include("apps.quiz.urls")),
     path('api/', include("apps.flashcards.urls")),
-    path('api/', include("apps.dashboard.urls")),
     path('api/', include("apps.accounts.urls")),
+    path('api/', include("apps.dashboard.urls")),
 ]

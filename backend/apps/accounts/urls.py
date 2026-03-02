@@ -9,7 +9,8 @@ from .views import (
     UpdateProfileView,
     ChangePasswordView,
     UploadProfileImageView,
-    DebugUsers
+    DebugUsers,
+    ProfileView
 )
 
 urlpatterns = [
@@ -17,6 +18,7 @@ urlpatterns = [
     path("auth/signup/",               SignupView.as_view(),              name="auth-signup"),
     path("auth/login/",                LoginView.as_view(),               name="auth-login"),
     path("auth/logout/",               LogoutView.as_view(),              name="auth-logout"),
+    path("auth/change-password/",      ChangePasswordView.as_view(),      name="auth-change-password"),
 
     # Re-hydrate auth state on page refresh
     path("auth/me/",                   MeView.as_view(),                  name="auth-me"),
@@ -26,9 +28,9 @@ urlpatterns = [
     path("auth/resend-verification/",  ResendVerificationEmailView.as_view(), name="auth-resend-verification"),
 
     # ── Profile ───────────────────────────────────────────────────────────────
-    path("auth/update-profile/",       UpdateProfileView.as_view(),       name="auth-update-profile"),
-    path("auth/change-password/",      ChangePasswordView.as_view(),      name="auth-change-password"),
-    path("auth/upload-profile-image/", UploadProfileImageView.as_view(),  name="auth-upload-image"),
+    path("profile/",                   ProfileView.as_view(),             name="profile"),
+    path("profile/update-profile/",       UpdateProfileView.as_view(),       name="auth-update-profile"),
+    path("profile/upload-profile-image/", UploadProfileImageView.as_view(),  name="auth-upload-image"),
     
     # Tests
     path("debug/users", DebugUsers.as_view(), name="debug-users")
