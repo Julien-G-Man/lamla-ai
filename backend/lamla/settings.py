@@ -100,21 +100,48 @@ ASGI_APPLICATION = "lamla.asgi.application"
 
 
 # Database Configuration
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-DATABASES = {
-    'default': env.db_url('DATABASE_URL')
-}
+if DATABASE_URL and not DEBUG:
+    import dj_database_url
 
-DB_SSL_REQUIRE = os.getenv("DB_SSL_REQUIRE", "false").lower() == "true"
+    DATABASES = {
+        "default": dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+        )
+    }
 
-# Force SSL in production
-if not DEBUG:
-    DB_SSL_REQUIRE = True
+    # Production (Neon requires SSL)
+    if not DEBUG:
+        DATABASES["default"]["OPTIONS"] = {"sslmode": "require"}
 
-# Inject the SSL setting into the OPTIONS dictionary where Django expects it
-if DB_SSL_REQUIRE:
-    DATABASES['default'].setdefault('OPTIONS', {})
-    DATABASES['default']['OPTIONS']['sslmode'] = 'require'
+if DEBUG:
+    # Local PostgreSQL
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.getenv("POSTGRES_DB_NAME"),
+            "USER": os.getenv("POSTGRES_DB_USER"),
+            "PASSWORD": os.getenv("POSTGRES_DB_PASSWORD"),
+            "HOST": os.getenv("POSTGRES_HOST"),
+            "PORT": os.getenv("POSTGRES_PORT"),
+            "OPTIONS": {
+                "sslmode": "disable"
+            }
+        }
+    }
+    
+# DB_SSL_REQUIRE = os.getenv("DB_SSL_REQUIRE", "false").lower() == "true"
+
+# # Force SSL in production
+# if not DEBUG:
+#     DB_SSL_REQUIRE = True
+
+# # Inject the SSL setting into the OPTIONS dictionary where Django expects it
+# if DB_SSL_REQUIRE and not DEBUG:
+#     DATABASES['default'].setdefault('OPTIONS', {})
+#     DATABASES['default']['OPTIONS']['sslmode'] = 'require'
 
 
 # Add Token authentication to REST framework
