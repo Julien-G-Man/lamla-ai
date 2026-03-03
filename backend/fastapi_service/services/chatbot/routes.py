@@ -1,19 +1,17 @@
 import json
 import logging
-from typing import Optional
-
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
 import httpx
+from fastapi import APIRouter, HTTPException
+from .schemas import PromptIn
 
 logger = logging.getLogger(__name__)
-router = APIRouter()
+chatbot_router = APIRouter()
 
 try:
-	from ..core.ai_client import ai_service
+	from ...core.ai_client import ai_service
 except Exception:
 	try:
-		from fastapi_service.core.ai_client import ai_service
+		from core.ai_client import ai_service
 	except Exception:
 		# Fallback: attempt to load module by path so running uvicorn from
 		# within the package dir still works (avoids "attempted relative
@@ -41,12 +39,7 @@ except Exception:
 			ai_service = None
 
 
-class PromptIn(BaseModel):
-	prompt: str
-	max_tokens: Optional[int] = 400
-
-
-@router.post("/")
+@chatbot_router.post("/")
 async def chatbot_endpoint(payload: PromptIn):
 	if not payload or not payload.prompt:
 		raise HTTPException(status_code=400, detail="Missing prompt")

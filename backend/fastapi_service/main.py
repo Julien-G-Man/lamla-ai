@@ -4,7 +4,9 @@ from fastapi import FastAPI, HTTPException, Request
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
-from routes import chatbot, quiz, flashcards
+from services.chatbot.routes import chatbot_router
+from services.quiz.routes import quiz_router
+from services.flashcards.routes import flashcards_router
 from core.middleware import InternalAuthMiddleware
 
 app = FastAPI(title="Lamla AI Engine")
@@ -14,9 +16,9 @@ load_dotenv()
 # Add internal auth middleware (core implementation checks X-Internal-Secret header)
 app.add_middleware(InternalAuthMiddleware)
 
-app.include_router(chatbot.router, prefix="/chatbot")
-app.include_router(quiz.router, prefix="/quiz")
-app.include_router(flashcards.router, prefix="/flashcards")
+app.include_router(chatbot_router, prefix="/chatbot")
+app.include_router(quiz_router, prefix="/quiz")
+app.include_router(flashcards_router, prefix="/flashcards")
 
 logger = logging.getLogger(__name__)
 
