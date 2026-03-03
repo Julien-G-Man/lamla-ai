@@ -81,7 +81,7 @@ const Navbar = ({ user }) => {
               ) : (
                 <>
                   <li className="nav-item-cta">
-                    <Link to="/auth/signup" className="btn btn-nav-secondary">Sign Up</Link>
+                    <Link to="/auth/login" className="btn btn-nav-secondary">Login</Link>
                   </li>
                 </>
               )}
