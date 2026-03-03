@@ -19,7 +19,7 @@ try:
 except ImportError:
     HAS_REPORTLAB = False
 
-
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 

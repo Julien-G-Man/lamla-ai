@@ -6,6 +6,7 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
  
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
@@ -29,7 +30,7 @@ async def ajax_extract_text(request):
         return JsonResponse({'error': 'File too large (max 10MB)'}, status=400)
 
     try:
-        import asyncio
+        import asyncio, io
         
         def extract_text_sync():
             """Synchronous text extraction - runs in thread pool"""
@@ -41,7 +42,6 @@ async def ajax_extract_text(request):
             
             # PDF extraction
             if file_ext == '.pdf':
-                import io
                 pdf_file = io.BytesIO(file_content)
                 pdf_reader = PyPDF2.PdfReader(pdf_file)
                 for page in pdf_reader.pages:
@@ -49,7 +49,6 @@ async def ajax_extract_text(request):
                     
             # DOCX extraction
             elif file_ext == '.docx':
-                import io
                 doc_file = io.BytesIO(file_content)
                 doc = docx.Document(doc_file)
                 text = '\n'.join([para.text for para in doc.paragraphs])
@@ -57,7 +56,6 @@ async def ajax_extract_text(request):
             # PPTX extraction
             elif file_ext == '.pptx':
                 from pptx import Presentation
-                import io
                 pptx_file = io.BytesIO(file_content)
                 prs = Presentation(pptx_file)
                 for slide in prs.slides:

@@ -43,11 +43,10 @@ class DashboardStatsView(APIView):
             avg=dm.Avg('score_percentage'),
         )
 
-        # Flashcards — model not built yet, default to 0
         total_flashcard_sets = 0
         try:
-            from apps.flashcards.models import FlashcardSet
-            total_flashcard_sets = FlashcardSet.objects.filter(user=user).count()
+            from apps.flashcards.models import Deck
+            total_flashcard_sets = Deck.objects.filter(user=user).count()
         except Exception:
             pass
 
@@ -77,8 +76,8 @@ class AdminDashboardStatsView(APIView):
 
         total_flashcard_sets = 0
         try:
-            from apps.flashcards.models import FlashcardSet
-            total_flashcard_sets = FlashcardSet.objects.count()
+            from apps.flashcards.models import Deck
+            total_flashcard_sets = Deck.objects.count()
         except Exception:
             pass
 

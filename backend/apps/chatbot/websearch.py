@@ -1,11 +1,10 @@
-# websearch.py
 import logging
 import os
 from typing import List, Dict, Optional
 from tavily import TavilyClient
 
 # Placeholder for an actual search client library (e.g., using a mock or a real one like SerpApi, Google Custom Search, etc.)
-
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 # Define the structure for a single search result
@@ -75,7 +74,7 @@ class SearchEngine:
             SearchResult(
                 title="Lamla AI's New Integration Guide",
                 snippet=f"The latest guide confirms that Lamla AI is integrating a new {query.split()[0]} search engine for real-time information retrieval, enhancing the RAG pipeline for general queries.",
-                url="https://lamla-ai.com/docs/new-search-feature"
+                url="https://lamla-ai.vercel.app/docs/new-search-feature"
             ),
             SearchResult(
                 title="Recent Trends in Educational AI",

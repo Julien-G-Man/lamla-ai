@@ -167,12 +167,12 @@ class ProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        from apps.quiz.models import QuizAttempt
-        from apps.flashcards.models import FlashcardSet
+        from apps.quiz.models import QuizSession
+        from apps.flashcards.models import Deck
         from django.db import models as dm
 
         user  = request.user
-        stats = QuizAttempt.objects.filter(user=user).aggregate(
+        stats = QuizSession.objects.filter(user=user).aggregate(
             total=dm.Count('id'),
             avg=dm.Avg('score_percent'),
         )
@@ -182,7 +182,7 @@ class ProfileView(APIView):
             'stats': {
                 'total_quizzes':        stats['total'] or 0,
                 'average_score':        round(stats['avg'] or 0, 1),
-                'total_flashcard_sets': FlashcardSet.objects.filter(user=user).count(),
+                'total_flashcard_sets': Deck.objects.filter(user=user).count(),
             }
         })
         
@@ -313,5 +313,5 @@ class DebugUsers(APIView):
 
     def get(self, request):
         from .models import User
-        users = User.objects.all().values("email", "username", "is_email_verified")
+        users = User.objects.all().values("email", "username", "is_email_verified", "is_admin")
         return Response(list(users))

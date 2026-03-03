@@ -7,6 +7,7 @@ Implements the Asynchronous Proxy Pattern for quiz endpoints.
 import json
 import logging
 import httpx
+from datetime import datetime
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -17,6 +18,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from .models import QuizSession
 
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 @csrf_exempt
@@ -185,7 +187,7 @@ async def submit_quiz_api_async(request):
             "total": total_questions,
             "score_percent": score_percent,
             "details": details,
-            "submitted_at": None  # Can add timestamp if storing in DB
+            "submitted_at": datetime.now()
         }
         
         logger.info(f"Quiz submitted: {correct_count}/{total_questions} correct ({score_percent}%)")
@@ -233,7 +235,7 @@ Respond in JSON format ONLY:
   "score": 0.0-1.0
 }}
 
-IMPORTANT: Return ONLY the JSON object, nothing else. No markdown formatting, no code blocks."""
+IMPORTANT: Return ONLY the JSON object, nothing else. No markdown formatting, no code blocks, only the JSON object"""
 
     try:
         client = get_async_client()

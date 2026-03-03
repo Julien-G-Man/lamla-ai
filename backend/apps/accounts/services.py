@@ -39,11 +39,11 @@ def _send_email(subject: str, to_email: str, html_body: str, text_body: str = No
 
         try:
             resend.Emails.send({
-                "from": settings.DEFAULT_FROM_EMAIL,
-                "to": [to_email],
+                "from":    settings.DEFAULT_FROM_EMAIL,
+                "to":      [to_email],
                 "subject": subject,
-                "html": html_body,
-                "text": text_body,
+                "html":    html_body,
+                "text":    text_body,
             })
 
             logger.info("Resend: Sent email to %s", to_email)
