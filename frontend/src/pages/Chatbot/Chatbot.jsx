@@ -123,7 +123,8 @@ const Chatbot = ({ user }) => {
                 });
 
                 if (!res.ok || !res.body) {
-                    throw new Error(`Stream API Connection Error: ${res.status}`);
+                    throw new Error(`This service is unavailable for now, but we are working on it. Please come back later.
+                        Stream API Connection Error: ${res.status}`);
                 }
                 
                 const reader = res.body.getReader();
