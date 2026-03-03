@@ -3,7 +3,7 @@ from . import views
 
 urlpatterns = [
     # user
-    path('dashboard/stats/',                                views.DashboardStatsView.as_view()),
+    path('dashboard/stats/',                      views.DashboardStatsView.as_view()),
     
     # admin
     path('dashboard/admin/stats/',                views.AdminDashboardStatsView.as_view()),
