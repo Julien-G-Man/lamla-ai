@@ -51,6 +51,7 @@
   padding: 36px 40px;
   min-height: calc(100vh - var(--navbar-height));
   overflow-y: auto;
+}
 
 .db-tab { animation: dbFade 0.22s ease; }
 
