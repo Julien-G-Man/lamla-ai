@@ -1,27 +1,9 @@
 @import './dashboard-shared.css';
 
-/* ── Admin accent: red ───────────────────────────────────────── */
-.db-stat-card:hover {
-  border-color: #ef4444;
-  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.08);
-}
-
-.db-stat-icon {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-}
-
-.db-action-card:hover {
-  border-color: #ef4444;
-  box-shadow: 0 6px 18px rgba(239, 68, 68, 0.08);
-}
-
-.db-field input:focus,
-.db-field select:focus,
-.db-field textarea:focus {
-  border-color: #ef4444;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
-}
+/* ── Admin theme accent: red ─────────────────────────────────── */
+/* Note: Sidebar variant handling (db-sidebar--admin) applies
+   red accent to sidebar. Page-level components inherit yellow
+   from shared.css unless admin variant is applied at component level. */
 
 /* ── Timeline ────────────────────────────────────────────────── */
 .db-timeline { display: flex; flex-direction: column; gap: 20px; }

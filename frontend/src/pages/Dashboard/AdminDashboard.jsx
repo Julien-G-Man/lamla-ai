@@ -127,45 +127,70 @@ const AdminDashboard = () => {
             <div className="db-tab">
               <div className="db-page-header">
                 <h1>User Management</h1>
-                <p>Monitor and manage user accounts.</p>
+                <p>View and manage user accounts. {users.length > 0 && `Showing latest ${users.length} users.`}</p>
               </div>
-              <div className="db-table-wrap">
-                <table className="db-table">
-                  <thead>
-                    <tr>
-                      <th>Username</th><th>Email</th><th>Joined</th>
-                      <th>Quizzes</th><th>Status</th><th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {loadingUsers ? (
-                      <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32, color: 'var(--text-secondary)' }}>Loading users…</td></tr>
-                    ) : users.length === 0 ? (
-                      <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32, color: 'var(--text-secondary)' }}>No users found.</td></tr>
-                    ) : (
-                      users.map((u) => (
-                        <tr key={u.email}>
-                          <td style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{u.username}</td>
+
+              {loadingUsers ? (
+                <div className="db-card">
+                  <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-secondary)' }}>
+                    <p>Loading users…</p>
+                  </div>
+                </div>
+              ) : users.length === 0 ? (
+                <div className="db-card">
+                  <div style={{ textAlign: 'center', padding: '48px 24px' }}>
+                    <p style={{ color: 'var(--text-secondary)', marginBottom: '16px' }}>No users found.</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="db-table-wrap">
+                  <table className="db-table">
+                    <thead>
+                      <tr>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Joined</th>
+                        <th>Quizzes</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.map((u) => (
+                        <tr key={u.id}>
+                          <td style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                            {u.username}
+                          </td>
                           <td>{u.email}</td>
                           <td>{u.date_joined}</td>
-                          <td>{u.total_quizzes ?? 0}</td>
+                          <td style={{ textAlign: 'center', color: 'var(--text-primary)', fontWeight: 600 }}>
+                            {u.total_quizzes ?? 0}
+                          </td>
                           <td>
                             <span className={`db-badge ${u.is_email_verified ? 'db-badge-green' : 'db-badge-gray'}`}>
                               {u.is_email_verified ? 'Verified' : 'Unverified'}
                             </span>
                           </td>
                           <td>
-                            <div style={{ display: 'flex', gap: 6 }}>
-                              <button className="db-btn db-btn-ghost db-btn-sm">View</button>
-                              <button className="db-btn db-btn-danger db-btn-sm" onClick={() => handleRemoveUser(u.id)}>Remove</button>
+                            <div style={{ display: 'flex', gap: 'var(--spacing-xs)' }}>
+                              <button className="db-btn db-btn-ghost db-btn-sm" title="View user details">
+                                View
+                              </button>
+                              <button
+                                className="db-btn db-btn-danger db-btn-sm"
+                                onClick={() => handleRemoveUser(u.id)}
+                                title="Remove user account"
+                              >
+                                Remove
+                              </button>
                             </div>
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
