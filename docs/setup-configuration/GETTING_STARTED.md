@@ -221,8 +221,10 @@ For production, use a process manager like Gunicorn or systemd.
 
 ## Documentation
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture
-- [ASYNC_PROXY_SETUP.md](backend/ASYNC_PROXY_SETUP.md) - Async proxy pattern
-- [QUICK_START_ASYNC.md](backend/QUICK_START_ASYNC.md) - Async quick start
-- [CONVERSATION_SAVE_FIXES.md](CONVERSATION_SAVE_FIXES.md) - Conversation persistence fixes
-- [AZURE_SAFETY_BLOCK_FIX.md](AZURE_SAFETY_BLOCK_FIX.md) - Safety filter handling
+- [ARCHITECTURE.md](../architecture-design/ARCHITECTURE.md) - System architecture and component overview
+- [FRONTEND_INTEGRATION.md](../architecture-design/FRONTEND_INTEGRATION.md) - Frontend integration guide
+- [AUTHENTICATION_SETUP.md](AUTHENTICATION_SETUP.md) - Email verification and auth setup
+- [UI_COMPONENTS_DASHBOARD.md](UI_COMPONENTS_DASHBOARD.md) - Dashboard layout and components
+- [CONVERSATION_SAVE_FIXES.md](../bug-fixes/CONVERSATION_SAVE_FIXES.md) - Conversation persistence fixes
+- [AZURE_SAFETY_BLOCK_FIX.md](../bug-fixes/AZURE_SAFETY_BLOCK_FIX.md) - Safety filter handling
+- [MARCH_2026_AUTH_OVERHAUL.md](../changelogs/MARCH_2026_AUTH_OVERHAUL.md) - Auth system redesign changelog

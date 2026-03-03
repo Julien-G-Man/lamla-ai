@@ -4,42 +4,18 @@ Welcome to the Lamla AI comprehensive documentation repository. This directory c
 
 ## 📋 Directory Structure
 
-### 🎯 [quiz-feature/](quiz-feature/)
-Complete documentation for the Quiz feature implementation, testing, and integration.
+### 🚀 [setup-configuration/](setup-configuration/)
+Setup procedures, configuration guides, quick start documentation, and authentication setup.
 
 **Contents:**
-- `QUIZ_ARCHITECTURE_DIAGRAMS.md` - Visual architecture and flow diagrams
-- `QUIZ_COMPLETE_IMPLEMENTATION.md` - Full implementation details
-- `QUIZ_FEATURE_TESTING.md` - Testing procedures and checklists
-- `QUIZ_FIXES_SUMMARY.md` - Summary of all fixes applied
-- `QUIZ_IMPLEMENTATION_SUMMARY.md` - Implementation overview
-- `QUIZ_INTEGRATION_CHECKLIST.md` - Integration verification steps
-- `QUIZ_READY_FOR_TESTING.md` - Pre-testing requirements
-- `QUIZ_TIMER_DOCUMENTATION_INDEX.md` - Index of timer-related docs
+- `GETTING_STARTED.md` - Getting started guide with Django & FastAPI setup
+- `QUICK_REFERENCE.md` - Quick reference for common tasks
+- `QUICK_TEST_GUIDE.md` - Quick testing procedures
+- `SETUP_POSTGRES_USAGE.md` - PostgreSQL setup and usage
+- `AUTHENTICATION_SETUP.md` - Email verification, auth flows, and API endpoints
+- `UI_COMPONENTS_DASHBOARD.md` - Dashboard layout and component architecture
 
-**Best For:** Understanding quiz feature architecture, implementation status, and testing requirements.
-
----
-
-### ⏱️ [timer-fixes/](timer-fixes/)
-Detailed documentation of timer bug identification, fixes, and validation.
-
-**Contents:**
-- `QUIZ_TIMER_EXEC_SUMMARY.md` - Executive summary of timer fixes
-- `QUIZ_TIMER_FIX.md` - Detailed timer bug fix explanation
-- `QUIZ_TIMER_FIX_COMPLETE.md` - Complete fix implementation
-- `QUIZ_TIMER_QUICK_FIX.md` - Quick reference for timer fix
-- `QUIZ_TIMER_RESOLUTION.md` - Resolution details
-- `QUIZ_TIMER_ROADMAP.md` - Fix roadmap and milestones
-- `QUIZ_TIMER_TESTING_CHECKLIST.md` - Testing procedures
-- `TIMER_BEFORE_AFTER.md` - Before/after comparison
-- `TIMER_FIX.md` - General timer fix documentation
-- `TIMER_QUICK_TEST.md` - Quick testing guide
-- `TIMER_RACE_CONDITION_FIX.md` - Race condition fix details
-- `TIMER_SUMMARY_REPORT.md` - Summary report
-- `TIMER_VISUAL_GUIDE.md` - Visual guide to timer fixes
-
-**Best For:** Understanding the timer bug, how it was fixed, and how to verify the fix.
+**Best For:** Setting up the development environment, initial configuration, authentication, and UI components.
 
 ---
 
@@ -54,13 +30,68 @@ System architecture, design patterns, and frontend-backend integration documenta
 
 ---
 
+### 🔐 [authentication/](authentication/)
+Complete authentication system documentation, user models, and email verification.
+
+**Contents:**
+- `AUTHENTICATION_SETUP.md` - Consolidated auth setup with email verification flow
+- `EMAIL_VERIFICATION.md` - Email verification system details
+- `CUSTOM_USER_MODEL.md` - Custom User model implementation and usage
+
+**Best For:** Understanding authentication architecture, email verification, custom user model, and security practices.
+
+---
+
+### ✨ [features/](features/)
+Feature-specific documentation for major system components.
+
+**Contents:**
+- `QUIZ.md` - Quiz generation, session management, and timer implementation
+- `FLASHCARDS.md` - Flashcard feature documentation
+- `CHATBOT.md` - AI chatbot integration and features
+
+**Best For:** Understanding individual feature architecture, APIs, and usage patterns.
+
+---
+
+### 🌐 [frontend/](frontend/)
+Frontend architecture, routing, and React component documentation.
+
+**Contents:**
+- `ROUTES_AND_PAGES.md` - React routes, page structure, and navigation
+
+**Best For:** Understanding frontend architecture and component organization.
+
+---
+
+### ⏱️ [timer-fixes/](timer-fixes/)
+Detailed documentation of timer bug identification, fixes, and validation.
+
+**Contents:**
+- `QUIZ_TIMER_EXEC_SUMMARY.md` - Executive summary of timer fixes
+- `QUIZ_TIMER_FIX_COMPLETE.md` - Complete fix implementation and details
+
+**Best For:** Understanding the timer bug, how it was fixed, and how to verify the fix.
+
+---
+
+### 📅 [changelogs/](changelogs/)
+Development changelog and version history.
+
+**Contents:**
+- `MARCH_2026_AUTH_OVERHAUL.md` - Auth system redesign (March 2026)
+
+**Best For:** Understanding what changed and when, and tracking feature implementation history.
+
+---
+
 ### 🚀 [deployment-guides/](deployment-guides/)
 Deployment procedures, checklists, and environment configuration.
 
 **Contents:**
 - `DEPLOYMENT_CHECKLIST.md` - Complete deployment checklist
 
-**Related Files (see deployment notes below):**
+**Related Info:**
 - Backend: Render (Django + FastAPI on separate servers)
 - Frontend: Already deployed on Vercel
 
@@ -78,19 +109,6 @@ Documentation of identified bugs and their resolutions.
 - `FIXES_SUMMARY.md` - Summary of all fixes
 
 **Best For:** Understanding past issues, how they were resolved, and preventing regressions.
-
----
-
-### ⚙️ [setup-configuration/](setup-configuration/)
-Setup procedures, configuration guides, and quick start documentation.
-
-**Contents:**
-- `GETTING_STARTED.md` - Getting started guide
-- `QUICK_REFERENCE.md` - Quick reference for common tasks
-- `QUICK_TEST_GUIDE.md` - Quick testing procedures
-- `SETUP_POSTGRES_USAGE.md` - PostgreSQL setup and usage
-
-**Best For:** Setting up the development environment, initial configuration, and quick reference.
 
 ---
 
@@ -145,26 +163,28 @@ UI/UX documentation, styling guidelines, and design implementation.
 ### For First-Time Setup
 1. Start with [setup-configuration/GETTING_STARTED.md](setup-configuration/GETTING_STARTED.md)
 2. Review [setup-configuration/QUICK_REFERENCE.md](setup-configuration/QUICK_REFERENCE.md)
-3. Check [security-reference/SECURITY.md](security-reference/SECURITY.md)
+3. Check [authentication/AUTHENTICATION_SETUP.md](authentication/AUTHENTICATION_SETUP.md)
+4. Review [security-reference/SECURITY.md](security-reference/SECURITY.md)
 
 ### For Feature Understanding
 1. Read [architecture-design/ARCHITECTURE.md](architecture-design/ARCHITECTURE.md)
-2. Review [quiz-feature/QUIZ_ARCHITECTURE_DIAGRAMS.md](quiz-feature/QUIZ_ARCHITECTURE_DIAGRAMS.md)
+2. Review [features/QUIZ.md](features/QUIZ.md) for quiz feature
 3. Check [architecture-design/FRONTEND_INTEGRATION.md](architecture-design/FRONTEND_INTEGRATION.md)
 
 ### For Quiz Module
-1. Start with [quiz-feature/QUIZ_IMPLEMENTATION_SUMMARY.md](quiz-feature/QUIZ_IMPLEMENTATION_SUMMARY.md)
+1. Start with [features/QUIZ.md](features/QUIZ.md)
 2. Review timer docs: [timer-fixes/QUIZ_TIMER_EXEC_SUMMARY.md](timer-fixes/QUIZ_TIMER_EXEC_SUMMARY.md)
 3. Check styling: [ui-styling/QUIZ_UI_STYLING_COMPLETE.md](ui-styling/QUIZ_UI_STYLING_COMPLETE.md)
-4. Test with [quiz-feature/QUIZ_FEATURE_TESTING.md](quiz-feature/QUIZ_FEATURE_TESTING.md)
+
+### For Authentication
+1. Read [authentication/AUTHENTICATION_SETUP.md](authentication/AUTHENTICATION_SETUP.md)
+2. Review [authentication/CUSTOM_USER_MODEL.md](authentication/CUSTOM_USER_MODEL.md)
+3. Check [authentication/EMAIL_VERIFICATION.md](authentication/EMAIL_VERIFICATION.md)
 
 ### For Deployment
 1. Review [architecture-design/ARCHITECTURE.md](architecture-design/ARCHITECTURE.md)
 2. Check [deployment-guides/DEPLOYMENT_CHECKLIST.md](deployment-guides/DEPLOYMENT_CHECKLIST.md)
-3. Follow deployment procedures for each service:
-   - **Frontend (Vercel):** Already deployed
-   - **Django (Render):** See deployment guide
-   - **FastAPI (Render):** See deployment guide
+3. Follow deployment procedures for each service
 
 ### For Bug Fixes & Troubleshooting
 1. Check [bug-fixes/FIXES_SUMMARY.md](bug-fixes/FIXES_SUMMARY.md)
@@ -173,46 +193,22 @@ UI/UX documentation, styling guidelines, and design implementation.
 
 ---
 
-## 📝 Documentation Categories Explained
-
-### Quiz Feature
-Complete lifecycle documentation for the quiz functionality, including architecture, implementation, testing, and integration steps.
-
-### Timer Fixes
-Comprehensive documentation of the timer bug that caused "time up" to show immediately, including root cause analysis, fix implementation, and validation procedures.
-
-### Architecture & Design
-System-level documentation describing overall architecture, component relationships, and how different parts integrate together.
-
-### Deployment Guides
-Production deployment checklists and procedures for all services (Frontend on Vercel, Django and FastAPI on Render).
-
-### Bug Fixes
-Historical documentation of bugs encountered and their resolutions for reference and regression prevention.
-
-### Setup & Configuration
-Development environment setup, initial configuration, and quick reference guides for common tasks.
-
-### Security
-Security guidelines, best practices, authentication mechanisms, and data protection policies.
-
-### UI Styling
-Design system documentation, CSS styling guides, and UI/UX implementation details.
-
----
-
 ## 🔍 Finding What You Need
 
 | Need | Start Here |
 |------|-----------|
-| Understanding Quiz feature | `quiz-feature/QUIZ_ARCHITECTURE_DIAGRAMS.md` |
-| Understanding Timer issues | `timer-fixes/QUIZ_TIMER_EXEC_SUMMARY.md` |
+| Setting up dev environment | `setup-configuration/GETTING_STARTED.md` |
+| Understanding authentication | `authentication/AUTHENTICATION_SETUP.md` |
+| Understanding Quiz feature | `features/QUIZ.md` |
+| Understanding Timer fixes | `timer-fixes/QUIZ_TIMER_EXEC_SUMMARY.md` |
 | System Architecture | `architecture-design/ARCHITECTURE.md` |
 | Deployment Setup | `deployment-guides/DEPLOYMENT_CHECKLIST.md` |
-| Setting up dev environment | `setup-configuration/GETTING_STARTED.md` |
 | UI/Design System | `ui-styling/QUIZ_STYLING_QUICK_REFERENCE.md` |
 | Security guidelines | `security-reference/SECURITY.md` |
 | Bug history | `bug-fixes/FIXES_SUMMARY.md` |
+| Flashcards feature | `features/FLASHCARDS.md` |
+| Chatbot feature | `features/CHATBOT.md` |
+| Frontend routing | `frontend/ROUTES_AND_PAGES.md` |
 
 ---
 
@@ -220,18 +216,29 @@ Design system documentation, CSS styling guides, and UI/UX implementation detail
 
 Each documentation file contains detailed information about its specific topic. If you need clarification:
 
-1. **Check the specific folder's README** (if available)
+1. **Check the specific folder README** (index documentation)
 2. **Review the quick reference guides** for your topic
 3. **Check ARCHITECTURE.md** for system-level questions
 4. **Refer to DEPLOYMENT_CHECKLIST.md** for deployment issues
+5. **Check CUSTOM_USER_MODEL.md** for authentication questions
 
 ---
 
-## 📅 Last Updated
-January 27, 2026
+## 📅 Documentation Updates
 
-## 📦 File Organization
-This documentation directory structure was created to organize all project documentation by category and use case, making it easier to find information based on your needs.
+- **March 2026:** Auth system redesign (custom user model, email verification)
+- **January 2026:** Initial documentation structure and timer fixes
+
+---
+
+## 📦 Documentation Organization
+
+This documentation directory structure is organized by:
+- **Topic/Category** (setup, architecture, features, deployment)
+- **Use Case** (first-time setup, feature understanding, troubleshooting)
+- **Audience** (developers, DevOps, project managers)
+
+No redundancy — each file has a single, focused purpose. Outdated and duplicate files have been consolidated or removed.
 
 ---
 
