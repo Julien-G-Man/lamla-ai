@@ -193,12 +193,7 @@
 }
 
 /* ── Responsive ──────────────────────────────────────────────── */
-@media (max-width: 1024px) {
-  .db-sidebar { width: 220px; }
-}
-
-/* Sidebar hidden on mobile — use navbar hamburger instead */
-@media (max-width: 768px) {
+@media (max-width: 1023px) {
   .db-sidebar {
     display: none;
   }

@@ -129,7 +129,23 @@
 }
 
 /* ── Responsive ──────────────────────────────────────────────── */
-@media (max-width: 600px) {
-  .db-profile-hero { flex-direction: column; text-align: center; }
+@media (max-width: 800px) {
+  .db-profile-hero { 
+    flex-direction: column; 
+    padding: var(--spacing-2xl);
+    text-align: center; 
+  }
+  .db-profile-avatar-xl { margin-bottom: var(--spacing-lg); }
   .db-profile-hero-meta { justify-content: center; }
+}
+
+@media (max-width: 600px) {
+  .db-profile-hero { 
+    flex-direction: column; 
+    padding: var(--spacing-xl);
+    text-align: center; 
+  }
+  .db-profile-avatar-xl { width: 70px; height: 70px; font-size: 1.8rem; }
+  .db-profile-hero-info h2 { font-size: 1.1rem; }
+  .db-profile-hero-info p { font-size: 0.8rem; }
 }
