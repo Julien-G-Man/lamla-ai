@@ -152,9 +152,10 @@
 }
 
 /* ── Table ───────────────────────────────────────────────────── */
+/* ── Table ───────────────────────────────────────────────────── */
 .db-table-wrap {
   overflow-x: auto;
-  border-radius: 14px;
+  border-radius: var(--radius-2xl);
   border: 1px solid var(--border);
 }
 
@@ -165,10 +166,12 @@
   font-size: 0.88rem;
 }
 
-.db-table thead { background: rgba(255,255,255,0.03); }
+.db-table thead {
+  background: rgba(255, 255, 255, 0.03);
+}
 
 .db-table th {
-  padding: 13px 16px;
+  padding: var(--spacing-lg) var(--spacing-lg);
   text-align: left;
   font-weight: 700;
   color: var(--text-secondary);
@@ -179,13 +182,38 @@
 }
 
 .db-table td {
-  padding: 14px 16px;
+  padding: var(--spacing-lg) var(--spacing-lg);
   border-bottom: 1px solid var(--border);
   color: var(--text-secondary);
 }
 
-.db-table tbody tr:last-child td { border-bottom: none; }
-.db-table tbody tr:hover td { background: rgba(255,255,255,0.02); }
+.db-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.db-table tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* User table specific styles */
+.db-table td[style*="fontWeight: 600"] {
+  color: var(--text-primary);
+}
+
+@media (max-width: 768px) {
+  .db-table {
+    font-size: 0.8rem;
+  }
+
+  .db-table th,
+  .db-table td {
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+
+  .db-table th {
+    font-size: 0.7rem;
+  }
+}
 
 /* ── Form ────────────────────────────────────────────────────── */
 .db-form {
