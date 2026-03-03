@@ -1,31 +1,57 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation,} from "react-router-dom"; // useNavigate  ifnavigate gets uncommented
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
 import "../App.css";
 
 const Navbar = ({ user }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
+  const location       = useLocation();
+  // const navigate       = useNavigate();
+  const isHome         = location.pathname === "/";
+
   const { theme, toggleTheme } = useTheme();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated }    = useAuth();
+  const [isOpen, setIsOpen]    = useState(false);
 
-  // Scroll listener — show glassy navbar after 50px
+  // On non-home pages we never want transparent — start as true and skip listener
+  const [isScrolled, setIsScrolled] = useState(!isHome || window.scrollY > 50);
+
+  // Re-evaluate whenever the route changes
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+    if (!isHome) {
+      setIsScrolled(true);
+      return;
+    }
 
-  // Lock body scroll when mobile menu is open
+    // We're on home — sync immediately in case we arrived mid-scroll
+    setIsScrolled(window.scrollY > 50);
+
+    const handleScroll = () => setIsScrolled(window.scrollY > 50);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [isHome]);
+
+  // Lock body scroll when mobile menu open
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [isOpen]);
 
   const closeMenu = () => setIsOpen(false);
+
+  /**
+   * Logo / "Home" click:
+   * - Already on /  → smooth scroll to very top (hero)
+   * - On other page → navigate to / (browser starts at top naturally)
+   */
+  const handleHomeClick = (e) => {
+    closeMenu();
+    if (isHome) {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    // else: let <Link to="/"> do its default navigation
+  };
 
   return (
     <>
@@ -34,15 +60,17 @@ const Navbar = ({ user }) => {
         <div className="container header-container">
 
           {/* Logo */}
-          <Link to="/" className="logo" onClick={closeMenu}>
+          <Link to="/" className="logo" onClick={handleHomeClick}>
             <img src="/assets/lamla_logo.png" alt="Lamla AI Logo" className="logo-img" />
             <span className="brand-highlight">Lamla.ai</span>
           </Link>
 
-          {/* Desktop nav links */}
+          {/* Desktop nav */}
           <nav className="main-nav">
             <ul className="nav-links nav-links--desktop">
-              <li><Link to="/">Home</Link></li>
+              <li>
+                <Link to="/" onClick={handleHomeClick}>Home</Link>
+              </li>
               <li><Link to="/ai-tutor">AI Tutor</Link></li>
               <li><Link to="/quiz/create">Quiz</Link></li>
               <li><Link to="/flashcards">Flashcards</Link></li>
@@ -52,16 +80,15 @@ const Navbar = ({ user }) => {
                 </li>
               ) : (
                 <>
-                  <li><Link to="/login">Login</Link></li>
                   <li className="nav-item-cta">
-                    <Link to="/signup" className="btn btn-nav-secondary">Sign Up</Link>
+                    <Link to="/auth/signup" className="btn btn-nav-secondary">Sign Up</Link>
                   </li>
                 </>
               )}
             </ul>
           </nav>
 
-          {/* Hamburger — mobile only */}
+          {/* Hamburger */}
           <button
             className={`navbar-hamburger ${isOpen ? "open" : ""}`}
             onClick={() => setIsOpen(!isOpen)}
@@ -76,17 +103,18 @@ const Navbar = ({ user }) => {
         </div>
       </header>
 
-      {/* ── Mobile slide-out panel ── */}
-      {/* Overlay */}
+      {/* ── Mobile overlay ── */}
       <div
         className={`nav-overlay ${isOpen ? "open" : ""}`}
         onClick={closeMenu}
         aria-hidden="true"
       />
 
-      {/* Drawer */}
+      {/* ── Mobile drawer ── */}
       <ul className={`nav-links nav-links--mobile ${isOpen ? "open" : ""}`}>
-        <li><Link to="/" onClick={closeMenu}>Home</Link></li>
+        <li>
+          <Link to="/" onClick={handleHomeClick}>Home</Link>
+        </li>
         <li><Link to="/ai-tutor" onClick={closeMenu}>AI Tutor</Link></li>
         <li><Link to="/quiz/create" onClick={closeMenu}>Quiz</Link></li>
         <li><Link to="/flashcards" onClick={closeMenu}>Flashcards</Link></li>
@@ -96,26 +124,24 @@ const Navbar = ({ user }) => {
           </li>
         ) : (
           <>
-            <li><Link to="/login" onClick={closeMenu}>Login</Link></li>
+            <li><Link to="/auth/login" onClick={closeMenu}>Login</Link></li>
             <li className="nav-item-cta">
-              <Link to="/signup" className="btn btn-nav-secondary" onClick={closeMenu}>Sign Up</Link>
+              <Link to="/auth/signup" className="btn btn-nav-secondary" onClick={closeMenu}>Sign Up</Link>
             </li>
           </>
         )}
       </ul>
 
-      {/* ── Theme toggle FAB — fixed bottom-right ── */}
+      {/* ── Theme FAB ── */}
       <button
         className="theme-toggle-fab"
         onClick={toggleTheme}
         aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
         title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
       >
-        {theme === "dark" ? (
-          <i className="fas fa-sun"></i>
-        ) : (
-          <i className="fas fa-moon"></i>
-        )}
+        {theme === "dark"
+          ? <i className="fas fa-sun"></i>
+          : <i className="fas fa-moon"></i>}
       </button>
     </>
   );
