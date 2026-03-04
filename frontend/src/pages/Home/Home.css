@@ -338,7 +338,7 @@
 
 .features-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 24px;
 }
 
@@ -497,6 +497,164 @@
   margin: 0;
 }
 
+/* Contact + CTA section below testimonials */
+.home-engagement-section {
+  padding: 78px 0 0;
+  background: var(--background-color);
+}
+
+.home-engagement-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+
+.home-contact-shell {
+  display: grid;
+  gap: 16px;
+  border: 1px solid rgba(255, 214, 0, 0.28);
+  border-radius: var(--radius-lg);
+  background: rgba(18, 18, 18, 0.78);
+  padding: 28px;
+  align-content: start;
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.home-contact-copy h3 {
+  margin: 0 0 10px;
+  color: var(--text-primary);
+  font-size: clamp(1.2rem, 2vw, 1.6rem);
+}
+
+.home-contact-copy p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.home-contact-form {
+  display: grid;
+  gap: 12px;
+}
+
+.home-contact-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.home-contact-form input,
+.home-contact-form textarea {
+  width: 100%;
+  border: 1px solid var(--border-dark);
+  background: var(--background-color);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  padding: 11px 12px;
+  font-size: 0.92rem;
+  font-family: inherit;
+}
+
+.home-contact-form textarea {
+  resize: vertical;
+  min-height: 90px;
+}
+
+.home-contact-form input:focus,
+.home-contact-form textarea:focus {
+  outline: 2px solid rgba(255, 214, 0, 0.16);
+  border-color: var(--primary-color);
+}
+
+.home-contact-form button {
+  border: 1px solid var(--primary-color);
+  background: #c0a100;
+  color: #101010;
+  border-radius: var(--radius-sm);
+  min-height: 42px;
+  padding: 8px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.home-contact-form button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.home-contact-status {
+  margin: 0;
+  color: var(--primary-color);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+/* Post-testimonials CTA */
+.post-testimonials-cta {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-top: 0;
+  border: none;
+  background: #8a7300;
+  border-radius: 0;
+  padding: 34px 28px 88px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 18px;
+  text-align: center;
+}
+
+.post-testimonials-copy h3 {
+  margin: 0 0 6px;
+  color: #fff;
+  font-size: clamp(1.25rem, 2.2vw, 1.8rem);
+}
+
+.post-testimonials-copy p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.post-testimonials-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.cta-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  min-width: 150px;
+  padding: 10px 18px;
+  text-decoration: none;
+  font-weight: 800;
+  border-radius: 0;
+  transition: var(--transition);
+}
+
+.cta-btn-solid {
+  background: #fff;
+  color: #1a1a1a;
+  border: 1px solid #fff;
+}
+
+.cta-btn-outline {
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.86);
+}
+
+.cta-btn-solid:hover,
+.cta-btn-outline:hover {
+  transform: translateY(-2px);
+}
+
 /* ═══════════════════════════════════════════════════
    RESPONSIVE
    ═══════════════════════════════════════════════════ */
@@ -527,9 +685,15 @@
   .principle-card { min-height: 280px; }
 
   .features-grid { grid-template-columns: repeat(2, 1fr); }
+
+  .post-testimonials-cta { padding: 24px 16px; }
 }
 
 @media (max-width: 600px) {
+  .home-contact-row {
+    grid-template-columns: 1fr;
+  }
+
   .hero-section {
     padding: 80px 20px 100px;
     background-attachment: scroll;

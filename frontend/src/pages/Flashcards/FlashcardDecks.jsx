@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "../../components/Navbar";
 import { useAuth } from "../../context/AuthContext";
 import djangoApi from "../../services/api";
-import "./flashcards.css";
+import "./Flashcards.css";
 
 export default function FlashcardDecks() {
   const navigate = useNavigate();

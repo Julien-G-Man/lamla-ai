@@ -1,8 +1,34 @@
 import React from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
+import djangoApi from "../services/api";
 import "../App.css";
 
 const Footer = () => {
+  const [newsletterStatus, setNewsletterStatus] = useState("");
+  const [isSubscribing, setIsSubscribing] = useState(false);
+
+  const handleNewsletterSubmit = async (e) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+
+    try {
+      setIsSubscribing(true);
+      await djangoApi.post("/dashboard/newsletter/", {
+        email: formData.get("newsletter_email"),
+      });
+      setNewsletterStatus("Subscribed. You will receive updates soon.");
+      form.reset();
+    } catch (err) {
+      console.error("Newsletter subscribe error:", err);
+      setNewsletterStatus("Subscription failed. Please try again.");
+    } finally {
+      setIsSubscribing(false);
+      setTimeout(() => setNewsletterStatus(""), 3500);
+    }
+  };
+
   return (
     <footer className="main-footer">
       <div className="container footer-grid">
@@ -27,6 +53,18 @@ const Footer = () => {
             <li><Link to="/#exam-analyzer">Exam Analyzer</Link></li>
           </ul>
         </div>
+        <div className="footer-col footer-form-col">
+          <h3>Newsletter</h3>
+          <p className="footer-newsletter-text">Get product updates, study tips, and feature announcements.</p>
+          <form className="footer-newsletter-bar" onSubmit={handleNewsletterSubmit}>
+            <input type="email" name="newsletter_email" placeholder="Enter your email address" required />
+            <button type="submit" disabled={isSubscribing}>
+              {isSubscribing ? "Subscribing..." : "Subscribe"}
+            </button>
+          </form>
+          {newsletterStatus && <p className="footer-form-status">{newsletterStatus}</p>}
+        </div>
+
         <div className="footer-col">
           <h3>Connect With Us</h3>
           <div className="social-icons">

@@ -4,7 +4,7 @@ from typing import List, Dict, Optional
 from tavily import TavilyClient
 
 # Placeholder for an actual search client library (e.g., using a mock or a real one like SerpApi, Google Custom Search, etc.)
-logging.basicConfig(level=logging.DEBUG)
+
 logger = logging.getLogger(__name__)
 
 # Define the structure for a single search result

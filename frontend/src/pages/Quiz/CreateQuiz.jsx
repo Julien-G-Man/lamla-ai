@@ -2,16 +2,16 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import djangoApi from '../../services/api';
-import './CreateQuiz.css'; 
+import './CreateQuiz.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-    faKeyboard, 
-    faCloudUploadAlt, 
-    faListUl, 
-    faPen, 
-    faClock, 
-    faChartLine, 
-    faSpinner, 
+import {
+    faKeyboard,
+    faCloudUploadAlt,
+    faListUl,
+    faPen,
+    faClock,
+    faChartLine,
+    faSpinner,
     faExclamationCircle,
     faInfoCircle
 } from '@fortawesome/free-solid-svg-icons';
@@ -20,7 +20,7 @@ const CreateQuiz = ({ user }) => {
     const navigate = useNavigate();
 
     // --- State Variables ---
-    const [activeTab, setActiveTab] = useState('textContent');
+    const [activeTab, setActiveTab] = useState('fileContent');
     const [subject, setSubject] = useState('');
     const [customSubject, setCustomSubject] = useState('');
     const [isOtherSelected, setIsOtherSelected] = useState(false);
@@ -29,7 +29,7 @@ const CreateQuiz = ({ user }) => {
     const [numShort, setNumShort] = useState(3);
     const [quizTime, setQuizTime] = useState(10);
     const [difficulty, setDifficulty] = useState('random');
-    
+
     const [isExtracting, setIsExtracting] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
     const [fileNameDisplay, setFileNameDisplay] = useState('');
@@ -44,7 +44,6 @@ const CreateQuiz = ({ user }) => {
         setToast({ message, type, visible: true });
     }, []);
 
-    // Effect to auto-hide toast 
     useEffect(() => {
         if (toast.visible) {
             const timer = setTimeout(() => {
@@ -77,12 +76,11 @@ const CreateQuiz = ({ user }) => {
 
             if (response.data.text) {
                 setStudyText(response.data.text);
-                setActiveTab('textContent'); // Switch tab like plain JS switchToTextTabWithContent
-                showToast(`Text extracted successfully!`, 'success');
-                console.log(`Text extracted from file: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+                setActiveTab('textContent');
+                showToast('Text extracted successfully!', 'success');
             }
         } catch (err) {
-            showToast("Failed to extract text.", "error");
+            showToast('Failed to extract text.', 'error');
         } finally {
             setIsExtracting(false);
         }
@@ -93,7 +91,7 @@ const CreateQuiz = ({ user }) => {
         const finalSubject = isOtherSelected ? customSubject.trim() : subject;
 
         if (!finalSubject) errors.push('Please select or enter a subject');
-        
+
         if (activeTab === 'textContent') {
             if (studyText.trim().length < 30) errors.push('Please enter at least 30 characters of text');
             if (studyText.length > 50000) errors.push('Text is too long (max 50,000)');
@@ -112,29 +110,27 @@ const CreateQuiz = ({ user }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!validateForm()) return;
-        
-        // Logical check for "Other" vs Dropdown
+
         const finalSubject = isOtherSelected ? customSubject.trim() : subject;
 
         if (!finalSubject) {
-          setErrorMessages(['Please select a subject']);
-          return;
+            setErrorMessages(['Please select a subject']);
+            return;
         }
 
         setIsGenerating(true);
         try {
-          const response = await djangoApi.post('/quiz/generate/', {
-            subject: finalSubject,
-            extractedText: studyText,
-            num_mcq: numMcq,
-            num_short: numShort,
-            quiz_time: quizTime,
-            difficulty: difficulty
-          });
-          // Navigate to quiz page with quiz data (not results page)
-          navigate('/quiz/play', { state: { quizData: response.data } });
+            const response = await djangoApi.post('/quiz/generate/', {
+                subject: finalSubject,
+                extractedText: studyText,
+                num_mcq: numMcq,
+                num_short: numShort,
+                quiz_time: quizTime,
+                difficulty: difficulty
+            });
+            navigate('/quiz/play', { state: { quizData: response.data } });
         } catch (err) {
-            showToast(err.response?.data?.error || "Generation failed", 'error');
+            showToast(err.response?.data?.error || 'Generation failed', 'error');
             setIsGenerating(false);
         }
     };
@@ -160,20 +156,19 @@ const CreateQuiz = ({ user }) => {
             <Navbar user={user} />
             <div className="page-wrapper">
                 <div className="quiz-card-container">
-                    <h1 className="main-page-title">🧠 Quiz Mode</h1>
+                    <h1 className="main-page-title">Quiz Mode</h1>
                     <p className="main-page-description">
                         Upload your study materials or paste content to create customized quiz questions with AI.
                     </p>
 
                     <form onSubmit={handleSubmit}>
-                        {/* Subject Section */}
                         <div className="subject-section">
                             <label className="subject-label">
-                                <span>📚</span> Subject / Topic
+                                <span>Subject / Topic</span>
                             </label>
-                            <select 
-                                className="subject-select" 
-                                value={subject} 
+                            <select
+                                className="subject-select"
+                                value={subject}
                                 onChange={handleSubjectChange}
                             >
                                 <option value="" disabled>Select a subject or topic</option>
@@ -193,10 +188,10 @@ const CreateQuiz = ({ user }) => {
 
                             {isOtherSelected && (
                                 <div className="custom-subject-container" style={{ marginTop: '12px' }}>
-                                    <input 
-                                        type="text" 
-                                        className="subject-input" 
-                                        placeholder="Type subject/topic (e.g. 'Quantum Mechanics')"
+                                    <input
+                                        type="text"
+                                        className="subject-input"
+                                        placeholder="Type subject/topic (e.g. Quantum Mechanics)"
                                         value={customSubject}
                                         onChange={(e) => setCustomSubject(e.target.value)}
                                         autoFocus
@@ -209,42 +204,26 @@ const CreateQuiz = ({ user }) => {
                             </div>
                         </div>
 
-                        {/* Tabs */}
                         <div className="tab-group">
-                            <button 
-                                type="button" 
-                                className={`tab ${activeTab === 'textContent' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('textContent')}
-                            >
-                                <FontAwesomeIcon icon={faKeyboard} /> Enter Text
-                            </button>
-                            <button 
-                                type="button" 
+                            <button
+                                type="button"
                                 className={`tab ${activeTab === 'fileContent' ? 'active' : ''}`}
                                 onClick={() => setActiveTab('fileContent')}
                             >
                                 <FontAwesomeIcon icon={faCloudUploadAlt} /> Upload File
                             </button>
+                            <button
+                                type="button"
+                                className={`tab ${activeTab === 'textContent' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('textContent')}
+                            >
+                                <FontAwesomeIcon icon={faKeyboard} /> Enter Text
+                            </button>
                         </div>
 
-                        {/* Text Tab Content */}
-                        {activeTab === 'textContent' && (
-                            <div className="tab-content active slide-in">
-                                <textarea 
-                                    placeholder="Paste your study materials here..." 
-                                    value={studyText}
-                                    onChange={(e) => setStudyText(e.target.value)}
-                                />
-                                <div className="character-count">
-                                    <span>{studyText.length}</span> / 50000 characters
-                                </div>
-                            </div>
-                        )}
-
-                        {/* File Tab Content */}
                         {activeTab === 'fileContent' && (
                             <div className="tab-content active slide-in">
-                                <div 
+                                <div
                                     className="upload-zone"
                                     onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = '#FFD600'; }}
                                     onDragLeave={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = '#E6C200'; }}
@@ -256,12 +235,12 @@ const CreateQuiz = ({ user }) => {
                                     <div className="upload-icon">📖</div>
                                     <div className="upload-text">Upload your study materials</div>
                                     <div className="upload-description">PDF, DOCX, PPT, PPTX, or TXT</div>
-                                    
-                                    <input 
-                                        type="file" 
+
+                                    <input
+                                        type="file"
                                         ref={fileInputRef}
                                         onChange={handleFileChange}
-                                        className="hidden-file-input" 
+                                        className="hidden-file-input"
                                         accept=".pdf,.docx,.ppt,.pptx,.txt"
                                         id="slideFile"
                                     />
@@ -273,7 +252,19 @@ const CreateQuiz = ({ user }) => {
                             </div>
                         )}
 
-                        {/* Options Row */}
+                        {activeTab === 'textContent' && (
+                            <div className="tab-content active slide-in">
+                                <textarea
+                                    placeholder="Paste your study materials here..."
+                                    value={studyText}
+                                    onChange={(e) => setStudyText(e.target.value)}
+                                />
+                                <div className="character-count">
+                                    <span>{studyText.length}</span> / 50000 characters
+                                </div>
+                            </div>
+                        )}
+
                         <div className="options-row">
                             <div className="option-group">
                                 <span><FontAwesomeIcon icon={faListUl} /> MCQ Questions</span>
@@ -285,7 +276,7 @@ const CreateQuiz = ({ user }) => {
                             </div>
                             <div className="option-group">
                                 <span><FontAwesomeIcon icon={faClock} /> Quiz Time (min)</span>
-                                <input type="number" value={quizTime} onChange={(e) => setQuizTime(Math.max(1, parseInt(e.target.value) || 10))} min="1" max="120" className="number-input" />
+                                <input type="number" value={quizTime} onChange={(e) => setQuizTime(Math.max(1, parseInt(e.target.value, 10) || 10))} min="1" max="120" className="number-input" />
                             </div>
                             <div className="option-group">
                                 <span><FontAwesomeIcon icon={faChartLine} /> Difficulty</span>
@@ -298,7 +289,6 @@ const CreateQuiz = ({ user }) => {
                             </div>
                         </div>
 
-                        {/* Actions */}
                         <div className="actions-row">
                             <button type="submit" className="main-btn" disabled={isGenerating || isExtracting}>
                                 {isGenerating ? <><FontAwesomeIcon icon={faSpinner} spin /> Generating...</> : 'Generate Questions'}
@@ -307,7 +297,6 @@ const CreateQuiz = ({ user }) => {
                         </div>
                     </form>
 
-                    {/* Error Messages */}
                     {errorMessages.length > 0 && (
                         <div className="messages-container">
                             {errorMessages.map((msg, i) => (
@@ -320,7 +309,6 @@ const CreateQuiz = ({ user }) => {
                 </div>
             </div>
 
-            {/* Toast Notification */}
             {toast.visible && (
                 <div className={`toast ${toast.type}`} style={{ display: 'block' }}>
                     {toast.message}

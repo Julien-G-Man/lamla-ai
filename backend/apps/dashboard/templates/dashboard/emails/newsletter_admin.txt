@@ -1,0 +1,3 @@
+New newsletter subscription on {{ site_name }}
+
+Email: {{ email }}

@@ -230,6 +230,28 @@ body {
     background: rgba(255, 214, 0, 0.05);
 }
 
+/* ---------- Split Content ---------- */
+.content-split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 28px;
+}
+
+.content-column {
+    min-width: 0;
+}
+
+.column-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
 /* ---------- Tab Content ---------- */
 .tab-content {
     background: var(--surface);
@@ -242,6 +264,12 @@ body {
     transition: var(--transition);
     border: 1px solid var(--border-dark);
     border-top: none;
+}
+
+.text-column-content {
+    border-top: 1px solid var(--border-dark);
+    border-radius: var(--radius-md);
+    margin-bottom: 0;
 }
 
 @keyframes slideIn {
@@ -290,10 +318,11 @@ body {
 }
 
 .upload-icon {
-    font-size: 3.6rem;
+    font-size: 1.25rem;
+    font-weight: 800;
     color: var(--primary-color);
     margin-bottom: 16px;
-    animation: bounce 2s ease-in-out infinite;
+    animation: none;
 }
 
 @keyframes bounce {
@@ -820,6 +849,7 @@ body {
     .main-page-title { font-size: 1.9rem; }
     .main-page-description { font-size: 0.98rem; margin-bottom: 20px; }
     .subject-section { padding: 16px; }
+    .content-split { grid-template-columns: 1fr; gap: 16px; }
     .tab { font-size: 0.98rem; padding: 14px 0 12px 0; }
     .tab-content { padding: 20px; }
     .upload-zone { padding: 36px 16px; }

@@ -6,9 +6,8 @@
 
 .chat-container {
     width: min(1100px, 100% - 32px); /* nicely centered card on desktop, with side gutters */
-    height: calc(100vh - var(--navbar-height) - 32px); /* occupy most of the viewport */
-    margin: calc(var(--navbar-height) + 16px) auto 16px auto; /* center horizontally */
-    padding-top: 20px;
+    height: calc(100dvh - var(--navbar-height) - 24px); /* occupy most of the viewport */
+    margin: calc(var(--navbar-height) + 12px) auto 12px auto; /* center horizontally */
     position: relative;
     display: flex;
     flex-direction: column;
@@ -323,7 +322,13 @@
 }
 
 @media (max-width: 600px) {
-    .chat-container { height: 95vh; padding: 0; }
+    .chat-container {
+        width: 100%;
+        height: calc(100dvh - var(--navbar-height));
+        margin: var(--navbar-height) 0 0 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
     .chat-header { padding: 16px; }
     #chat-messages { padding: 16px; }
     .chat-input-area { padding: 12px 16px; gap: 8px; }

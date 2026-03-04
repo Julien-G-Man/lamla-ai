@@ -2,14 +2,15 @@ import datetime
 from django.utils import timezone
 from django.db import models as dm
 from django.db.models.functions import TruncDate
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.quiz.models import QuizSession
 from apps.chatbot.models import ChatSession
 from apps.accounts.serializers import user_to_dict
-
+from .services import send_contact_emails, send_newsletter_emails
+from .serializers import ContactFormSerializer, NewsletterSerializer
 
 def _calculate_streak(user):
     """Consecutive days (ending today) on which user completed at least one quiz."""
@@ -128,3 +129,27 @@ class AdminUserDeleteView(APIView):
             return Response({'detail': 'User removed.'})
         except User.DoesNotExist:
             return Response({'detail': 'User not found.'}, status=404)
+
+
+class ContactMessageView(APIView):
+    """POST /api/dashboard/contact/"""
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        serializer = ContactFormSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        send_contact_emails(**serializer.validated_data)
+        return Response({"detail": "Message sent successfully."})
+
+
+class NewsletterSubscribeView(APIView):
+    """POST /api/dashboard/newsletter/"""
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        serializer = NewsletterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        send_newsletter_emails(serializer.validated_data["email"])
+        return Response({"detail": "Subscription successful."})

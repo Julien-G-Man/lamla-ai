@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "../../components/Navbar";
 import { useAuth } from "../../context/AuthContext";
 import djangoApi from "../../services/api";
-import "./flashcards.css";
+import "./Flashcards.css";
 
 const SUBJECT_OPTIONS = [
   "Computer Science",
@@ -15,6 +15,7 @@ const SUBJECT_OPTIONS = [
   "Economics",
   "History",
   "Programming",
+  "Artificial Intelligence",
   "Other",
 ];
 

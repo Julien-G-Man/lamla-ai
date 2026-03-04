@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
 import "../App.css";
 
@@ -8,7 +7,6 @@ const Navbar = ({ user, brandOnly = false }) => {
   const location = useLocation();
   const isHome = location.pathname === "/";
 
-  const { theme, toggleTheme } = useTheme();
   const { isAuthenticated } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -115,15 +113,6 @@ const Navbar = ({ user, brandOnly = false }) => {
               </>
             )}
           </ul>
-
-          <button
-            className="theme-toggle-fab"
-            onClick={toggleTheme}
-            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-            title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-          >
-            {theme === "dark" ? <i className="fas fa-sun"></i> : <i className="fas fa-moon"></i>}
-          </button>
         </>
       )}
     </>

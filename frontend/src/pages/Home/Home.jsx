@@ -1,10 +1,14 @@
 import React, { useEffect, useState } from "react";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
+import djangoApi from "../../services/api";
 import "./Home.css";
 import "../../App.css";
 
 const Home = ({ user }) => {
+  const [contactStatus, setContactStatus] = useState("");
+  const [isSendingContact, setIsSendingContact] = useState(false);
+
   const [isVisible, setIsVisible] = useState({
     about: false,
     features: false,
@@ -35,6 +39,31 @@ const Home = ({ user }) => {
       if (o3) o3.disconnect();
     };
   }, []);
+
+  const handleContactSubmit = async (e) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    const payload = {
+      name: formData.get("name"),
+      email: formData.get("email"),
+      title: formData.get("title"),
+      message: formData.get("message"),
+    };
+
+    try {
+      setIsSendingContact(true);
+      await djangoApi.post("/dashboard/contact/", payload);
+      setContactStatus("Thanks for reaching out. We will get back to you soon.");
+      form.reset();
+    } catch (err) {
+      console.error("Contact form error:", err);
+      setContactStatus("We could not send your message right now. Please try again.");
+    } finally {
+      setIsSendingContact(false);
+      setTimeout(() => setContactStatus(""), 3500);
+    }
+  };
 
   return (
     <div className="site-wrapper">
@@ -234,6 +263,44 @@ const Home = ({ user }) => {
                 </div>
               </div>
             )}
+          </div>
+        </section>
+
+        <section className="home-engagement-section">
+          <div className="container">
+            <div className="home-engagement-grid">
+              <form className="home-contact-shell" onSubmit={handleContactSubmit}>
+                <div className="home-contact-copy">
+                  <p className="section-label">GET IN TOUCH</p>
+                  <h3>Have Questions? Send Us A Message</h3>
+                  <p>Tell us what you need and the Lamla team will respond as soon as possible.</p>
+                </div>
+                <div className="home-contact-form">
+                  <div className="home-contact-row">
+                    <input type="text" name="name" placeholder="Your name" required />
+                    <input type="email" name="email" placeholder="Your email" required />
+                  </div>
+                  <input type="text" name="title" placeholder="Subject" required />
+                  <textarea name="message" rows="4" placeholder="Type your message..." required />
+                  <button type="submit" disabled={isSendingContact}>
+                    {isSendingContact ? "Sending..." : "Send Message"}
+                  </button>
+                  {contactStatus && <p className="home-contact-status">{contactStatus}</p>}
+                </div>
+              </form>
+
+              <div className="post-testimonials-cta">
+                <div className="post-testimonials-copy">
+                  <p className="section-label">READY TO START?</p>
+                  <h3>Turn Your Notes Into Better Scores Today</h3>
+                  <p>Join Lamla AI to generate smarter quizzes, track progress, and build real exam confidence.</p>
+                </div>
+                <div className="post-testimonials-actions">
+                  <a href="/auth/signup" className="cta-btn cta-btn-solid">Sign Up</a>
+                  <a href="/quiz/create" className="cta-btn cta-btn-outline">Go To Quiz</a>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 

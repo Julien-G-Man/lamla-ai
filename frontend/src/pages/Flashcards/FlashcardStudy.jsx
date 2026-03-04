@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "../../components/Navbar";
 import { useAuth } from "../../context/AuthContext";
 import djangoApi from "../../services/api";
-import "./flashcards.css";
+import "./Flashcards.css";
 
 const qualityMap = {
   again: 0,

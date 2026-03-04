@@ -1,0 +1,7 @@
+Hi,
+
+You are now subscribed to {{ site_name }} updates.
+We will send you product updates, study tips, and feature announcements.
+
+Best,
+The {{ site_name }} Team
