@@ -1,4 +1,4 @@
-@import '../Dashboard/dashboard-shared.css';
+@import '../Dashboards/dashboard-shared.css';
 
 /* ── Design tokens ──────────────────────────────────────────── */
 :root {
@@ -149,3 +149,10 @@
   .db-profile-hero-info h2 { font-size: 1.1rem; }
   .db-profile-hero-info p { font-size: 0.8rem; }
 }
+
+@media (max-width: 1023px) {
+  .db-main {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  }
+}
+

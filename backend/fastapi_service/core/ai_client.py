@@ -251,4 +251,11 @@ class AIClient:
 
 
 # instantiate global client
-ai_service = AIClient(provider_priority=["azure"])
+# Optional override via env, e.g. AI_PROVIDER_ORDER=deepseek,gemini,azure
+provider_order_env = os.environ.get("AI_PROVIDER_ORDER")
+if provider_order_env:
+    provider_order = [p.strip().lower() for p in provider_order_env.split(",") if p.strip()]
+else:
+    provider_order = DEFAULT_PROVIDER_ORDER
+
+ai_service = AIClient(provider_priority=provider_order)

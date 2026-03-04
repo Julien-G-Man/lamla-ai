@@ -2,7 +2,6 @@ import os
 import httpx
 from django.conf import settings
 
-
 FASTAPI_URL = os.getenv("FASTAPI_URL")
 FASTAPI_SECRET = os.getenv("FASTAPI_SECRET")
 

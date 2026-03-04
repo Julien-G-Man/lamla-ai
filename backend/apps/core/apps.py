@@ -7,7 +7,6 @@ class CoreConfig(AppConfig):
     
     def ready(self):
         """Initialize async client when app is ready"""
-        # Import here to avoid circular imports
         from .async_client import get_async_client
         pass
     

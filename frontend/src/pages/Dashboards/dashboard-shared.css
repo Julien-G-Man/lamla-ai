@@ -58,6 +58,7 @@
 @media (max-width: 1023px) {
   .db-main {
     margin-left: 0;
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
   }
 }
 
@@ -534,3 +535,4 @@
   .db-actions-grid   { grid-template-columns: 1fr; }
   .db-card h2        { font-size: 0.95rem; }
 }
+

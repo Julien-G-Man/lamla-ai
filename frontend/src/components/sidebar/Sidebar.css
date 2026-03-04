@@ -1,6 +1,5 @@
-/* ── Design tokens ──────────────────────────────────────────── */
+/* - Design tokens ---------------------------------------------------- */
 :root {
-  /* Spacing */
   --spacing-xs: 4px;
   --spacing-sm: 8px;
   --spacing-md: 12px;
@@ -8,14 +7,13 @@
   --spacing-xl: 20px;
   --spacing-2xl: 24px;
   --spacing-3xl: 28px;
-  
-  /* Corner radius */
+
   --radius-lg: 10px;
   --radius-xl: 11px;
   --radius-2xl: 14px;
 }
 
-/* ── Sidebar shell ───────────────────────────────────────────── */
+/* - Sidebar shell ---------------------------------------------------- */
 .db-sidebar {
   background: var(--surface);
   border-right: 1px solid var(--border);
@@ -31,7 +29,6 @@
   scrollbar-width: thin;
 }
 
-/* ── User card ───────────────────────────────────────────────── */
 .db-sidebar-user {
   text-align: center;
   padding-bottom: var(--spacing-2xl);
@@ -97,18 +94,11 @@
   color: #ef4444;
 }
 
-/* ── Nav ─────────────────────────────────────────────────────── */
 .db-nav {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xs);
   flex: 1;
-}
-
-.db-nav-divider {
-  height: 1px;
-  background: var(--border);
-  margin: 10px 0;
 }
 
 .db-nav-item {
@@ -145,7 +135,6 @@
   opacity: 1;
 }
 
-/* ── Variant: user (yellow) ──────────────────────────────────── */
 .db-sidebar--user .db-nav-item.active {
   color: var(--primary-color, #FFD600);
   background: rgba(255, 214, 0, 0.1);
@@ -153,7 +142,6 @@
 }
 .db-sidebar--user .db-nav-item.active svg { opacity: 1; }
 
-/* ── Variant: admin (red) ────────────────────────────────────── */
 .db-sidebar--admin .db-avatar {
   background: linear-gradient(135deg, #ef4444, #dc2626);
   color: #fff;
@@ -166,7 +154,6 @@
 }
 .db-sidebar--admin .db-nav-item.active svg { opacity: 1; }
 
-/* ── Logout ──────────────────────────────────────────────────── */
 .db-logout-btn {
   background: transparent;
   border: 1px solid var(--border);
@@ -192,9 +179,60 @@
   color: #ef4444;
 }
 
-/* ── Responsive ──────────────────────────────────────────────── */
+/* Mobile bottom navigation */
+.db-mobile-nav {
+  display: none;
+}
+
 @media (max-width: 1023px) {
   .db-sidebar {
     display: none;
+  }
+
+  .db-mobile-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1200;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(64px, 1fr);
+    gap: 4px;
+    padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border);
+    background: rgba(18, 18, 18, 0.95);
+    backdrop-filter: blur(6px);
+  }
+
+  .db-mobile-nav-item {
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    border-radius: 10px;
+    padding: 6px 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    cursor: pointer;
+    min-height: 52px;
+  }
+
+  .db-mobile-nav-item svg {
+    font-size: 0.95rem;
+  }
+
+  .db-mobile-nav--user .db-mobile-nav-item.active {
+    color: var(--primary-color, #FFD600);
+    background: rgba(255, 214, 0, 0.12);
+  }
+
+  .db-mobile-nav--admin .db-mobile-nav-item.active {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.12);
   }
 }

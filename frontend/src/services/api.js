@@ -34,6 +34,6 @@ djangoApi.interceptors.request.use((config) => {
 
 export const DJANGO_HEALTH_ENDPOINT = `${DJANGO_ROOT_URL}/health/`;
 export const DJANGO_WARMUP_ENDPOINT = `${DJANGO_ROOT_URL}/warmup/`;
-export const FASTAPI_HEALTH_ENDPOINT = `${FASTAPI_URL}/health/`;
+export const FASTAPI_HEALTH_ENDPOINT = `${FASTAPI_URL}/health`;
 
 export default djangoApi;

@@ -8,27 +8,33 @@ import Home from "./pages/Home/Home";
 import Login from "./pages/Login/Login";
 import Signup from "./pages/Signup/Signup";
 import VerifyEmail from "./pages/Auth/VerifyEmail";
-import Dashboard from "./pages/Dashboard/Dashboard";
-import AdminDashboard from "./pages/Dashboard/AdminDashboard";
-import CreateQuiz from "./pages/CreateQuiz/CreateQuiz";
+import Dashboard from "./pages/Dashboards/Dashboard";
+import AdminDashboard from "./pages/Dashboards/AdminDashboard";
+import CreateQuiz from "./pages/Quiz/CreateQuiz";
 import Quiz from "./pages/Quiz/Quiz";
-import QuizResults from "./pages/QuizResults/QuizResults";
-import Flashcards from "./pages/Flashcards/Flashcards";
+import QuizResults from "./pages/Quiz/QuizResults";
+import FlashcardDecks from "./pages/Flashcards/FlashcardDecks";
+import FlashcardCreate from "./pages/Flashcards/FlashcardCreate";
+import FlashcardDeck from "./pages/Flashcards/FlashcardDeck";
+import FlashcardStudy from "./pages/Flashcards/FlashcardStudy";
 import Chatbot from "./pages/Chatbot/Chatbot";
 import Profile from "./pages/UserProfile/Profile";
 import NotFound from "./pages/NotFound/NotFound";
 
+const WAKE_INTERVAL_MS = 10 * 60 * 1000;
+
 function App() {
   useEffect(() => {
-    // Wake Django
-    fetch(DJANGO_WARMUP_ENDPOINT).catch(() => {});
-    
-    // Wake FastAPI
-    // Bro, this is needed to wake the FastAPI server in production
-    // Please don't remove it
-    fetch(FASTAPI_HEALTH_ENDPOINT)
-      .then((res) => res.json())
-      .catch((err) => console.warn("FastAPI not reachable: ", err));
+    const wakeServices = async () => {
+      await Promise.allSettled([
+        fetch(DJANGO_WARMUP_ENDPOINT, { method: "GET", credentials: "omit" }),
+        fetch(FASTAPI_HEALTH_ENDPOINT, { method: "GET", credentials: "omit" }),
+      ]);
+    };
+
+    wakeServices();
+    const intervalId = setInterval(wakeServices, WAKE_INTERVAL_MS);
+    return () => clearInterval(intervalId);
   }, []);
 
   return (
@@ -36,33 +42,31 @@ function App() {
       <AuthProvider>
         <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Routes>
-            {/* Public */}
             <Route path="/" element={<Home />} />
 
-            {/* Auth routes */}
-            <Route path="/auth/login"    element={<Login />} />
-            <Route path="/auth/signup"   element={<Signup />} />
-            <Route path="/auth/verify-email"   element={<VerifyEmail />} />
+            <Route path="/auth/login" element={<Login />} />
+            <Route path="/auth/signup" element={<Signup />} />
+            <Route path="/auth/verify-email" element={<VerifyEmail />} />
 
-            {/* Legacy redirects */}
-            <Route path="/auth"           element={<Navigate to="/auth/login"  replace />} />
-            <Route path="/login"          element={<Navigate to="/auth/login"  replace />} />
-            <Route path="/signup"         element={<Navigate to="/auth/signup" replace />} />
-            <Route path="/verify-email"   element={<Navigate to="/auth/verify-email" replace />} />
+            <Route path="/auth" element={<Navigate to="/auth/login" replace />} />
+            <Route path="/login" element={<Navigate to="/auth/login" replace />} />
+            <Route path="/signup" element={<Navigate to="/auth/signup" replace />} />
+            <Route path="/verify-email" element={<Navigate to="/auth/verify-email" replace />} />
 
-            {/* Protected */}
-            <Route path="/dashboard"       element={<Dashboard />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/admin-dashboard" element={<AdminDashboard />} />
-            <Route path="/profile"         element={<Profile />} />
+            <Route path="/profile" element={<Profile />} />
 
-            {/* General*/}
-            <Route path="/quiz/create"     element={<CreateQuiz />} />
-            <Route path="/quiz/play"            element={<Quiz />} />
-            <Route path="/quiz/results"    element={<QuizResults />} />
-            <Route path="/flashcards"      element={<Flashcards />} />
-            <Route path="/ai-tutor"        element={<Chatbot />} />
+            <Route path="/quiz/create" element={<CreateQuiz />} />
+            <Route path="/quiz/play" element={<Quiz />} />
+            <Route path="/quiz/results" element={<QuizResults />} />
 
-            {/* 404 */}
+            <Route path="/flashcards" element={<FlashcardDecks />} />
+            <Route path="/flashcards/create" element={<FlashcardCreate />} />
+            <Route path="/flashcards/deck/:id" element={<FlashcardDeck />} />
+            <Route path="/flashcards/study/:id" element={<FlashcardStudy />} />
+
+            <Route path="/ai-tutor" element={<Chatbot />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Router>

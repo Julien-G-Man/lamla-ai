@@ -1,25 +1,16 @@
 import os
 import logging
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
 from services.chatbot.routes import chatbot_router
 from services.quiz.routes import quiz_router
 from services.flashcards.routes import flashcards_router
 from core.middleware import InternalAuthMiddleware
 
 app = FastAPI(title="Lamla AI Engine")
-    
+
 load_dotenv()
-
-# Add internal auth middleware (core implementation checks X-Internal-Secret header)
-app.add_middleware(InternalAuthMiddleware)
-
-app.include_router(chatbot_router, prefix="/chatbot")
-app.include_router(quiz_router, prefix="/quiz")
-app.include_router(flashcards_router, prefix="/flashcards")
-
 logger = logging.getLogger(__name__)
 
 origins_env = os.getenv(
@@ -32,13 +23,24 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
+# Protect internal endpoints with shared-secret auth middleware
+app.add_middleware(InternalAuthMiddleware)
+
+app.include_router(chatbot_router, prefix="/chatbot")
+app.include_router(quiz_router, prefix="/quiz")
+app.include_router(flashcards_router, prefix="/flashcards")
+
+logger.info("FastAPI CORS allowed origins: %s", origins)
+
+
 @app.get("/")
-def check_health():
+def check_root():
     return {"status": "ok", "message": "FastAPI Backend is live!"}
+
 
 @app.get("/health")
 def check_health():

@@ -196,6 +196,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 SITE_NAME="Lamla AI"
 
 FASTAPI_BASE_URL = os.getenv("FASTAPI_BASE_URL", "http://localhost:8001")
+FASTAPI_URL = FASTAPI_BASE_URL
 FASTAPI_SECRET = os.getenv("FASTAPI_SECRET")
 
 AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")

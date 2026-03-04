@@ -20,6 +20,9 @@ urlpatterns = [
     path("flashcards/decks/", get_decks,name="flashcards_decks"),
     path("flashcards/decks/<int:deck_id>/", get_deck_cards,name="flashcards_deck_cards"),
     path("flashcards/decks/save/",save_flashcard_deck,name="flashcards_save_deck"),
+    # Aliases matching simplified docs
+    path("flashcards/deck/<int:deck_id>/", get_deck_cards, name="flashcards_deck_cards_alias"),
+    path("flashcards/save/", save_flashcard_deck, name="flashcards_save_deck_alias"),
 
     # Study system
     path("flashcards/review/",review_flashcard,name="flashcards_review"),
