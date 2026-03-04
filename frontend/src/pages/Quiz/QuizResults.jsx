@@ -1,37 +1,34 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import styles from './QuizResults.css';
+import Navbar from '../../components/Navbar';
+import Footer from '../../components/Footer';
+import './QuizResults.css';
 import djangoApi from '../../services/api';
 
 const downloadAsText = (results) => {
     const { score, total, score_percent, details, subject, difficulty } = results;
     const timestamp = new Date().toLocaleString();
-    
-    let content = `QUIZ RESULTS REPORT\n`;
+
+    let content = 'QUIZ RESULTS REPORT\n';
     content += `${'='.repeat(60)}\n\n`;
     content += `Subject: ${subject}\n`;
     content += `Difficulty: ${difficulty}\n`;
     content += `Date: ${timestamp}\n`;
     content += `Score: ${score}/${total} (${score_percent.toFixed(1)}%)\n`;
     content += `${'='.repeat(60)}\n\n`;
-    
-    content += `DETAILED ANSWER REVIEW\n`;
+    content += 'DETAILED ANSWER REVIEW\n';
     content += `${'-'.repeat(60)}\n\n`;
-    
+
     details.forEach((detail, idx) => {
         content += `Q${idx + 1}. ${detail.question}\n`;
         content += `Your Answer: ${detail.user_answer || '(Unanswered)'}\n`;
         content += `Correct Answer: ${detail.correct_answer}\n`;
-        content += `Status: ${detail.is_correct ? 'CORRECT ✓' : 'INCORRECT ✗'}\n`;
-        if (detail.reasoning) {
-            content += `Evaluation: ${detail.reasoning}\n`;
-        }
-        if (detail.explanation) {
-            content += `Explanation: ${detail.explanation}\n`;
-        }
+        content += `Status: ${detail.is_correct ? 'CORRECT' : 'INCORRECT'}\n`;
+        if (detail.reasoning) content += `Evaluation: ${detail.reasoning}\n`;
+        if (detail.explanation) content += `Explanation: ${detail.explanation}\n`;
         content += '\n';
     });
-    
+
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -44,14 +41,9 @@ const downloadAsText = (results) => {
     URL.revokeObjectURL(url);
 };
 
-// PDF download via backend
 const downloadAsPDF = async (results) => {
     try {
-        const response = await djangoApi.post('/quiz/download/', {
-            results: results,
-            format: 'pdf'
-        }, { responseType: 'blob' });
-        
+        const response = await djangoApi.post('/quiz/download/', { results, format: 'pdf' }, { responseType: 'blob' });
         const blob = response.data;
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -69,11 +61,7 @@ const downloadAsPDF = async (results) => {
 
 const downloadAsDOCX = async (results) => {
     try {
-        const response = await djangoApi.post('/quiz/download/', {
-            results: results,
-            format: 'docx'
-        }, { responseType: 'blob' });
-        
+        const response = await djangoApi.post('/quiz/download/', { results, format: 'docx' }, { responseType: 'blob' });
         const blob = response.data;
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -89,20 +77,17 @@ const downloadAsDOCX = async (results) => {
     }
 };
 
-const QuizResults = () => {
+const QuizResults = ({ user }) => {
     const location = useLocation();
     const navigate = useNavigate();
     const results = location.state?.results;
-    
+
     const [rating, setRating] = useState(0);
     const [hoverRating, setHoverRating] = useState(0);
     const [feedbackSent, setFeedbackSent] = useState(false);
 
-    // Redirect if no results found
     useEffect(() => {
-        if (!results) {
-            navigate('/quiz/create');
-        }
+        if (!results) navigate('/quiz/create');
     }, [results, navigate]);
 
     if (!results) return null;
@@ -113,150 +98,139 @@ const QuizResults = () => {
         navigator.clipboard.writeText(text);
         const btn = e.currentTarget;
         const originalText = btn.innerText;
-        btn.innerText = "Copied!";
-        setTimeout(() => btn.innerText = originalText, 2000);
+        btn.innerText = 'Copied';
+        setTimeout(() => {
+            btn.innerText = originalText;
+        }, 1500);
     };
 
     const handleShare = () => {
         const shareData = {
             title: 'Lamla AI Quiz',
             text: `I scored ${score}/${total} on the ${subject} quiz!`,
-            url: window.location.origin
+            url: window.location.origin,
         };
+
         if (navigator.share) {
             navigator.share(shareData);
         } else {
-            navigator.clipboard.writeText(shareData.text + " " + shareData.url);
-            alert("Link copied to clipboard!");
+            navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
+            alert('Link copied to clipboard.');
         }
     };
 
     const submitFeedback = async (val) => {
         setRating(val);
-        // Add your API call to djangoApi here
         setFeedbackSent(true);
     };
 
     return (
-        <div className={styles.resultsContainer}>
-            {/* Summary Card */}
-            <div className={styles.summaryCard}>
-                <div className={styles.summaryHeader}>
-                    <h1>
-                        {score_percent >= 80 ? "Excellent Work!" : 
-                         score_percent >= 50 ? "Good Effort!" : "Time to Review!"}
-                    </h1>
-                    <p>You completed the <strong>{subject} Quiz</strong></p>
-                </div>
-
-                <div className={styles.scoreMetrics}>
-                    <div className={styles.metric}>
-                        <h2 style={{ color: score_percent >= 70 ? 'var(--success-green)' : 'var(--error-red)' }}>
-                            {score}/{total}
-                        </h2>
-                        <p>Correct Answers</p>
+        <>
+            <Navbar user={user} />
+            <div className="results-page">
+                <header className="results-page-header">
+                    <div>
+                        <h1>{subject} Quiz Results</h1>
                     </div>
-                    <div className={styles.metric}>
-                        <h2>{score_percent.toFixed(1)}%</h2>
-                        <p>Overall Score</p>
+                    <p className="results-score-pill">{score_percent.toFixed(1)}%</p>
+                </header>
+
+                <section className="results-summary-card">
+                    <h2>
+                        {score_percent >= 80 ? 'Excellent Work' : score_percent >= 50 ? 'Good Effort' : 'Time to Review'}
+                    </h2>
+                    <p>You completed <strong>{subject}</strong>. Here is your breakdown.</p>
+
+                    <div className="results-metrics-grid">
+                        <article className="results-metric">
+                            <span>Correct Answers</span>
+                            <strong>{score}/{total}</strong>
+                        </article>
+                        <article className="results-metric">
+                            <span>Overall Score</span>
+                            <strong>{score_percent.toFixed(1)}%</strong>
+                        </article>
                     </div>
-                </div>
 
-                <div className={styles.progressBarContainer}>
-                    <div 
-                        className={styles.progressBar} 
-                        style={{ width: `${score_percent}%` }}
-                    />
-                </div>
-            </div>
+                    <div className="results-progress-track">
+                        <div className="results-progress-fill" style={{ width: `${score_percent}%` }} />
+                    </div>
+                </section>
 
-            {/* Detailed Review */}
-            <div className={styles.reviewSection}>
-                <h2 className="mb-4">Detailed Answer Review</h2>
-                {details.map((detail, idx) => (
-                    <div 
-                        key={idx} 
-                        className={`${styles.questionReviewItem} ${
-                            detail.is_correct ? styles.correct : 
-                            detail.user_answer ? styles.incorrect : styles.unanswered
-                        }`}
-                    >
-                        <div className={styles.questionHeader}>
-                            Q{idx + 1}. {detail.question}
-                        </div>
+                <section className="results-review-section">
+                    <h3>Detailed Answer Review</h3>
+                    <div className="results-review-list">
+                        {details.map((detail, idx) => (
+                            <article
+                                key={idx}
+                                className={[
+                                    'results-review-item',
+                                    detail.is_correct ? 'is-correct' : detail.user_answer ? 'is-incorrect' : 'is-unanswered',
+                                ].join(' ')}
+                            >
+                                <h4>Q{idx + 1}. {detail.question}</h4>
 
-                        <div className={styles.answerDetail}>
-                            <div className={styles.answerLine}>
-                                <span className={styles.answerLabel}>Your Answer:</span>
-                                <span>{detail.user_answer || "(Unanswered)"}</span>
-                            </div>
-                            <div className={styles.answerLine}>
-                                <span className={styles.answerLabel}>Correct Answer:</span>
-                                <span className="flex items-center gap-2">
-                                    {detail.correct_answer}
-                                    <button 
-                                        className={styles.actionBtn}
-                                        onClick={(e) => handleCopy(detail.correct_answer, e)}
-                                    >
-                                        Copy
-                                    </button>
-                                </span>
-                            </div>
-                            {detail.reasoning && (
-                                <div className={styles.answerLine}>
-                                    <span className={styles.answerLabel}>Evaluation:</span>
-                                    <span className={styles.reasoning}>{detail.reasoning}</span>
+                                <div className="results-answer-rows">
+                                    <div className="results-answer-row">
+                                        <span className="label">Your answer</span>
+                                        <span className="value">{detail.user_answer || '(Unanswered)'}</span>
+                                    </div>
+                                    <div className="results-answer-row">
+                                        <span className="label">Correct answer</span>
+                                        <span className="value with-action">
+                                            {detail.correct_answer}
+                                            <button className="results-inline-btn" onClick={(e) => handleCopy(detail.correct_answer, e)}>
+                                                Copy
+                                            </button>
+                                        </span>
+                                    </div>
+                                    {detail.reasoning && (
+                                        <div className="results-answer-row">
+                                            <span className="label">Evaluation</span>
+                                            <span className="value">{detail.reasoning}</span>
+                                        </div>
+                                    )}
+                                    {detail.explanation && (
+                                        <div className="results-answer-row">
+                                            <span className="label">Explanation</span>
+                                            <span className="value">{detail.explanation}</span>
+                                        </div>
+                                    )}
                                 </div>
-                            )}
-                            {detail.explanation && (
-                                <div className={styles.answerLine}>
-                                    <span className={styles.answerLabel}>Explanation:</span>
-                                    <span className={styles.explanation}>{detail.explanation}</span>
-                                </div>
-                            )}
-                        </div>
+                            </article>
+                        ))}
                     </div>
-                ))}
-            </div>
+                </section>
 
-            {/* Feedback & Actions */}
-            <div className={styles.summaryCard + " text-center"}>
-                <h3>How was your experience?</h3>
-                <div className={styles.stars}>
-                    {[1, 2, 3, 4, 5].map((star) => (
-                        <i 
-                            key={star}
-                            className={`fas fa-star ${(hoverRating || rating) >= star ? styles.starRated : ''}`}
-                            onMouseEnter={() => !feedbackSent && setHoverRating(star)}
-                            onMouseLeave={() => setHoverRating(0)}
-                            onClick={() => !feedbackSent && submitFeedback(star)}
-                        />
-                    ))}
-                </div>
-                {feedbackSent && <p className="text-green-500">Thank you for your feedback! 🎉</p>}
+                <section className="results-actions-card">
+                    <h3>Rate this quiz experience</h3>
+                    <div className="results-stars" role="button" aria-label="Rate quiz experience">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                                key={star}
+                                type="button"
+                                className={`results-star ${(hoverRating || rating) >= star ? 'active' : ''}`}
+                                onMouseEnter={() => !feedbackSent && setHoverRating(star)}
+                                onMouseLeave={() => setHoverRating(0)}
+                                onClick={() => !feedbackSent && submitFeedback(star)}
+                            >
+                                ?
+                            </button>
+                        ))}
+                    </div>
+                    {feedbackSent && <p className="results-feedback-done">Thanks for your feedback.</p>}
 
-                <div className="flex justify-center gap-4 mt-6" style={{ flexWrap: 'wrap', justifyContent: 'center', gap: '12px' }}>
-                    <button className={styles.actionBtn} onClick={handleShare}>
-                        <i className="fas fa-share-alt mr-2" /> Share
-                    </button>
-                    
-                    {/* Download Buttons */}
-                    <button className={styles.actionBtn} onClick={() => downloadAsText(results)} title="Download as Plain Text">
-                        <i className="fas fa-file-alt mr-2" /> TXT
-                    </button>
-                    <button className={styles.actionBtn} onClick={() => downloadAsPDF(results)} title="Download as PDF">
-                        <i className="fas fa-file-pdf mr-2" /> PDF
-                    </button>
-                    <button className={styles.actionBtn} onClick={() => downloadAsDOCX(results)} title="Download as Word Document">
-                        <i className="fas fa-file-word mr-2" /> DOCX
-                    </button>
-                    
-                    <Link to="/quiz/create" className="btn primary">
-                        Generate New Quiz
-                    </Link>
-                </div>
+                    <div className="results-actions-grid">
+                        <button className="results-action-btn" onClick={handleShare}>Share</button>
+                        <button className="results-action-btn" onClick={() => downloadAsText(results)}>Download TXT</button>
+                        <button className="results-action-btn" onClick={() => downloadAsPDF(results)}>Download PDF</button>
+                        <button className="results-action-btn" onClick={() => downloadAsDOCX(results)}>Download DOCX</button>
+                        <Link to="/quiz/create" className="results-action-btn primary">Generate New Quiz</Link>
+                    </div>
+                </section>
             </div>
-        </div>
+            <Footer />
+        </>
     );
 };
 

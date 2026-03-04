@@ -7,7 +7,7 @@ import httpx
 logger = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT = 30
-DEFAULT_PROVIDER_ORDER = ["azure", "deepseek", "gemini", "huggingface"]
+DEFAULT_PROVIDER_ORDER = ["claude", "nvidia", "azure", "deepseek", "gemini", "huggingface"]
 
 
 class APIIntegrationError(Exception):
@@ -49,6 +49,8 @@ class AIClient:
     """
     Async AI provider orchestrator.
     Use generate_content(client=async_httpx_client, prompt=...) from FastAPI services.
+
+    Provider priority (default): claude → nvidia → azure → deepseek → gemini → huggingface
     """
     def __init__(self, provider_priority: Optional[List[str]] = None):
         self.providers = provider_priority or DEFAULT_PROVIDER_ORDER
@@ -56,17 +58,32 @@ class AIClient:
         logger.info("AIClient initialized with providers: %s", self.providers)
 
     def _refresh_keys(self):
-        self.deepseek_key = os.environ.get("DEEPSEEK_API_KEY")
-        self.deepseek_url = os.environ.get("DEEPSEEK_API_URL", "https://api.deepseek.com/v1/chat/completions")
+        # --- Claude (Anthropic) ---
+        self.claude_key = os.getenv("CLAUDE_API_KEY")
+        self.claude_model = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-20250514")
+        self.claude_url = os.getenv("CLAUDE_URL", "https://api.anthropic.com/v1/messages")
+        self.claude_api_version = os.getenv("CLAUDE_API_VERSION", "2023-06-01")
 
+        # --- NVIDIA OpenAI-compatible ---
+        self.nvidia_key = os.getenv("NVIDIA_OPENAI_API_KEY")
+        self.nvidia_url = os.getenv("NVIDIA_API_URL", "https://integrate.api.nvidia.com/v1/chat/completions")
+        self.nvidia_model = os.getenv("NVIDIA_MODEL", "openai/gpt-oss-20b")
+
+        # --- Azure OpenAI ---
         self.azure_key = os.environ.get("AZURE_OPENAI_API_KEY")
-        self.azure_endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")  # can be /deployments/... or base endpoint
+        self.azure_endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
         self.azure_deployment = os.environ.get("AZURE_OPENAI_DEPLOYMENT")
         self.azure_api_version = os.environ.get("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
 
+        # --- DeepSeek ---
+        self.deepseek_key = os.environ.get("DEEPSEEK_API_KEY")
+        self.deepseek_url = os.environ.get("DEEPSEEK_API_URL", "https://api.deepseek.com/v1/chat/completions")
+
+        # --- Gemini ---
         self.gemini_key = os.environ.get("GEMINI_API_KEY")
         self.gemini_url = os.environ.get("GEMINI_API_URL", "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent")
 
+        # --- HuggingFace ---
         self.hf_token = os.environ.get("HUGGING_FACE_API_TOKEN")
         self.hf_url_template = os.environ.get("HUGGING_FACE_API_URL_TEMPLATE", "https://api-inference.huggingface.co/models/{model}")
 
@@ -84,26 +101,34 @@ class AIClient:
         for provider in provider_list:
             provider = provider.lower()
             try:
-                if provider == "azure" and self.azure_key and (self.azure_endpoint or self.azure_deployment):
+                if provider == "claude" and self.claude_key:
+                    raw = await self._call_claude(client, prompt, max_tokens)
+
+                elif provider == "nvidia" and self.nvidia_key:
+                    raw = await self._call_nvidia(client, prompt, max_tokens)
+
+                elif provider == "azure" and self.azure_key and (self.azure_endpoint or self.azure_deployment):
                     raw = await self._call_azure_openai(client, prompt, max_tokens)
-                    # If Azure returned a safety block string, try next provider
                     if isinstance(raw, str) and "[Safety Block]" in raw:
                         logger.warning("Azure flagged content as unsafe. Trying next provider.")
                         errors.append((provider, "Content flagged by safety filter"))
                         continue
+
                 elif provider == "deepseek" and self.deepseek_key:
                     raw = await self._call_deepseek(client, prompt, max_tokens)
+
                 elif provider == "gemini" and self.gemini_key:
                     raw = await self._call_gemini(client, prompt, max_tokens)
+
                 elif provider in ("huggingface", "hf") and self.hf_token:
                     raw = await self._call_huggingface(client, prompt, max_tokens)
+
                 else:
-                    errors.append((provider, "Provider not configured"))
+                    errors.append((provider, "Provider not configured or missing API key"))
                     continue
 
-                # Handle different return types
+                # --- Normalise the raw response to str or dict ---
                 if isinstance(raw, dict):
-                    # Already parsed JSON, return as-is
                     text = json.dumps(raw)
                     if not text or text == "{}":
                         raise APIIntegrationError(f"{provider} returned empty JSON response")
@@ -111,34 +136,31 @@ class AIClient:
                 elif isinstance(raw, str):
                     text = raw.strip()
                     if not text:
-                        logger.error(f"{provider} returned empty text. Raw response type: {type(raw)}")
                         raise APIIntegrationError(f"{provider} returned empty text")
                 else:
                     text = str(raw).strip()
                     if not text:
-                        logger.error(f"{provider} returned empty text. Raw response type: {type(raw)}, value: {raw}")
                         raise APIIntegrationError(f"{provider} returned empty text")
 
-                # Try to parse full JSON first
+                # Try full JSON parse first
                 try:
                     parsed = json.loads(text)
-                    # For Azure, extract content from choices if present
-                    if provider == "azure" and isinstance(parsed, dict):
-                        if "choices" in parsed and isinstance(parsed["choices"], list) and len(parsed["choices"]) > 0:
-                            choice = parsed["choices"][0]
-                            if "message" in choice and "content" in choice["message"]:
-                                content = choice["message"]["content"]
-                                if content and content.strip():
-                                    logger.debug(f"Azure extracted content: {content[:100]}...")
-                                    return content  # Return extracted content string for parsing
+                    # Extract content from OpenAI-style choices wrapper (Azure, NVIDIA, DeepSeek)
+                    if provider in ("azure", "nvidia", "deepseek") and isinstance(parsed, dict):
+                        if "choices" in parsed:
+                            content = parsed["choices"][0]["message"].get("content", "")
+                            if content and content.strip():
+                                logger.debug("%s extracted content: %s...", provider, content[:100])
+                                return content
                     return parsed
-                except json.JSONDecodeError as e:
-                    logger.debug(f"{provider} response is not valid JSON: {text[:200]}")
+                except json.JSONDecodeError:
                     parsed = _extract_json_substring(text)
                     if parsed is not None:
                         return parsed
                     return text
 
+            except APIIntegrationError:
+                raise
             except Exception as e:
                 logger.warning("Provider %s failed: %s", provider, str(e))
                 errors.append((provider, str(e)))
@@ -149,14 +171,99 @@ class AIClient:
             raise APIIntegrationError(f"All AI providers failed: {err_msg}")
         return ""
 
-    # ----- provider implementations -----
+    # ------------------------------------------------------------------ #
+    #  Provider implementations                                            #
+    # ------------------------------------------------------------------ #
+
+    async def _call_claude(self, client: httpx.AsyncClient, prompt: str, max_tokens: int) -> str:
+        """
+        Call Anthropic Claude via the /v1/messages endpoint.
+        Docs: https://docs.anthropic.com/en/api/messages
+        """
+        if not self.claude_key:
+            raise APIIntegrationError("Claude API key not configured (CLAUDE_API_KEY)")
+
+        headers = {
+            "x-api-key": self.claude_key,
+            "anthropic-version": self.claude_api_version,
+            "content-type": "application/json",
+        }
+        payload = {
+            "model": self.claude_model,
+            "max_tokens": max_tokens,
+            "messages": [
+                {"role": "user", "content": prompt}
+            ],
+        }
+
+        resp = await client.post(self.claude_url, headers=headers, json=payload, timeout=DEFAULT_TIMEOUT)
+        resp.raise_for_status()
+
+        data = resp.json()
+        # Anthropic response shape: {"content": [{"type": "text", "text": "..."}], ...}
+        content_blocks = data.get("content", [])
+        text = " ".join(
+            block.get("text", "")
+            for block in content_blocks
+            if block.get("type") == "text"
+        ).strip()
+
+        if not text:
+            raise APIIntegrationError(f"Claude returned empty content. Full response: {data}")
+
+        logger.debug("Claude response snippet: %s...", text[:120])
+        return text
+
+    async def _call_nvidia(self, client: httpx.AsyncClient, prompt: str, max_tokens: int) -> str:
+        """
+        Call NVIDIA-hosted models via their OpenAI-compatible chat completions endpoint.
+        Docs: https://build.nvidia.com/explore/discover
+        """
+        if not self.nvidia_key:
+            raise APIIntegrationError("NVIDIA API key not configured (NVIDIA_OPENAI_API_KEY)")
+
+        headers = {
+            "Authorization": f"Bearer {self.nvidia_key}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": self.nvidia_model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are a helpful educational assistant. Provide accurate, helpful responses to student questions.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            "max_tokens": max_tokens,
+            "temperature": 0.7,
+            "top_p": 1,
+            "stream": False,
+        }
+
+        resp = await client.post(self.nvidia_url, headers=headers, json=payload, timeout=DEFAULT_TIMEOUT)
+        resp.raise_for_status()
+
+        data = resp.json()
+        # Standard OpenAI shape
+        content = data["choices"][0]["message"].get("content", "").strip()
+        if not content:
+            raise APIIntegrationError(f"NVIDIA returned empty content. Full response: {data}")
+
+        logger.debug("NVIDIA response snippet: %s...", content[:120])
+        return content
 
     async def _call_deepseek(self, client: httpx.AsyncClient, prompt: str, max_tokens: int) -> str:
-        url = self.deepseek_url
         headers = {
-            "Content-Type": "application/json", "Authorization": f"Bearer {self.deepseek_key}",}
-        payload = {"model": "deepseek-chat", "messages": [{"role": "user", "content": prompt}], "max_tokens": max_tokens}
-        resp = await client.post(url, headers=headers, json=payload, timeout=DEFAULT_TIMEOUT)
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.deepseek_key}",
+        }
+        payload = {
+            "model": "deepseek-chat",
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": max_tokens,
+        }
+        resp = await client.post(self.deepseek_url, headers=headers, json=payload, timeout=DEFAULT_TIMEOUT)
         resp.raise_for_status()
         return resp.text
 
@@ -166,69 +273,46 @@ class AIClient:
 
         base_url = self.azure_endpoint.rstrip('/')
         if '/openai/deployments/' in base_url.lower():
-            # Endpoint already contains deployment path
             url = f"{base_url}/chat/completions?api-version={self.azure_api_version}"
         else:
-            # Need to construct full URL with deployment
             if not self.azure_deployment:
                 raise APIIntegrationError("Azure OpenAI deployment name is required")
             url = f"{base_url}/openai/deployments/{self.azure_deployment}/chat/completions?api-version={self.azure_api_version}"
 
-        headers = {
-            "Content-Type": "application/json", 
-            "api-key": self.azure_key
-        }
-        
+        headers = {"Content-Type": "application/json", "api-key": self.azure_key}
         payload = {
             "messages": [
-                {"role": "system", "content": "You are a helpful educational assistant. Provide accurate, helpful responses to student questions."},
-                {"role": "user", "content": prompt}
-            ], 
-            "max_tokens": max_tokens, 
-            "temperature": 0.7
+                {"role": "system", "content": "You are a helpful educational assistant."},
+                {"role": "user", "content": prompt},
+            ],
+            "max_tokens": max_tokens,
+            "temperature": 0.7,
         }
-        
+
         resp = await client.post(url, headers=headers, json=payload, timeout=DEFAULT_TIMEOUT)
-        
-        # Handle content filter 400 errors
+
         if resp.status_code == 400:
             try:
-                error_data = resp.json()
-                inner_error = error_data.get("error", {}).get("innererror", {})
-                if inner_error.get("code") == "ResponsibleAIPolicyViolation":
-                    # Return special marker so provider can be skipped and next provider tried
-                    logger.warning("Azure content filter triggered. Will try alternative provider.")
+                inner = resp.json().get("error", {}).get("innererror", {})
+                if inner.get("code") == "ResponsibleAIPolicyViolation":
+                    logger.warning("Azure content filter triggered.")
                     return "[Safety Block] Azure content filter"
             except Exception:
-                pass    
-        
+                pass
+
         if resp.status_code != 200:
-            logger.error(f"Azure API Error: {resp.status_code} - {resp.text}")
+            logger.error("Azure API Error: %s - %s", resp.status_code, resp.text)
             resp.raise_for_status()
-        
-        # Azure returns JSON, parse and return as dict
+
         try:
-            resp_json = resp.json()
-            logger.debug(f"Azure response keys: {list(resp_json.keys()) if isinstance(resp_json, dict) else 'not a dict'}")
-            # Validate response has content
-            if "choices" in resp_json and isinstance(resp_json["choices"], list) and len(resp_json["choices"]) > 0:
-                choice = resp_json["choices"][0]
-                if "message" in choice:
-                    content = choice["message"].get("content", "")
-                    if not content or not content.strip():
-                        logger.warning(f"Azure response has empty content. Full response: {resp_json}")
-            
-            return resp_json
-        
+            return resp.json()
         except json.JSONDecodeError as e:
-            logger.error(f"Azure response is not valid JSON: {resp.text[:500]}")
-            raise APIIntegrationError(f"Azure returned invalid JSON: {str(e)}")
+            raise APIIntegrationError(f"Azure returned invalid JSON: {e}")
 
     async def _call_gemini(self, client: httpx.AsyncClient, prompt: str, max_tokens: int) -> str:
         if not self.gemini_key or not self.gemini_url:
             raise APIIntegrationError("Gemini not configured")
         headers = {"Authorization": f"Bearer {self.gemini_key}", "Content-Type": "application/json"}
-        # Generic payload - adapt if you have a specific schema
         payload = {"prompt": prompt, "max_output_tokens": max_tokens}
         resp = await client.post(self.gemini_url, headers=headers, json=payload, timeout=DEFAULT_TIMEOUT)
         resp.raise_for_status()
@@ -243,15 +327,15 @@ class AIClient:
         payload = {"inputs": prompt, "parameters": {"max_new_tokens": max_tokens}}
         resp = await client.post(url, headers=headers, json=payload, timeout=DEFAULT_TIMEOUT)
         resp.raise_for_status()
-        # HF often returns json; return str for parsing upstream
         try:
             return resp.json()
         except Exception:
             return resp.text
 
 
-# instantiate global client
-# Optional override via env, e.g. AI_PROVIDER_ORDER=deepseek,gemini,azure
+# ------------------------------------------------------------------ #
+#  Global singleton                                                    #
+# ------------------------------------------------------------------ #
 provider_order_env = os.environ.get("AI_PROVIDER_ORDER")
 if provider_order_env:
     provider_order = [p.strip().lower() for p in provider_order_env.split(",") if p.strip()]

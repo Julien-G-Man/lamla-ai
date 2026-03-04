@@ -132,7 +132,7 @@ const CreateQuiz = ({ user }) => {
             difficulty: difficulty
           });
           // Navigate to quiz page with quiz data (not results page)
-          navigate('/quiz', { state: { quizData: response.data } });
+          navigate('/quiz/play', { state: { quizData: response.data } });
         } catch (err) {
             showToast(err.response?.data?.error || "Generation failed", 'error');
             setIsGenerating(false);
@@ -289,7 +289,7 @@ const CreateQuiz = ({ user }) => {
                             </div>
                             <div className="option-group">
                                 <span><FontAwesomeIcon icon={faChartLine} /> Difficulty</span>
-                                <select value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
+                                <select id="difficultySelect" value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
                                     <option value="random">Random</option>
                                     <option value="easy">Easy</option>
                                     <option value="medium">Medium</option>

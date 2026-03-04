@@ -60,13 +60,16 @@ function App() {
             <Route path="/quiz/create" element={<CreateQuiz />} />
             <Route path="/quiz/play" element={<Quiz />} />
             <Route path="/quiz/results" element={<QuizResults />} />
+            <Route path="/quiz" element={<Navigate to="/quiz/create" replace />} />
 
             <Route path="/flashcards" element={<FlashcardDecks />} />
             <Route path="/flashcards/create" element={<FlashcardCreate />} />
             <Route path="/flashcards/deck/:id" element={<FlashcardDeck />} />
             <Route path="/flashcards/study/:id" element={<FlashcardStudy />} />
+            <Route path="/flashcard" element={<Navigate to="/flashcards" replace />} />
 
             <Route path="/ai-tutor" element={<Chatbot />} />
+            <Route path="/chatbot" element={<Navigate to="/ai-tutor" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Router>

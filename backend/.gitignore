@@ -6,6 +6,8 @@ fastapi_service/fastenv/
 db.sqlite3
 
 # Legacy setup files 
+fastapi_service/nvidia_openai.py
+nvidia_openai.py
 tests/
 setup_postgres.sql
 setup_postgres.bat
