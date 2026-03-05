@@ -82,19 +82,46 @@ def _build_fallback_cards(text: str, subject: str, num_cards: int):
         normalized = "No source text was provided."
 
     # Split into sentence-like chunks and use as answer material.
-    chunks = [c.strip() for c in re.split(r"(?<=[.!?])\s+", normalized) if c.strip()]
+    chunks = [c.strip(" -\t") for c in re.split(r"(?<=[.!?])\s+", normalized) if c.strip()]
     if not chunks:
         chunks = [normalized]
+
+    def to_card(source: str):
+        sentence = source.strip().strip(".")
+        if not sentence:
+            sentence = "No source text provided"
+
+        # Pattern: "X is Y" -> "What is X?"
+        match_is = re.match(r"^([A-Za-z0-9][A-Za-z0-9 ()/\-]{1,80})\s+is\s+(.+)$", sentence, flags=re.IGNORECASE)
+        if match_is:
+            term = match_is.group(1).strip()
+            meaning = match_is.group(2).strip()
+            return {
+                "question": f"What is {term}?",
+                "answer": meaning[:320],
+            }
+
+        # Pattern: "Term: definition"
+        if ":" in sentence:
+            left, right = sentence.split(":", 1)
+            left = left.strip()
+            right = right.strip()
+            if left and right and len(left) <= 90:
+                return {
+                    "question": f"Explain {left} in {safe_subject}.",
+                    "answer": right[:320],
+                }
+
+        snippet = sentence[:140]
+        return {
+            "question": f"In {safe_subject}, explain this idea: \"{snippet}\"",
+            "answer": sentence[:320],
+        }
 
     cards = []
     for i in range(max(1, min(num_cards, 25))):
         source = chunks[i % len(chunks)]
-        cards.append(
-            {
-                "question": f"Key point {i + 1} in {safe_subject}?",
-                "answer": source[:320],
-            }
-        )
+        cards.append(to_card(source))
     return cards
 
 

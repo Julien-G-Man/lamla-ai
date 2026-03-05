@@ -166,29 +166,59 @@ def get_decks(request):
             ]
         }
     )
+
+
+def get_flashcards_history(request):
+    user, auth_error = _get_authenticated_user(request)
+    if auth_error:
+        return auth_error
+
+    decks = (
+        Deck.objects.filter(user=user)
+        .annotate(card_count=Count("cards"))
+        .order_by("-created_at")[:30]
+    )
+
+    return JsonResponse(
+        {
+            "history": [
+                {
+                    "id": d.id,
+                    "title": d.title,
+                    "subject": d.subject,
+                    "card_count": d.card_count,
+                    "created_at": d.created_at.isoformat(),
+                }
+                for d in decks
+            ]
+        }
+    )
     
+@csrf_exempt
 @require_http_methods(["GET", "DELETE"])
 def get_deck_cards(request, deck_id):
     user, auth_error = _get_authenticated_user(request)
     if auth_error:
         return auth_error
 
+    deck = Deck.objects.filter(id=deck_id, user=user).first()
+    
     if request.method == "DELETE":
-        deleted, _ = Deck.objects.filter(id=deck_id, user=user).delete()
+        deleted, _ = deck.delete()
         if deleted == 0:
             return JsonResponse({"error": "Deck not found"}, status=404)
         return JsonResponse({"status": "deleted"})
 
+    if not deck:
+        return JsonResponse({"error": "Deck not found"}, status=404)
+    
     cards = Flashcard.objects.filter(
         deck_id=deck_id,
-        deck__user=user
-    ).values(
-        "id",
-        "question",
-        "answer"
-    )
+        deck__user=user,
+    ).values("id", "question", "answer")
 
     return JsonResponse({
+        "title": deck.title,
         "cards": list(cards)
     })
     

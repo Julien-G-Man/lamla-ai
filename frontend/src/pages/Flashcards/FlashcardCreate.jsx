@@ -43,13 +43,43 @@ const normalizeCards = (rawCards) => {
 const buildFallbackCards = (text, subject, count) => {
   const safeSubject = (subject || "the topic").trim() || "the topic";
   const normalized = (text || "").replace(/\s+/g, " ").trim();
-  const chunks = normalized.split(/(?<=[.!?])\s+/).filter(Boolean);
+  const chunks = normalized.split(/(?<=[.!?])\s+/).map((c) => c.trim()).filter(Boolean);
   const source = chunks.length ? chunks : [normalized || "No source text provided."];
   const max = Math.max(1, Math.min(Number(count) || 10, 25));
-  return Array.from({ length: max }, (_, idx) => ({
-    question: `Key point ${idx + 1} in ${safeSubject}?`,
-    answer: source[idx % source.length].slice(0, 320),
-  }));
+  const toCard = (line) => {
+    const sentence = (line || "").trim().replace(/\.$/, "");
+    if (!sentence) {
+      return {
+        question: `Explain one core idea in ${safeSubject}.`,
+        answer: "No source text provided.",
+      };
+    }
+
+    const isPattern = sentence.match(/^([A-Za-z0-9][A-Za-z0-9 ()/-]{1,80})\s+is\s+(.+)$/i);
+    if (isPattern) {
+      return {
+        question: `What is ${isPattern[1].trim()}?`,
+        answer: isPattern[2].trim().slice(0, 320),
+      };
+    }
+
+    if (sentence.includes(":")) {
+      const [left, right] = sentence.split(":");
+      if (left && right) {
+        return {
+          question: `Explain ${left.trim()} in ${safeSubject}.`,
+          answer: right.trim().slice(0, 320),
+        };
+      }
+    }
+
+    return {
+      question: `In ${safeSubject}, explain this idea: "${sentence.slice(0, 120)}"`,
+      answer: sentence.slice(0, 320),
+    };
+  };
+
+  return Array.from({ length: max }, (_, idx) => toCard(source[idx % source.length]));
 };
 
 export default function FlashcardCreate() {
@@ -173,6 +203,7 @@ export default function FlashcardCreate() {
             </div>
 
             <form className="fc-form" onSubmit={generate}>
+              <p className="fc-step-label">Step 1: Choose your subject</p>
               <label>Subject / Topic</label>
               <select value={subject} onChange={(e) => setSubject(e.target.value)}>
                 <option value="">Select subject</option>
@@ -187,6 +218,7 @@ export default function FlashcardCreate() {
                 />
               )}
 
+              <p className="fc-step-label">Step 2: Add study content</p>
               <div className="tab-group fc-tab-group-like-cq">
                 <button
                   type="button"
@@ -262,6 +294,7 @@ export default function FlashcardCreate() {
               <label>Custom Prompt (optional)</label>
               <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="Extra instructions for AI" />
 
+              <p className="fc-step-label">Step 3: Configure and generate</p>
               <div className="fc-row two">
                 <div>
                   <label>Number of cards</label>

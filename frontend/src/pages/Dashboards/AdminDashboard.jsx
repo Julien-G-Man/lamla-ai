@@ -337,7 +337,13 @@ const AdminDashboard = () => {
                           </td>
                           <td data-label="Actions">
                             <div style={{ display: 'flex', gap: 'var(--spacing-xs)' }}>
-                              <button className="db-btn db-btn-ghost db-btn-sm" title="View user details">View</button>
+                              <button
+                                className="db-btn db-btn-ghost db-btn-sm"
+                                title="View user details"
+                                onClick={() => navigate(`/admin-dashboard/user/${u.id}`)}
+                              >
+                                View
+                              </button>
                               <button
                                 className="db-btn db-btn-danger db-btn-sm"
                                 onClick={() => handleRemoveUser(u.id)}

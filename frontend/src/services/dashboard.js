@@ -39,6 +39,11 @@ export const dashboardService = {
     return res.data.users;
   },
 
+  getAdminUserDetails: async (userId) => {
+    const res = await djangoApi.get(`/dashboard/admin/users/${userId}/`);
+    return res.data;
+  },
+
   removeUser: async (userId) => {
     const res = await djangoApi.delete(`/dashboard/admin/users/${userId}/`);
     return res.data;

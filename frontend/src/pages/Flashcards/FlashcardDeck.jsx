@@ -10,8 +10,11 @@ export default function FlashcardDeck() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
 
+  const [title, setTitle] = useState("");
   const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [explainingId, setExplainingId] = useState(null);
+  const [explanations, setExplanations] = useState({});
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -24,6 +27,7 @@ export default function FlashcardDeck() {
       try {
         const res = await djangoApi.get(`/flashcards/deck/${id}/`);
         setCards(res.data?.cards || []);
+        setTitle(res.data?.title || res.data?.subject || "");
       } catch (err) {
         console.error("Load flashcard deck failed", err);
       } finally {
@@ -44,13 +48,30 @@ export default function FlashcardDeck() {
     }
   };
 
+  const explainCard = async (card) => {
+    if (!card?.id) return;
+    setExplainingId(card.id);
+    try {
+      const res = await djangoApi.post("/flashcards/explain/", {
+        question: card.question,
+        answer: card.answer,
+      });
+      const text = res.data?.explanation || "No explanation available.";
+      setExplanations((prev) => ({ ...prev, [card.id]: text }));
+    } catch (err) {
+      console.error("Explain flashcard failed", err);
+    } finally {
+      setExplainingId(null);
+    }
+  };
+
   return (
     <>
       <Navbar />
       <main className="fc-page">
         <section className="fc-hero compact">
           <div>
-            <h1>Deck Details</h1>
+            <h1>Deck Details: {title}</h1>
             <p>{cards.length} cards in this deck</p>
           </div>
           <div className="fc-actions">
@@ -67,6 +88,21 @@ export default function FlashcardDeck() {
             <article key={card.id} className="fc-panel fc-qa">
               <h4>{card.question}</h4>
               <p>{card.answer}</p>
+              <div className="fc-actions">
+                <button
+                  className="fc-secondary"
+                  onClick={() => explainCard(card)}
+                  disabled={explainingId === card.id}
+                >
+                  {explainingId === card.id ? "Explaining..." : "Explain"}
+                </button>
+              </div>
+              {explanations[card.id] && (
+                <div className="fc-explain-box">
+                  <strong>Explanation</strong>
+                  <p>{explanations[card.id]}</p>
+                </div>
+              )}
             </article>
           ))}
         </section>

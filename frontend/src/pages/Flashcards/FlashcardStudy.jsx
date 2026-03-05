@@ -20,6 +20,8 @@ export default function FlashcardStudy() {
   const [cards, setCards] = useState([]);
   const [idx, setIdx] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
+  const [explanation, setExplanation] = useState("");
+  const [isExplaining, setIsExplaining] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -51,10 +53,27 @@ export default function FlashcardStudy() {
         quality: qualityMap[qualityKey],
       });
 
+      setExplanation("");
       setShowAnswer(false);
       setIdx((prev) => Math.min(prev + 1, cards.length - 1));
     } catch (err) {
       console.error("Submit flashcard review failed", err);
+    }
+  };
+
+  const explainCurrent = async () => {
+    if (!current) return;
+    setIsExplaining(true);
+    try {
+      const res = await djangoApi.post("/flashcards/explain/", {
+        question: current.question,
+        answer: current.answer,
+      });
+      setExplanation(res.data?.explanation || "No explanation available.");
+    } catch (err) {
+      console.error("Explain flashcard failed", err);
+    } finally {
+      setIsExplaining(false);
     }
   };
 
@@ -83,6 +102,17 @@ export default function FlashcardStudy() {
                   <button className="fc-primary" onClick={() => setShowAnswer(true)}>Show Answer</button>
                 ) : (
                   <>
+                    <div className="fc-actions" style={{ marginBottom: 10 }}>
+                      <button className="fc-secondary" onClick={explainCurrent} disabled={isExplaining}>
+                        {isExplaining ? "Explaining..." : "Explain This Card"}
+                      </button>
+                    </div>
+                    {explanation && (
+                      <div className="fc-explain-box">
+                        <strong>Explanation</strong>
+                        <p>{explanation}</p>
+                      </div>
+                    )}
                     <p className="fc-info">How well did you remember?</p>
                     <div className="fc-actions stretch">
                       <button className="fc-danger" onClick={() => submitReview("again")}>Again</button>

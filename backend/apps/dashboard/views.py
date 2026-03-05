@@ -181,23 +181,6 @@ class AdminDashboardStatsView(APIView):
                 "created_at": d.created_at,
             })
 
-        recent_chat_messages = (
-            ChatMessage.objects
-            .filter(sender="user", session__user__isnull=False)
-            .select_related("session__user")
-            .order_by("-created_at")[:24]
-        )
-        for m in recent_chat_messages:
-            content_preview = (m.content or "").strip().replace("\n", " ")
-            if len(content_preview) > 68:
-                content_preview = f"{content_preview[:65]}..."
-            recent_activity.append({
-                "type": "chat",
-                "actor": _actor(getattr(m.session, "user", None)),
-                "text": f"sent a chat message: \"{content_preview}\"" if content_preview else "sent a chat message",
-                "created_at": m.created_at,
-            })
-
         recent_activity.sort(key=lambda item: item["created_at"], reverse=True)
         recent_activity = recent_activity[:20]
         recent_activity_payload = [
@@ -337,6 +320,93 @@ class AdminUsersListView(APIView):
 class AdminUserDeleteView(APIView):
     """DELETE /api/dashboard/admin/users/<user_id>/"""
     permission_classes = [IsAuthenticated]
+
+    def get(self, request, user_id):
+        if not request.user.is_admin:
+            return Response({'detail': 'Forbidden.'}, status=403)
+
+        from apps.accounts.models import User
+        from apps.flashcards.models import Deck, Flashcard
+
+        try:
+            target = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'detail': 'User not found.'}, status=404)
+
+        quizzes_qs = QuizSession.objects.filter(user=target)
+        decks_qs = Deck.objects.filter(user=target)
+        flashcards_qs = Flashcard.objects.filter(deck__user=target)
+        chat_sessions_qs = ChatSession.objects.filter(user=target)
+        chat_messages_qs = ChatMessage.objects.filter(session__user=target)
+
+        quiz_count = quizzes_qs.count()
+        flashcard_decks_count = decks_qs.count()
+        flashcards_count = flashcards_qs.count()
+        chat_sessions_count = chat_sessions_qs.count()
+        chat_messages_count = chat_messages_qs.count()
+
+        quiz_chars = (
+            _safe_char_sum(quizzes_qs, Length('subject')) +
+            _safe_char_sum(quizzes_qs, Length(Cast('questions_data', output_field=TextField()))) +
+            _safe_char_sum(quizzes_qs, Length(Cast('user_answers', output_field=TextField())))
+        )
+        flashcard_chars = (
+            _safe_char_sum(flashcards_qs, Length('question')) +
+            _safe_char_sum(flashcards_qs, Length('answer'))
+        )
+        chat_chars = _safe_char_sum(chat_messages_qs, Length('content'))
+
+        tokens_quiz = _tokens_from_chars(quiz_chars)
+        tokens_flashcards = _tokens_from_chars(flashcard_chars)
+        tokens_chat = _tokens_from_chars(chat_chars)
+
+        quiz_stats = quizzes_qs.aggregate(
+            avg=dm.Avg('score_percentage'),
+            total_questions=Coalesce(dm.Sum('total_questions'), Value(0)),
+        )
+
+        # Recent per-user activity (quizzes + flashcards only)
+        recent_activity = []
+        for q in quizzes_qs.order_by('-created_at')[:15]:
+            recent_activity.append({
+                "type": "quiz",
+                "text": f"completed a {(q.subject or 'General')} quiz ({q.score_percentage}%)",
+                "created_at": q.created_at,
+            })
+
+        for d in decks_qs.order_by('-created_at')[:15]:
+            recent_activity.append({
+                "type": "flashcards",
+                "text": f"created flashcard deck '{d.title}'",
+                "created_at": d.created_at,
+            })
+
+        recent_activity.sort(key=lambda item: item["created_at"], reverse=True)
+        recent_activity = [
+            {**item, "created_at": item["created_at"].isoformat()}
+            for item in recent_activity[:20]
+        ]
+
+        return Response({
+            'user': user_to_dict(target),
+            'summary': {
+                'total_quizzes': quiz_count,
+                'total_quiz_questions': int(quiz_stats.get('total_questions') or 0),
+                'average_score': round(float(quiz_stats.get('avg') or 0), 1),
+                'total_flashcard_decks': flashcard_decks_count,
+                'total_flashcards': flashcards_count,
+                'total_chat_sessions': chat_sessions_count,
+                'total_chat_messages': chat_messages_count,
+            },
+            'estimated_tokens': {
+                'quiz': tokens_quiz,
+                'flashcards': tokens_flashcards,
+                'chat': tokens_chat,
+                'total': tokens_quiz + tokens_flashcards + tokens_chat,
+                'method': 'chars_div_4_estimate',
+            },
+            'recent_activity': recent_activity,
+        })
 
     def delete(self, request, user_id):
         if not request.user.is_admin:

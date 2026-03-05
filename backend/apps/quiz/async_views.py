@@ -8,10 +8,13 @@ import json
 import logging
 import httpx
 from datetime import datetime
+from asgiref.sync import sync_to_async
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from apps.core.async_client import call_fastapi, build_fastapi_headers
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.exceptions import AuthenticationFailed
 
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
@@ -19,6 +22,31 @@ from rest_framework.response import Response
 from .models import QuizSession
 
 logger = logging.getLogger(__name__)
+
+
+async def _get_authenticated_user_async(request):
+    """
+    Async-safe token authentication for async views.
+    """
+    try:
+        auth_result = await sync_to_async(
+            TokenAuthentication().authenticate,
+            thread_sensitive=True
+        )(request)
+    except AuthenticationFailed as exc:
+        return None, JsonResponse({"detail": str(exc)}, status=401)
+
+    if auth_result is None:
+        return None, JsonResponse(
+            {"detail": "Authentication credentials were not provided."},
+            status=401
+        )
+
+    user, _token = auth_result
+    if not user or not user.is_active:
+        return None, JsonResponse({"detail": "Invalid user."}, status=401)
+
+    return user, None
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -119,6 +147,10 @@ async def submit_quiz_api_async(request):
     Receives user answers and quiz data, calculates score, and returns results.
     """
     try:
+        user, auth_error = await _get_authenticated_user_async(request)
+        if auth_error:
+            return auth_error
+
         # Parse request
         data = json.loads(request.body) if request.body else {}
         
@@ -187,6 +219,18 @@ async def submit_quiz_api_async(request):
             "details": details,
             "submitted_at": datetime.now()
         }
+
+        # Persist to quiz history for this authenticated user (including admins).
+        await sync_to_async(QuizSession.objects.create, thread_sensitive=True)(
+            user=user,
+            subject=(quiz_data.get("subject", "General") or "General")[:100],
+            total_questions=total_questions,
+            correct_answers=correct_count,
+            score_percentage=score_percent,
+            duration_minutes=int(data.get("duration_minutes") or 0),
+            questions_data=quiz_data,
+            user_answers=user_answers,
+        )
         
         logger.info(f"Quiz submitted: {correct_count}/{total_questions} correct ({score_percent}%)")
         

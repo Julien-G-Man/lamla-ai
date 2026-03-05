@@ -221,6 +221,15 @@
   font-weight: 700;
 }
 
+.fc-step-label {
+  margin: 14px 0 8px;
+  font-size: 0.84rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--fc-primary);
+}
+
 .fc-form input,
 .fc-form select,
 .fc-form textarea {
@@ -319,6 +328,25 @@
 .fc-info {
   color: var(--fc-info);
   margin-top: 10px;
+}
+
+.fc-explain-box {
+  margin-top: 10px;
+  border: 1px solid rgba(255, 214, 0, 0.3);
+  background: rgba(255, 214, 0, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.fc-explain-box strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--fc-primary);
+}
+
+.fc-explain-box p {
+  margin: 0;
+  color: var(--fc-text);
 }
 
 @media (max-width: 1050px) {

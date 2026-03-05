@@ -2,11 +2,41 @@ import os
 import docx
 import PyPDF2
 import logging
+import re
+import unicodedata
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
  
 logger = logging.getLogger(__name__)
+
+
+def _clean_extracted_text(raw_text: str) -> str:
+    """
+    Normalize extraction artifacts from PDF/PPTX/DOCX:
+    - remove control chars (e.g. \x01)
+    - normalize unicode
+    - preserve meaningful newlines for downstream segmentation
+    """
+    if not raw_text:
+        return ""
+
+    text = unicodedata.normalize("NFKC", raw_text)
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+
+    # Remove non-printable control characters except \n and \t.
+    text = "".join(
+        ch if (ch in "\n\t" or ch.isprintable()) else " "
+        for ch in text
+    )
+
+    # Normalize tabs and spacing around lines.
+    text = text.replace("\t", " ")
+    text = "\n".join(re.sub(r"[ ]{2,}", " ", ln).strip() for ln in text.split("\n"))
+
+    # Collapse excessive blank lines.
+    text = re.sub(r"\n{3,}", "\n\n", text).strip()
+    return text
 
 
 @csrf_exempt
@@ -72,7 +102,7 @@ async def ajax_extract_text(request):
             else:
                 raise ValueError(f'Unsupported file format: {file_ext}')
             
-            return text.strip()
+            return _clean_extracted_text(text)
         
         # Run blocking extraction in thread pool
         text = await asyncio.to_thread(extract_text_sync)

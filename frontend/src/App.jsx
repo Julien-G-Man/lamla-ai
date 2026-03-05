@@ -10,6 +10,7 @@ import Signup from "./pages/Signup/Signup";
 import VerifyEmail from "./pages/Auth/VerifyEmail";
 import Dashboard from "./pages/Dashboards/Dashboard";
 import AdminDashboard from "./pages/Dashboards/AdminDashboard";
+import AdminUserDetails from "./pages/Dashboards/AdminUserDetails";
 import CreateQuiz from "./pages/Quiz/CreateQuiz";
 import Quiz from "./pages/Quiz/Quiz";
 import QuizResults from "./pages/Quiz/QuizResults";
@@ -55,6 +56,7 @@ function App() {
 
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/admin-dashboard" element={<AdminDashboard />} />
+            <Route path="/admin-dashboard/user/:id" element={<AdminUserDetails />} />
             <Route path="/profile" element={<Profile />} />
 
             <Route path="/quiz/create" element={<CreateQuiz />} />
