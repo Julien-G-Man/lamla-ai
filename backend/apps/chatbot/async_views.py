@@ -14,6 +14,8 @@ from django.http import JsonResponse, StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from asgiref.sync import sync_to_async
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.exceptions import AuthenticationFailed
 from .file_extractor import extract_text_from_file, FileExtractionError
 from apps.core.async_client import call_fastapi, build_fastapi_headers
 from .chatbot_service import chatbot_service
@@ -22,21 +24,61 @@ from .models import ChatMessage, ChatSession
 logger = logging.getLogger(__name__)
 
 
+async def _resolve_authenticated_user(request):
+    """
+    Resolve authenticated user for non-DRF async Django views.
+    Uses DRF token auth only to avoid touching lazy request.user/session
+    in async context.
+    """
+    auth_header = request.headers.get("Authorization", "").strip()
+    if not auth_header:
+        return None
+
+    try:
+        auth_result = await sync_to_async(
+            TokenAuthentication().authenticate,
+            thread_sensitive=True,
+        )(request)
+    except AuthenticationFailed:
+        return None
+    except Exception:
+        logger.exception("Token authentication failed in chatbot session resolver")
+        return None
+
+    if not auth_result:
+        return None
+
+    user, _token = auth_result
+    return user if user and user.is_active else None
+
+
 async def _get_or_create_session(request):
-    """Get or create a chat session (sync DB operation wrapped in async)"""
-    if request.user.is_authenticated:
-        session_obj, _ = await sync_to_async(ChatSession.objects.get_or_create)(user=request.user)
-    else:
-        session_id = request.session.session_key or str(uuid.uuid4())
-        if not request.session.session_key:
-            request.session['session_id'] = session_id
-            await sync_to_async(request.session.save)()
-        session_obj, _ = await sync_to_async(ChatSession.objects.get_or_create)(session_id=session_id)
-    return session_obj
+    """
+    Get/create deterministic chat session for authenticated users only.
+    Anonymous users are handled in-memory per request and are not persisted.
+    """
+    user = await _resolve_authenticated_user(request)
+
+    if user:
+        # Deterministic per-user session id guarantees stable memory continuity.
+        deterministic_session_id = f"user-{user.id}"
+        session_obj, _ = await sync_to_async(ChatSession.objects.get_or_create)(
+            session_id=deterministic_session_id,
+            defaults={"user": user},
+        )
+        # Self-heal legacy rows where session exists but is not linked to user.
+        if session_obj.user_id != user.id:
+            session_obj.user = user
+            await sync_to_async(session_obj.save, thread_sensitive=True)(update_fields=["user"])
+        return user, session_obj
+
+    return None, None
 
 
 async def _save_user_message(session_obj, user_message: str):
     """Save user message to DB"""
+    if session_obj is None:
+        return None
     try:
         msg_obj = await sync_to_async(ChatMessage.objects.create)(
             session=session_obj,
@@ -52,6 +94,8 @@ async def _save_user_message(session_obj, user_message: str):
 
 async def _save_ai_message(session_obj, ai_message: str):
     """Save AI message to DB"""
+    if session_obj is None:
+        return None
     try:
         msg_obj = await sync_to_async(ChatMessage.objects.create)(
             session=session_obj,
@@ -71,7 +115,10 @@ async def _get_conversation_history(session_obj, limit: int = 10):
     
     This ensures the bot remembers the last 5 exchanges with the user for context continuity.
     """
-    # Get last 10 messages (5 conversations = 5 user messages + 5 AI responses)
+    if session_obj is None:
+        return []
+
+    # Get last `limit` messages
     history_qs = await sync_to_async(list)(session_obj.messages.order_by('-created_at')[:limit])
     conversation_history = []
     # Reverse to get chronological order (oldest first)
@@ -80,7 +127,7 @@ async def _get_conversation_history(session_obj, limit: int = 10):
     return conversation_history  # Return all 10 messages (last 5 conversations)
 
 
-async def _build_chatbot_prompt(user_message: str, conversation_history=None, context_document=None):
+async def _build_chatbot_prompt(user_message: str, conversation_history=None, context_document=None, user=None):
     """Build the full prompt with enhanced safety delimiters for Azure Content Filters"""
     lamla_knowledge = await sync_to_async(chatbot_service.get_lamla_knowledge_base)()
     edtech_best_practices = chatbot_service.get_edtech_best_practices()
@@ -109,9 +156,16 @@ INSTRUCTIONS: Analyze the above study material to answer the user's question.
 Focus on extracting knowledge and providing educational guidance based on this material.
 """
     
+    user_name = getattr(user, "username", None) if user else None
+    user_email = getattr(user, "email", None) if user else None
+    user_context = ""
+    if user_name or user_email:
+        user_context = f"Authenticated user context: name={user_name or 'N/A'}, email={user_email or 'N/A'}."
+
     system_prompt = f"""You are Lamla AI Tutor, a friendly educational assistant helping students learn.
 
 {document_context}
+{user_context}
 
 About Lamla AI:
 {lamla_knowledge}
@@ -159,16 +213,16 @@ async def chatbot_api_async(request):
             return JsonResponse({"error": "Message is required"}, status=400)
         
         # 1. Django handles session/auth (fast DB operations)
-        session_obj = await _get_or_create_session(request)
+        user, session_obj = await _get_or_create_session(request)
         
         # 2. Save user message
         await _save_user_message(session_obj, user_message)
         
-        # 3. Get conversation history (last 5 conversations = 10 messages)
-        conversation_history = await _get_conversation_history(session_obj, limit=10)
+        # 3. Get conversation history (last 10 conversations = 20 messages)
+        conversation_history = await _get_conversation_history(session_obj, limit=20)
         
         # 4. Build full prompt
-        full_prompt = await _build_chatbot_prompt(user_message, conversation_history)
+        full_prompt = await _build_chatbot_prompt(user_message, conversation_history, user=user)
         
         # 5. Forward to FastAPI using async client
         try:
@@ -281,8 +335,8 @@ async def chatbot_file_api_async(request):
             return JsonResponse({"error": str(fee)}, status=400)
 
         # 2. Session & History
-        session_obj = await _get_or_create_session(request)
-        logger.debug(f"Using session {session_obj.id}")
+        user, session_obj = await _get_or_create_session(request)
+        logger.debug("Authenticated session in use: %s", getattr(session_obj, "id", None))
         
         # 3. Save user message with file reference
         display_message = f"{user_message} (File: {filename})"
@@ -290,7 +344,7 @@ async def chatbot_file_api_async(request):
         
         # 4. Get History & Build Prompt with FILE CONTEXT
         history = await _get_conversation_history(session_obj)
-        full_prompt = await _build_chatbot_prompt(user_message, history, context_document=context_document)
+        full_prompt = await _build_chatbot_prompt(user_message, history, context_document=context_document, user=user)
         
         logger.debug(f"Built prompt with {len(context_document)} chars of file context for {filename}")
 
@@ -381,16 +435,16 @@ async def chatbot_stream_async(request):
             return JsonResponse({"error": "Message is required"}, status=400)
         
         # 1. Django handles session/auth
-        session_obj = await _get_or_create_session(request)
+        user, session_obj = await _get_or_create_session(request)
         
         # 2. Save user message
         await _save_user_message(session_obj, user_message)
         
-        # 3. Get conversation history (last 5 conversations = 10 messages)
-        conversation_history = await _get_conversation_history(session_obj, limit=10)
+        # 3. Get conversation history (last 10 conversations = 20 messages)
+        conversation_history = await _get_conversation_history(session_obj, limit=20)
         
         # 4. Build full prompt
-        full_prompt = await _build_chatbot_prompt(user_message, conversation_history)
+        full_prompt = await _build_chatbot_prompt(user_message, conversation_history, user=user)
         
         # 5. Forward to FastAPI (Note: FastAPI doesn't stream yet, so we get full response and stream it)
         try:
@@ -461,7 +515,7 @@ async def chatbot_stream_async(request):
             # Save to DB after streaming completes
             try:
                 await _save_ai_message(session_obj, cleaned_response)
-                logger.debug(f"Saved streamed response to session {session_obj.id}")
+                logger.debug("Saved streamed response. session=%s", getattr(session_obj, "id", None))
             except Exception as e:
                 logger.error(f"Failed to save streamed response to DB: {e}", exc_info=True)
         
@@ -501,7 +555,9 @@ async def get_conversation_history(request):
     Returns: List of all messages in the current user's session.
     """
     try:
-        session_obj = await _get_or_create_session(request)
+        user, session_obj = await _get_or_create_session(request)
+        if not user or not session_obj:
+            return JsonResponse({"detail": "Authentication required"}, status=401)
         
         # Get ALL messages (not just last 10)
         all_messages = await sync_to_async(list)(
@@ -519,7 +575,7 @@ async def get_conversation_history(request):
         
         return JsonResponse({
             "session_id": session_obj.session_id,
-            "user": str(session_obj.user) if session_obj.user else "Anonymous",
+            "user": str(session_obj.user),
             "message_count": len(messages_data),
             "messages": messages_data
         })
@@ -536,7 +592,9 @@ async def clear_conversation_history(request):
     Useful for testing.
     """
     try:
-        session_obj = await _get_or_create_session(request)
+        user, session_obj = await _get_or_create_session(request)
+        if not user or not session_obj:
+            return JsonResponse({"detail": "Authentication required"}, status=401)
         deleted_count, _ = await sync_to_async(session_obj.messages.all().delete)()
         
         logger.info(f"Cleared {deleted_count} messages from session {session_obj.session_id}")

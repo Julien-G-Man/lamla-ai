@@ -15,6 +15,12 @@ import djangoApi from '../../services/api';
 // Global counter for generating unique message IDs
 let messageIdCounter = Date.now();
 
+const formatFileSize = (size) => {
+    if (!size || Number.isNaN(size)) return "";
+    if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))} KB`;
+    return `${(size / 1024 / 1024).toFixed(2)} MB`;
+};
+
 const Chatbot = ({ user }) => {
     // --- State Variables ---
     const [messageInput, setMessageInput] = useState('');
@@ -46,8 +52,8 @@ const Chatbot = ({ user }) => {
 
     // --- Core Logic (API Calls) ---
 
-    const addMessage = (text, type, sender = null) => {
-        const newMessage = { id: messageIdCounter++, text, type, sender };
+    const addMessage = (text, type, sender = null, extra = {}) => {
+        const newMessage = { id: messageIdCounter++, text, type, sender, ...extra };
         setHistory(prev => [...prev, newMessage]);
         return newMessage; // Return the message object to capture its specific ID
     };
@@ -68,15 +74,19 @@ const Chatbot = ({ user }) => {
         }
 
         // 1. Prepare UI for sending
-        const userDisplayMessage = text + (fileToSend ? ` (attached: ${fileToSend.name})` : '');
-        addMessage(userDisplayMessage, "user");
+        addMessage(text, "user", null, fileToSend ? {
+            attachment: {
+                name: fileToSend.name,
+                size: fileToSend.size,
+            }
+        } : {});
         
         setMessageInput(''); 
         clearAttachment();
         
         // 2. Set up AI response container and lock UI
         // FIXED: Capture the ID from the returned message object to ensure we update the correct bubble
-        const aiPlaceholder = addMessage("...", "ai", "AI Tutor"); 
+        const aiPlaceholder = addMessage("", "ai", "AI Tutor", { isThinking: true }); 
         const placeholderId = aiPlaceholder.id;
         
         setIsProcessing(true); 
@@ -85,11 +95,7 @@ const Chatbot = ({ user }) => {
             if (fileToSend) {
                 // A. File Upload (Non-streaming endpoint)
                 const fileApiEndpoint = "chat/file/";
-                
-                setHistory(prev => prev.map(msg => 
-                    msg.id === placeholderId ? { ...msg, text: "Processing file... This may take a moment." } : msg
-                ));
-                
+
                 const formData = new FormData();
                 formData.append('file_upload', fileToSend);
                 formData.append('message', text);
@@ -102,7 +108,7 @@ const Chatbot = ({ user }) => {
                 const aiResponseText = res.data?.response || "[Error: Empty response from file API]";
 
                 setHistory(prev => prev.map(msg => 
-                    msg.id === placeholderId ? { ...msg, text: aiResponseText } : msg
+                    msg.id === placeholderId ? { ...msg, text: aiResponseText, isThinking: false } : msg
                 ));
 
             } else {
@@ -110,10 +116,15 @@ const Chatbot = ({ user }) => {
                 const streamApiEndpoint = "/chat/stream/";
                 const baseUrl = djangoApi.defaults.baseURL.replace(/\/+$/, "");
                 const fullStreamUrl = `${baseUrl}${streamApiEndpoint}`;
+                const token = localStorage.getItem("auth_token");
 
                 const res = await fetch(fullStreamUrl, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: {
+                        "Content-Type": "application/json",
+                        ...(token ? { Authorization: `Token ${token}` } : {}),
+                    },
+                    credentials: "include",
                     body: JSON.stringify({ 
                         message: text,
                         search_mode: currentSearchMode,
@@ -130,11 +141,26 @@ const Chatbot = ({ user }) => {
                 const reader = res.body.getReader();
                 const decoder = new TextDecoder("utf-8");
                 let accumulatedText = "";
+                let frameId = null;
+                let pendingText = "";
 
-                const updateState = (text) => {
-                    setHistory(prev => prev.map(msg =>
-                        msg.id === placeholderId ? { ...msg, text: text } : msg
-                    ));
+                const flushState = (force = false) => {
+                    if (!force && frameId !== null) return;
+                    const run = () => {
+                        frameId = null;
+                        if (!pendingText) return;
+                        const nextText = pendingText;
+                        pendingText = "";
+                        setHistory(prev => prev.map(msg =>
+                            msg.id === placeholderId ? { ...msg, text: nextText, isThinking: false } : msg
+                        ));
+                        scrollToBottom();
+                    };
+                    if (force) {
+                        run();
+                    } else {
+                        frameId = window.requestAnimationFrame(run);
+                    }
                 };
 
                 while (true) {
@@ -143,17 +169,17 @@ const Chatbot = ({ user }) => {
 
                     const chunk = decoder.decode(value, { stream: true });
                     accumulatedText += chunk;
-                    
-                    updateState(accumulatedText);
-                    scrollToBottom();
+                    pendingText = accumulatedText;
+                    flushState(false);
                 }
+                flushState(true);
             }
         } catch (err) {
             console.error("API Error:", err);
             const errorMsg = err.response?.data?.detail || err.message || "An unknown error occurred.";
             
             setHistory(prev => prev.map(msg => 
-                msg.id === placeholderId ? { ...msg, text: `[Error: ${errorMsg}]` } : msg
+                msg.id === placeholderId ? { ...msg, text: `[Error: ${errorMsg}]`, isThinking: false } : msg
             ));
         } finally {
             setIsProcessing(false);
@@ -213,6 +239,7 @@ const Chatbot = ({ user }) => {
     const fileBarClassName = `file-status-bar ${attachedFile ? '' : 'hidden'}`;
     const searchIndicatorClassName = `search-indicator ${isProcessing && isSearchActive ? '' : 'hidden'}`;
     const fileNameDisplay = attachedFile ? attachedFile.name : '';
+    const fileSizeDisplay = attachedFile ? formatFileSize(attachedFile.size) : "";
     const sendButtonClass = isProcessing ? 'processing' : '';
     const searchButtonClass = `file-upload-btn ${isSearchActive ? 'active-search' : ''}`;
     
@@ -225,7 +252,7 @@ const Chatbot = ({ user }) => {
             {message.sender && (
                 <div className="sender-row">
                     <div className="sender-name">{message.sender}</div>
-                    {message.type === 'ai' && message.text !== "..." && (
+                    {message.type === 'ai' && !message.isThinking && (
                         <button 
                             className="copy-btn" 
                             title="Copy to clipboard"
@@ -236,7 +263,22 @@ const Chatbot = ({ user }) => {
                     )}
                 </div>
             )}
-            <p style={{ whiteSpace: 'pre-wrap' }}>{message.text}</p>
+            {message.attachment && (
+                <div className="message-attachment-chip">
+                    <span className="attachment-chip-icon" aria-hidden="true">
+                        <FontAwesomeIcon icon={faFolder} />
+                    </span>
+                    <span className="attachment-chip-name">{message.attachment.name}</span>
+                    <span className="attachment-chip-size">{formatFileSize(message.attachment.size)}</span>
+                </div>
+            )}
+            {message.isThinking ? (
+                <div className="ai-thinking-dots" aria-label="AI is typing">
+                    <span></span><span></span><span></span>
+                </div>
+            ) : (
+                <p style={{ whiteSpace: 'pre-wrap' }}>{message.text}</p>
+            )}
         </div>
     );
     
@@ -253,9 +295,7 @@ const Chatbot = ({ user }) => {
                     {history.map(msg => <MessageBubble key={msg.id} message={msg} />)}
                 </div>
 
-                <div id="typing-indicator" className="typing-indicator" style={{ display: isProcessing ? 'flex' : 'none' }}>
-                    <span className="typing-dot">•</span><span className="typing-dot">•</span><span className="typing-dot">•</span>
-                </div>
+                
 
                 <div id="search-indicator" className={searchIndicatorClassName}>
                     <span className="searching-text">
@@ -265,7 +305,16 @@ const Chatbot = ({ user }) => {
                 </div>
 
                 <div id="file-status-bar" className={fileBarClassName}>
-                    <span id="file-name-display" className="truncate">{fileNameDisplay}</span>
+                    <div className="file-meta-wrap">
+                        <span className="file-meta-icon" aria-hidden="true">
+                            <FontAwesomeIcon icon={faFolder} />
+                        </span>
+                        <div className="file-meta-text">
+                            <span id="file-name-display" className="truncate">{fileNameDisplay}</span>
+                            <span className="file-size-display">{fileSizeDisplay}</span>
+                        </div>
+                        <span className="file-ready-badge">Ready</span>
+                    </div>
                     <button id="clear-file-btn" title="Remove attachment" onClick={clearAttachment} disabled={isProcessing}>
                         <FontAwesomeIcon icon={faTimesCircle} />
                     </button>
