@@ -175,10 +175,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
-# Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
-
 LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'UTC'
@@ -186,10 +182,6 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 
 USE_TZ = True
-
-
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -218,7 +210,9 @@ ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
 
 # Auth emails (confirmations, password resets)
 EMAIL_BACKEND_TYPE = os.getenv("EMAIL_BACKEND_TYPE")   # "smtp" or "mailjet"
+EMAIL_BACKEND_PRIORITY = os.getenv("EMAIL_BACKEND_PRIORITY")
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+BREVO_API_KEY = os.getenv("BREVO_API_KEY")
 
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
 
@@ -233,8 +227,7 @@ WELCOME_EMAIL_HOST_PASSWORD = os.getenv("WELCOME_EMAIL_HOST_PASSWORD")
 
 
 if not DEBUG:
-    pass
-    #EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
