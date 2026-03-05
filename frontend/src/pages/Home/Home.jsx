@@ -292,7 +292,7 @@ const Home = ({ user }) => {
               <div className="post-testimonials-cta">
                 <div className="post-testimonials-copy">
                   <p className="section-label">READY TO START?</p>
-                  <h3>Turn Your Notes Into Better Scores Today</h3>
+                  <h3>Turn Your Notes Into Better Performance Today</h3>
                   <p>Join Lamla AI to generate smarter quizzes, track progress, and build real exam confidence.</p>
                 </div>
                 <div className="post-testimonials-actions">

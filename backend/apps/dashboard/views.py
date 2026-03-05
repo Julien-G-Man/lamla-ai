@@ -1,4 +1,5 @@
 import datetime
+import logging
 from django.utils import timezone
 from django.db import models as dm
 from django.db.models.functions import TruncDate
@@ -9,8 +10,12 @@ from rest_framework.views import APIView
 from apps.quiz.models import QuizSession
 from apps.chatbot.models import ChatSession
 from apps.accounts.serializers import user_to_dict
+from apps.accounts.services import EmailDeliveryError
 from .services import send_contact_emails, send_newsletter_emails
 from .serializers import ContactFormSerializer, NewsletterSerializer
+
+logger = logging.getLogger(__name__)
+
 
 def _calculate_streak(user):
     """Consecutive days (ending today) on which user completed at least one quiz."""
@@ -23,7 +28,7 @@ def _calculate_streak(user):
         .order_by('-day')
     )
     streak = 0
-    today  = timezone.now().date()
+    today = timezone.now().date()
     for i, day in enumerate(dates):
         if day == today - datetime.timedelta(days=i):
             streak += 1
@@ -52,11 +57,11 @@ class DashboardStatsView(APIView):
             pass
 
         return Response({
-            'total_quizzes':        quiz_stats['total'] or 0,
-            'average_score':        round(float(quiz_stats['avg'] or 0), 1),
+            'total_quizzes': quiz_stats['total'] or 0,
+            'average_score': round(float(quiz_stats['avg'] or 0), 1),
             'total_flashcard_sets': total_flashcard_sets,
-            'total_chats':          ChatSession.objects.filter(user=user).count(),
-            'study_streak':         _calculate_streak(user),
+            'total_chats': ChatSession.objects.filter(user=user).count(),
+            'study_streak': _calculate_streak(user),
         })
 
 
@@ -83,11 +88,11 @@ class AdminDashboardStatsView(APIView):
             pass
 
         return Response({
-            'total_users':     User.objects.count(),
-            'verified_users':  User.objects.filter(is_email_verified=True).count(),
-            'total_quizzes':   quiz_stats['total'] or 0,
+            'total_users': User.objects.count(),
+            'verified_users': User.objects.filter(is_email_verified=True).count(),
+            'total_quizzes': quiz_stats['total'] or 0,
             'total_materials': total_flashcard_sets,
-            'average_score':   round(float(quiz_stats['avg'] or 0), 1),
+            'average_score': round(float(quiz_stats['avg'] or 0), 1),
         })
 
 
@@ -102,11 +107,11 @@ class AdminUsersListView(APIView):
         from apps.accounts.models import User
 
         users = User.objects.order_by('-date_joined')[:50]
-        data  = []
+        data = []
         for u in users:
             d = user_to_dict(u)
             d['total_quizzes'] = QuizSession.objects.filter(user=u).count()
-            d['date_joined']   = u.date_joined.strftime('%b %d, %Y')
+            d['date_joined'] = u.date_joined.strftime('%b %d, %Y')
             data.append(d)
 
         return Response({'users': data})
@@ -139,7 +144,16 @@ class ContactMessageView(APIView):
     def post(self, request):
         serializer = ContactFormSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        send_contact_emails(**serializer.validated_data)
+
+        try:
+            send_contact_emails(**serializer.validated_data)
+        except (EmailDeliveryError, ValueError) as exc:
+            logger.exception("Contact email delivery failed: %s", exc)
+            return Response(
+                {"detail": "Message saved but email delivery is temporarily unavailable."},
+                status=202,
+            )
+
         return Response({"detail": "Message sent successfully."})
 
 
@@ -151,5 +165,14 @@ class NewsletterSubscribeView(APIView):
     def post(self, request):
         serializer = NewsletterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        send_newsletter_emails(serializer.validated_data["email"])
+
+        try:
+            send_newsletter_emails(serializer.validated_data["email"])
+        except (EmailDeliveryError, ValueError) as exc:
+            logger.exception("Newsletter email delivery failed: %s", exc)
+            return Response(
+                {"detail": "Subscription received but email delivery is temporarily unavailable."},
+                status=202,
+            )
+
         return Response({"detail": "Subscription successful."})

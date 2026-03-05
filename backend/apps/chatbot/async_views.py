@@ -15,7 +15,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from asgiref.sync import sync_to_async
 from .file_extractor import extract_text_from_file, FileExtractionError
-from apps.core.async_client import get_async_client, build_fastapi_headers
+from apps.core.async_client import call_fastapi, build_fastapi_headers
 from .chatbot_service import chatbot_service
 from .models import ChatMessage, ChatSession
 
@@ -172,14 +172,13 @@ async def chatbot_api_async(request):
         
         # 5. Forward to FastAPI using async client
         try:
-            client = get_async_client()
             headers = build_fastapi_headers()
-            
-            fastapi_resp = await client.post(
+            fastapi_resp = await call_fastapi(
+                "POST",
                 "/chatbot/",
                 json={"prompt": full_prompt, "max_tokens": 400},
                 headers=headers,
-                timeout=60.0
+                timeout=60.0,
             )
             
             if fastapi_resp.status_code != 200:
@@ -296,16 +295,16 @@ async def chatbot_file_api_async(request):
         logger.debug(f"Built prompt with {len(context_document)} chars of file context for {filename}")
 
         # 5. Proxy to FastAPI
-        client = get_async_client()
         headers = build_fastapi_headers()
         
         # Note: Ensure the slash matches your FastAPI route exactly to avoid 307 redirects
         try:
-            fastapi_resp = await client.post(
-                "/chatbot/", 
+            fastapi_resp = await call_fastapi(
+                "POST",
+                "/chatbot/",
                 json={"prompt": full_prompt, "max_tokens": 1000}, # Higher tokens for file analysis
                 headers=headers,
-                timeout=120.0 # Files take longer to process
+                timeout=120.0, # Files take longer to process
             )
         except httpx.TimeoutException:
             logger.error(f"FastAPI request timed out for file {filename}")
@@ -395,14 +394,13 @@ async def chatbot_stream_async(request):
         
         # 5. Forward to FastAPI (Note: FastAPI doesn't stream yet, so we get full response and stream it)
         try:
-            client = get_async_client()
             headers = build_fastapi_headers()
-            
-            fastapi_resp = await client.post(
+            fastapi_resp = await call_fastapi(
+                "POST",
                 "/chatbot/",
                 json={"prompt": full_prompt, "max_tokens": 400},
                 headers=headers,
-                timeout=60.0
+                timeout=60.0,
             )
             
             if fastapi_resp.status_code != 200:

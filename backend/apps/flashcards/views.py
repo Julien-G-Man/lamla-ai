@@ -1,5 +1,3 @@
-import os
-import httpx
 import json
 import logging
 from django.http import JsonResponse
@@ -8,20 +6,13 @@ from django.views.decorators.http import require_POST, require_http_methods
 from asgiref.sync import sync_to_async
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.exceptions import AuthenticationFailed
-from django.conf import settings
 from django.utils import timezone
 from django.db.models import Count, Q
 from .models import Deck, Flashcard
 from .scheduling import update_sm2
+from apps.core.async_client import call_fastapi, build_fastapi_headers
 
 logger = logging.getLogger(__name__)
-
-FASTAPI_URL = (
-    os.getenv("FASTAPI_URL")
-    or getattr(settings, "FASTAPI_BASE_URL", "")
-).rstrip("/")
-FASTAPI_SECRET = os.getenv("FASTAPI_SECRET")
-
 
 def _get_authenticated_user(request):
     """
@@ -77,15 +68,8 @@ async def _get_authenticated_user_async(request):
 async def generate_flashcards(request):
 
     import json
-    import httpx
 
     try:
-        if not FASTAPI_URL.startswith(("http://", "https://")):
-            return JsonResponse(
-                {"error": "FASTAPI base URL is not configured with http:// or https://"},
-                status=500
-            )
-
         user, auth_error = await _get_authenticated_user_async(request)
         if auth_error:
             return auth_error
@@ -98,25 +82,21 @@ async def generate_flashcards(request):
         num_cards = int(data.get("num_cards", 10))
         difficulty = data.get("difficulty", "intermediate")
 
-        async with httpx.AsyncClient(timeout=90) as client:
-
-            resp = await client.post(
-                f"{FASTAPI_URL}/flashcards/generate",
-                headers={
-                    "X-Internal-Secret": FASTAPI_SECRET
-                },
-                json={
-                    "subject": subject,
-                    "text": text,
-                    "prompt": prompt,
-                    "num_cards": num_cards,
-                    "difficulty": difficulty
-                }
-            )
-
-            resp.raise_for_status()
-
-            result = resp.json()
+        resp = await call_fastapi(
+            "POST",
+            "/flashcards/generate",
+            timeout=90,
+            headers=build_fastapi_headers(),
+            json={
+                "subject": subject,
+                "text": text,
+                "prompt": prompt,
+                "num_cards": num_cards,
+                "difficulty": difficulty,
+            },
+        )
+        resp.raise_for_status()
+        result = resp.json()
 
         return JsonResponse(result)
 
@@ -253,32 +233,22 @@ async def explain_flashcard(request):
 
     import json
 
-    if not FASTAPI_URL.startswith(("http://", "https://")):
-        return JsonResponse(
-            {"error": "FASTAPI base URL is not configured with http:// or https://"},
-            status=500
-        )
-
     data = json.loads(request.body)
 
     question = data.get("question")
     answer = data.get("answer")
 
-    async with httpx.AsyncClient(timeout=60) as client:
-
-        resp = await client.post(
-            f"{FASTAPI_URL}/flashcards/explain",
-            headers={
-                "X-Internal-Secret": FASTAPI_SECRET
-            },
-            json={
-                "question": question,
-                "answer": answer
-            }
-        )
-
-        resp.raise_for_status()
-
-        result = resp.json()
+    resp = await call_fastapi(
+        "POST",
+        "/flashcards/explain",
+        timeout=60,
+        headers=build_fastapi_headers(),
+        json={
+            "question": question,
+            "answer": answer
+        },
+    )
+    resp.raise_for_status()
+    result = resp.json()
 
     return JsonResponse(result)

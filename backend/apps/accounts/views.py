@@ -22,10 +22,8 @@ from .services import send_verification_email
 logger = logging.getLogger(__name__)
 
 
-# ── Signup ────────────────────────────────────────────────────────────────────
-
 class SignupView(APIView):
-    """POST /api/auth/signup/ — public, creates user, sends verification email, returns token + user."""
+    """POST /api/auth/signup/ - public, creates user, sends verification email, returns token + user."""
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -34,10 +32,10 @@ class SignupView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            user     = serializer.save()
+            user = serializer.save()
             token, _ = Token.objects.get_or_create(user=user)
 
-            # Fire verification email (non-blocking — failure is logged, not raised)
+            # Fire verification email (non-blocking - failure is logged, not raised)
             send_verification_email(user)
 
             logger.info("New user registered: %s (admin=%s)", user.email, user.is_admin)
@@ -53,41 +51,34 @@ class SignupView(APIView):
             )
 
 
-# ── Login ─────────────────────────────────────────────────────────────────────
-
 class LoginView(APIView):
-    """POST /api/auth/login/ — public, returns token + user (including is_email_verified)."""
+    """POST /api/auth/login/ - public, returns token + user (including is_email_verified)."""
     permission_classes = [AllowAny]
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data, context={"request": request})
         if not serializer.is_valid():
-            errors     = serializer.errors
-            non_field  = errors.get("non_field_errors", [])
-            detail     = non_field[0] if non_field else "Invalid credentials."
+            errors = serializer.errors
+            non_field = errors.get("non_field_errors", [])
+            detail = non_field[0] if non_field else "Invalid credentials."
             return Response({"detail": detail}, status=status.HTTP_401_UNAUTHORIZED)
 
-        user     = serializer.validated_data["user"]
+        user = serializer.validated_data["user"]
         token, _ = Token.objects.get_or_create(user=user)
 
-        # Update last_login and last_login_ip
-        user.last_login    = timezone.now()
+        user.last_login = timezone.now()
         user.last_login_ip = _get_client_ip(request)
         user.save(update_fields=["last_login", "last_login_ip"])
 
         logger.info("User logged in: %s (admin=%s)", user.email, user.is_admin)
-        return Response({
-            "token": token.key, 
-            "user": user_to_dict(user)
-            },
+        return Response(
+            {"token": token.key, "user": user_to_dict(user)},
             status=status.HTTP_200_OK,
         )
 
 
-# ── Logout ────────────────────────────────────────────────────────────────────
-
 class LogoutView(APIView):
-    """POST /api/auth/logout/ — deletes token server-side."""
+    """POST /api/auth/logout/ - deletes token server-side."""
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -99,31 +90,27 @@ class LogoutView(APIView):
         return Response({"detail": "Logged out successfully."}, status=status.HTTP_200_OK)
 
 
-# ── Current user ──────────────────────────────────────────────────────────────
-
 class MeView(APIView):
-    """GET /api/auth/me/ — re-hydrate auth state on page refresh."""
+    """GET /api/auth/me/ - re-hydrate auth state on page refresh."""
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         return Response({"user": user_to_dict(request.user)}, status=status.HTTP_200_OK)
 
 
-# ── Email Verification ────────────────────────────────────────────────────────
-
 class VerifyEmailView(APIView):
     """
     POST /api/auth/verify-email/
-    Public — React sends uid + token extracted from the link in the verification email.
+    Public - React sends uid + token extracted from the link in the verification email.
     """
     permission_classes = [AllowAny]
 
     def post(self, request):
         serializer = VerifyEmailSerializer(data=request.data)
         if not serializer.is_valid():
-            errors     = serializer.errors
-            non_field  = errors.get("non_field_errors", [])
-            detail     = non_field[0] if non_field else "Verification failed."
+            errors = serializer.errors
+            non_field = errors.get("non_field_errors", [])
+            detail = non_field[0] if non_field else "Verification failed."
             return Response({"detail": detail}, status=status.HTTP_400_BAD_REQUEST)
 
         user = serializer.save()
@@ -137,22 +124,27 @@ class VerifyEmailView(APIView):
 class ResendVerificationEmailView(APIView):
     """
     POST /api/auth/resend-verification/
-    Authenticated — lets unverified users request a new verification email.
+    Authenticated - lets unverified users request a new verification email.
     """
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        serializer = ResendVerificationSerializer(
-            data={}, context={"request": request}
-        )
+        serializer = ResendVerificationSerializer(data={}, context={"request": request})
         if not serializer.is_valid():
-            errors    = serializer.errors
+            errors = serializer.errors
             non_field = errors.get("non_field_errors", [])
-            detail    = non_field[0] if non_field else "Could not resend email."
+            detail = non_field[0] if non_field else "Could not resend email."
             return Response({"detail": detail}, status=status.HTTP_400_BAD_REQUEST)
 
         user = serializer.validated_data["user"]
-        send_verification_email(user)
+        sent = send_verification_email(user)
+        if not sent:
+            logger.error("Verification email resend failed for: %s", user.email)
+            return Response(
+                {"detail": "Verification email could not be sent right now. Please try again later."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
         logger.info("Verification email resent to: %s", user.email)
         return Response(
             {"detail": "Verification email sent. Please check your inbox."},
@@ -160,10 +152,8 @@ class ResendVerificationEmailView(APIView):
         )
 
 
-# ── Update profile ────────────────────────────────────────────────────────────
-
 class ProfileView(APIView):
-    """GET /api/profile/ — full profile data including stats summary"""
+    """GET /api/profile/ - full profile data including stats summary"""
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -171,24 +161,24 @@ class ProfileView(APIView):
         from apps.flashcards.models import Deck
         from django.db import models as dm
 
-        user  = request.user
+        user = request.user
         stats = QuizSession.objects.filter(user=user).aggregate(
             total=dm.Count('id'),
             avg=dm.Avg('score_percent'),
         )
 
         return Response({
-            'user':  user_to_dict(user),
+            'user': user_to_dict(user),
             'stats': {
-                'total_quizzes':        stats['total'] or 0,
-                'average_score':        round(stats['avg'] or 0, 1),
+                'total_quizzes': stats['total'] or 0,
+                'average_score': round(stats['avg'] or 0, 1),
                 'total_flashcard_sets': Deck.objects.filter(user=user).count(),
             }
         })
-        
-        
+
+
 class UpdateProfileView(APIView):
-    """POST /api/auth/update-profile/ — update username and/or email."""
+    """POST /api/auth/update-profile/ - update username and/or email."""
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -206,10 +196,8 @@ class UpdateProfileView(APIView):
         return Response({"user": user_to_dict(user)}, status=status.HTTP_200_OK)
 
 
-# ── Change password ───────────────────────────────────────────────────────────
-
 class ChangePasswordView(APIView):
-    """POST /api/auth/change-password/ — validates old pw, sets new, rotates token."""
+    """POST /api/auth/change-password/ - validates old pw, sets new, rotates token."""
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -222,7 +210,6 @@ class ChangePasswordView(APIView):
 
         user = serializer.save()
 
-        # Rotate token to invalidate existing sessions
         Token.objects.filter(user=user).delete()
         new_token, _ = Token.objects.get_or_create(user=user)
 
@@ -233,12 +220,10 @@ class ChangePasswordView(APIView):
         )
 
 
-# ── Upload profile image ──────────────────────────────────────────────────────
-
 class UploadProfileImageView(APIView):
-    """POST /api/auth/upload-profile-image/ — multipart image upload."""
+    """POST /api/auth/upload-profile-image/ - multipart image upload."""
     permission_classes = [IsAuthenticated]
-    parser_classes     = [MultiPartParser, FormParser]
+    parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request):
         file = request.FILES.get("profile_image")
@@ -277,12 +262,6 @@ class UploadProfileImageView(APIView):
         return Response({"user": user_to_dict(request.user)}, status=status.HTTP_200_OK)
 
     def _upload(self, file, user):
-        """
-        Swap this body for your storage backend:
-          - Cloudinary: cloudinary.uploader.upload(file)["secure_url"]
-          - S3:         boto3 put_object → URL
-          - Azure Blob: BlobServiceClient → upload_blob → URL
-        """
         import os
         if os.getenv("STORAGE_BACKEND") == "cloudinary":
             import cloudinary.uploader
@@ -295,11 +274,8 @@ class UploadProfileImageView(APIView):
             )
             return result["secure_url"]
 
-        # Local dev placeholder
         return f"/media/profile_images/{user.id}/avatar"
 
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _get_client_ip(request) -> str | None:
     """Extract the real client IP, handling proxies."""
@@ -307,6 +283,7 @@ def _get_client_ip(request) -> str | None:
     if x_forwarded_for:
         return x_forwarded_for.split(",")[0].strip()
     return request.META.get("REMOTE_ADDR")
+
 
 class DebugUsers(APIView):
     permission_classes = [AllowAny]

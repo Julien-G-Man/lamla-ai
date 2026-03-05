@@ -194,8 +194,10 @@ USE_TZ = True
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 SITE_NAME="Lamla AI"
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 FASTAPI_BASE_URL = os.getenv("FASTAPI_BASE_URL", "http://localhost:8001")
+FASTAPI_BASE_URLS = os.getenv("FASTAPI_BASE_URLS", "")
 FASTAPI_URL = FASTAPI_BASE_URL
 FASTAPI_SECRET = os.getenv("FASTAPI_SECRET")
 

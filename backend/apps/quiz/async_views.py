@@ -11,7 +11,7 @@ from datetime import datetime
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from apps.core.async_client import get_async_client, build_fastapi_headers
+from apps.core.async_client import call_fastapi, build_fastapi_headers
 
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
@@ -66,15 +66,14 @@ async def generate_quiz_api_async(request):
         }
         
         # Forward to FastAPI using async client
-        client = get_async_client()
         headers = build_fastapi_headers()
-        logger.info(f"Headers sent: {headers}")
         
-        fastapi_resp = await client.post(
+        fastapi_resp = await call_fastapi(
+            "POST",
             "/quiz/",
             json=payload,
             headers=headers,
-            timeout=60.0 
+            timeout=60.0,
         )
         
         if fastapi_resp.status_code != 200:
@@ -237,14 +236,13 @@ Respond in JSON format ONLY:
 IMPORTANT: Return ONLY the JSON object, nothing else. No markdown formatting, no code blocks, only the JSON object"""
 
     try:
-        client = get_async_client()
         headers = build_fastapi_headers()
-        
-        response = await client.post(
+        response = await call_fastapi(
+            "POST",
             "/chatbot/",
             json={"message": evaluation_prompt},
             headers=headers,
-            timeout=30.0
+            timeout=30.0,
         )
         
         if response.status_code != 200:
