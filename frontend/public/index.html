@@ -20,16 +20,25 @@
     <meta name="theme-color" content="#FFD600" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 
-    <!-- DNS Prefetch & Preconnect for performance (signals crawlability + speed to Google) -->
+    <!-- DNS Prefetch & Preconnect -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="dns-prefetch" href="https://lamla-ai.vercel.app" />
 
+    <!-- =============================================
+         WEB APP MANIFEST
+    ============================================= -->
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
 
+    <!-- =============================================
+         GOOGLE SEARCH CONSOLE VERIFICATION
+    ============================================= -->
     <meta name="google-site-verification" content="8PBvluqN1f-xRG8MCuNeKZS9-zdXeyFKMt27haJZHkI" />
     <meta name="google-site-verification" content="googlef82bec8c5ad249a7" />
 
+    <!-- =============================================
+         PRIMARY SEO META TAGS
+    ============================================= -->
     <title>Lamla AI – AI-Powered Quiz, Flashcards & Personalized Learning Platform</title>
     <meta name="description" content="Lamla AI is your intelligent learning companion. Generate AI-powered quizzes, flashcards, and study dashboards in seconds. Chat with advanced AI tutors to master any subject faster." />
     <meta name="keywords" content="AI learning platform, AI quiz generator, flashcard generator, AI tutor, personalized learning, study assistant, AI study tool, quiz maker, intelligent learning, exam prep, student AI, e-learning, adaptive learning, AI education, study dashboard, learn with AI, Lamla AI" />
@@ -49,25 +58,48 @@
     <!-- Canonical URL -->
     <link rel="canonical" href="https://lamla-ai.vercel.app/" />
 
-    <!-- Geo targeting (helps with regional search) -->
+    <!-- Geo targeting -->
     <meta name="geo.region" content="US" />
     <meta name="geo.placename" content="United States" />
 
     <!-- =============================================
-         OPEN GRAPH (Facebook, LinkedIn, WhatsApp)
+         OPEN GRAPH — WhatsApp / Facebook / LinkedIn
+
+         HOW WHATSAPP PICKS AN IMAGE:
+         • Mobile WhatsApp shows a square thumbnail — it uses
+           the FIRST og:image tag it finds.
+         • We put the square (600×600) image FIRST so mobile
+           WhatsApp renders it perfectly.
+         • The wide 1200×630 image is second for desktop
+           Facebook/LinkedIn previews.
+
+         ⚠️ ACTION REQUIRED: Add a square version of your
+         preview image to /public/assets/og-image-square.png
+         (600×600px, centered logo + tagline).
+         Use Figma, Canva, or any image editor to create it.
     ============================================= -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Lamla AI" />
     <meta property="og:title" content="Lamla AI – Intelligent Platform for Personalized Learning" />
     <meta property="og:description" content="Generate quizzes, flashcards, and study dashboards instantly with AI. Chat with an AI tutor and master any subject faster. Try Lamla AI free." />
-    <meta property="og:url" content="https://lamla-ai.vercel.app" />
+    <meta property="og:url" content="https://lamla-ai.vercel.app/" />
     <meta property="og:locale" content="en_US" />
+
+    <!-- 1st image: Square 600×600 — WhatsApp mobile thumbnail -->
+    <meta property="og:image" content="https://lamla-ai.vercel.app/assets/og-image-square.png" />
+    <meta property="og:image:secure_url" content="https://lamla-ai.vercel.app/assets/og-image-square.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="600" />
+    <meta property="og:image:height" content="600" />
+    <meta property="og:image:alt" content="Lamla AI – AI-powered quiz, flashcards and learning platform" />
+
+    <!-- 2nd image: Wide 1200×630 — Facebook / LinkedIn desktop -->
     <meta property="og:image" content="https://lamla-ai.vercel.app/assets/og-image.png" />
     <meta property="og:image:secure_url" content="https://lamla-ai.vercel.app/assets/og-image.png" />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Lamla AI – Intelligent Learning Platform; generate quizzes, flashcards, and AI tutor dashboard preview" />
+    <meta property="og:image:alt" content="Lamla AI – Quiz generator, flashcards, and AI tutor dashboard preview" />
 
     <!-- =============================================
          TWITTER / X CARD
@@ -78,6 +110,8 @@
     <meta name="twitter:title" content="Lamla AI – AI-Powered Learning Platform, Flashcards & Personalized Learning" />
     <meta name="twitter:description" content="Generate quizzes, flashcards, and study dashboards instantly with AI. Chat with an AI tutor and master any subject faster." />
     <meta name="twitter:image" content="https://lamla-ai.vercel.app/assets/og-image.png" />
+    <meta name="twitter:image:width" content="1200" />
+    <meta name="twitter:image:height" content="630" />
     <meta name="twitter:image:alt" content="Lamla AI platform preview with quiz, flashcards, and AI tutor features" />
     <meta name="twitter:url" content="https://lamla-ai.vercel.app" />
 
@@ -106,7 +140,6 @@
 
     <!-- =============================================
          JSON-LD STRUCTURED DATA
-         Enables rich results in Google Search
     ============================================= -->
 
     <!-- WebApplication Schema -->
@@ -171,7 +204,7 @@
     }
     </script>
 
-    <!-- Website / Sitelinks Search Box Schema -->
+    <!-- WebSite / Sitelinks Search Box Schema -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -190,7 +223,7 @@
     }
     </script>
 
-    <!-- FAQPage Schema (boosts visibility with FAQ rich snippets) -->
+    <!-- FAQPage Schema -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -232,11 +265,9 @@
     }
     </script>
 
-    <title>Lamla AI – Intelligent Personalized Learning Platform</title>
   </head>
   <body>
     <noscript>
-      <!-- Fallback content for crawlers and no-JS users -->
       <div style="font-family: sans-serif; max-width: 700px; margin: 40px auto; padding: 20px;">
         <h1>Lamla AI – AI-Powered Learning Platform</h1>
         <p>Lamla AI is your intelligent learning companion. Generate AI-powered quizzes, flashcards, and study dashboards in seconds. Chat with advanced AI tutors to master any subject faster.</p>
