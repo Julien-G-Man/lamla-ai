@@ -28,6 +28,11 @@ export const dashboardService = {
     const res = await djangoApi.get('/dashboard/admin/stats/');
     return res.data;
   },
+  
+  getAdminUsageTrends: async (days = 14) => {
+    const res = await djangoApi.get(`/dashboard/admin/usage-trends/?days=${days}`);
+    return res.data;
+  },
 
   getAdminUsers: async () => {
     const res = await djangoApi.get('/dashboard/admin/users/');

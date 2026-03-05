@@ -58,3 +58,38 @@
 .db-content-item h4    { font-weight: 700; color: var(--text-primary); margin: 0 0 4px; font-size: 0.9rem; }
 .db-content-item p     { font-size: 0.8rem; color: var(--text-secondary); margin: 0; }
 .db-content-item-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+/* Usage analytics chart */
+.usage-chart-wrap {
+  width: 100%;
+}
+
+.usage-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  margin-bottom: 10px;
+}
+
+.usage-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.usage-legend-item i {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.usage-chart-svg {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(15,23,42,0.28) 0%, rgba(15,23,42,0.1) 100%);
+}
