@@ -145,6 +145,71 @@ class AdminDashboardStatsView(APIView):
         avg_quizzes_per_user = round((quiz_stats['total'] or 0) / max(total_users, 1), 2)
         avg_chats_per_user = round(total_chat_sessions / max(total_users, 1), 2)
 
+        # Recent real activity (who did what)
+        def _actor(user_obj):
+            if not user_obj:
+                return "Unknown user"
+            return getattr(user_obj, "username", None) or getattr(user_obj, "email", "User")
+
+        recent_activity = []
+
+        recent_quizzes = (
+            QuizSession.objects
+            .select_related("user")
+            .order_by("-created_at")[:12]
+        )
+        for q in recent_quizzes:
+            subject = q.subject or "General"
+            recent_activity.append({
+                "type": "quiz",
+                "actor": _actor(q.user),
+                "text": f"completed a {subject} quiz ({q.score_percentage}%)",
+                "created_at": q.created_at,
+            })
+
+        recent_decks = (
+            Deck.objects
+            .select_related("user")
+            .order_by("-created_at")[:12]
+        )
+        for d in recent_decks:
+            subject = d.subject or "General"
+            recent_activity.append({
+                "type": "flashcards",
+                "actor": _actor(d.user),
+                "text": f"created flashcard deck '{d.title}' ({subject})",
+                "created_at": d.created_at,
+            })
+
+        recent_chat_messages = (
+            ChatMessage.objects
+            .filter(sender="user", session__user__isnull=False)
+            .select_related("session__user")
+            .order_by("-created_at")[:24]
+        )
+        for m in recent_chat_messages:
+            content_preview = (m.content or "").strip().replace("\n", " ")
+            if len(content_preview) > 68:
+                content_preview = f"{content_preview[:65]}..."
+            recent_activity.append({
+                "type": "chat",
+                "actor": _actor(getattr(m.session, "user", None)),
+                "text": f"sent a chat message: \"{content_preview}\"" if content_preview else "sent a chat message",
+                "created_at": m.created_at,
+            })
+
+        recent_activity.sort(key=lambda item: item["created_at"], reverse=True)
+        recent_activity = recent_activity[:20]
+        recent_activity_payload = [
+            {
+                "type": item["type"],
+                "actor": item["actor"],
+                "text": item["text"],
+                "created_at": item["created_at"].isoformat(),
+            }
+            for item in recent_activity
+        ]
+
         return Response({
             'total_users': total_users,
             'verified_users': verified_users,
@@ -164,6 +229,7 @@ class AdminDashboardStatsView(APIView):
                 'flashcards': cards_24h,
                 'chat_messages': chat_messages_24h,
             },
+            'recent_activity': recent_activity_payload,
             'estimated_tokens': {
                 'chat': estimated_tokens_chat,
                 'quiz': estimated_tokens_quiz,

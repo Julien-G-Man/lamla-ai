@@ -20,6 +20,16 @@ const NAV_ITEMS = [
 
 const nfmt = (v) => (typeof v === 'number' ? v.toLocaleString() : (v ?? '0'));
 
+const formatRelativeTime = (isoDate) => {
+  const dt = new Date(isoDate);
+  if (Number.isNaN(dt.getTime())) return '';
+  const seconds = Math.floor((Date.now() - dt.getTime()) / 1000);
+  if (seconds < 60) return 'just now';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  return `${Math.floor(seconds / 86400)}d ago`;
+};
+
 const AnalyticsLineChart = ({ labels = [], series = {} }) => {
   const width = 920;
   const height = 280;
@@ -72,7 +82,8 @@ const AnalyticsLineChart = ({ labels = [], series = {} }) => {
         ))}
       </div>
 
-      <svg viewBox={`0 0 ${width} ${height}`} className="usage-chart-svg" role="img" aria-label="Usage analytics chart">
+      <div className="usage-chart-scroll">
+        <svg viewBox={`0 0 ${width} ${height}`} className="usage-chart-svg" role="img" aria-label="Usage analytics chart">
         {yTicks.map((t) => (
           <g key={t.value}>
             <line
@@ -114,7 +125,8 @@ const AnalyticsLineChart = ({ labels = [], series = {} }) => {
             </text>
           );
         })}
-      </svg>
+        </svg>
+      </div>
     </div>
   );
 };
@@ -211,7 +223,7 @@ const AdminDashboard = () => {
                 <p>Global usage, engagement, and AI consumption metrics.</p>
               </div>
 
-              <div className="db-stats-grid">
+              <div className="db-stats-grid db-stats-grid--two">
                 {statCards.map(({ icon, label, value }) => (
                   <div className="db-stat-card" key={label}>
                     <div className="db-stat-icon"><FontAwesomeIcon icon={icon} /></div>
@@ -224,27 +236,6 @@ const AdminDashboard = () => {
               </div>
 
               <div className="db-card">
-                <div className="db-card-header"><h2>Last 24 Hours</h2></div>
-                <div className="db-timeline">
-                  {[
-                    { title: 'New Users', desc: `${nfmt(adminStats.activity_24h?.new_users)} joined`, time: '24h' },
-                    { title: 'Quizzes', desc: `${nfmt(adminStats.activity_24h?.quizzes)} completed`, time: '24h' },
-                    { title: 'Decks / Flashcards', desc: `${nfmt(adminStats.activity_24h?.decks)} decks, ${nfmt(adminStats.activity_24h?.flashcards)} cards`, time: '24h' },
-                    { title: 'Chat Messages', desc: `${nfmt(adminStats.activity_24h?.chat_messages)} sent`, time: '24h' },
-                  ].map(({ title, desc, time }) => (
-                    <div className="db-timeline-item" key={title}>
-                      <div className="db-timeline-dot" />
-                      <div className="db-timeline-body">
-                        <h4>{title}</h4>
-                        <p>{desc}</p>
-                        <span>{time}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="db-card">
                 <div className="db-card-header"><h2>Usage Analytics (14 Days)</h2></div>
                 {loadingTrends ? (
                   <p style={{ color: 'var(--text-secondary)' }}>Loading analytics...</p>
@@ -254,8 +245,28 @@ const AdminDashboard = () => {
               </div>
 
               <div className="db-card">
+                <div className="db-card-header"><h2>Recent Real Activity</h2></div>
+                <div className="db-timeline">
+                  {(adminStats.recent_activity || []).length === 0 ? (
+                    <p style={{ color: 'var(--text-secondary)', margin: 0 }}>No recent activity found.</p>
+                  ) : (
+                    (adminStats.recent_activity || []).map((item, idx) => (
+                      <div className="db-timeline-item" key={`${item.type}-${item.created_at}-${idx}`}>
+                        <div className="db-timeline-dot" />
+                        <div className="db-timeline-body">
+                          <h4>{item.actor}</h4>
+                          <p>{item.text}</p>
+                          <span>{formatRelativeTime(item.created_at)}</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="db-card">
                 <div className="db-card-header"><h2>Estimated Token Usage</h2></div>
-                <div className="db-stats-grid">
+                <div className="db-stats-grid db-stats-grid--two">
                   <div className="db-stat-card">
                     <div className="db-stat-body"><p>Chat</p><h3>{nfmt(adminStats.estimated_tokens?.chat)}</h3></div>
                   </div>
@@ -313,18 +324,18 @@ const AdminDashboard = () => {
                     <tbody>
                       {users.map((u) => (
                         <tr key={u.id}>
-                          <td style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{u.username}</td>
-                          <td>{u.email}</td>
-                          <td>{u.date_joined}</td>
-                          <td style={{ textAlign: 'center', color: 'var(--text-primary)', fontWeight: 600 }}>{u.total_quizzes ?? 0}</td>
-                          <td style={{ textAlign: 'center', color: 'var(--text-primary)', fontWeight: 600 }}>{u.total_flashcard_sets ?? 0}</td>
-                          <td style={{ textAlign: 'center', color: 'var(--text-primary)', fontWeight: 600 }}>{u.total_chats ?? 0}</td>
-                          <td>
+                          <td data-label="Username" style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{u.username}</td>
+                          <td data-label="Email">{u.email}</td>
+                          <td data-label="Joined">{u.date_joined}</td>
+                          <td data-label="Quizzes" style={{ textAlign: 'center', color: 'var(--text-primary)', fontWeight: 600 }}>{u.total_quizzes ?? 0}</td>
+                          <td data-label="Flashcards" style={{ textAlign: 'center', color: 'var(--text-primary)', fontWeight: 600 }}>{u.total_flashcard_sets ?? 0}</td>
+                          <td data-label="Chats" style={{ textAlign: 'center', color: 'var(--text-primary)', fontWeight: 600 }}>{u.total_chats ?? 0}</td>
+                          <td data-label="Status">
                             <span className={`db-badge ${u.is_email_verified ? 'db-badge-green' : 'db-badge-gray'}`}>
                               {u.is_email_verified ? 'Verified' : 'Unverified'}
                             </span>
                           </td>
-                          <td>
+                          <td data-label="Actions">
                             <div style={{ display: 'flex', gap: 'var(--spacing-xs)' }}>
                               <button className="db-btn db-btn-ghost db-btn-sm" title="View user details">View</button>
                               <button
