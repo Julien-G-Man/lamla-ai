@@ -39,6 +39,7 @@ class SignupView(APIView):
             send_verification_email(user)
 
             logger.info("New user registered: %s (admin=%s)", user.email, user.is_admin)
+            print("New user registered: %s (admin=%s)", user.email, user.is_admin)
             return Response(
                 {"token": token.key, "user": user_to_dict(user)},
                 status=status.HTTP_201_CREATED,
@@ -71,6 +72,7 @@ class LoginView(APIView):
         user.save(update_fields=["last_login", "last_login_ip"])
 
         logger.info("User logged in: %s (admin=%s)", user.email, user.is_admin)
+        print("User logged in: %s (admin=%s)", user.email, user.is_admin)
         return Response(
             {"token": token.key, "user": user_to_dict(user)},
             status=status.HTTP_200_OK,
