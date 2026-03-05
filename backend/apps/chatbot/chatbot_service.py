@@ -189,15 +189,16 @@ You can also answer general questions and help with various topics. Always maint
             fastapi_url = getattr(settings, "FASTAPI_BASE_URL", "http://localhost:8001").rstrip('/') + "/chatbot"
             try:
                 resp = requests.post(fastapi_url, json={"prompt": full_prompt, "max_tokens": 400}, timeout=30)
-                if resp.status_code != 200:
+                if resp.status_code == 200:
                     resp_json = resp.json()
                     raw_response = resp_json.get("response", "")
-                else:  
-                    content = "⚠️ [Safety Block] Request flagged by Azure. Please rephrase."
-                    logger.error(f"Content Filter Triggered for Message ID: {user_log.id}")
-                    raw_response = "I encountered a safety filter issue. Could you please rephrase your question?"
+                else:
+                    logger.error(
+                        "FastAPI returned %s for Message ID %s. Body: %s",
+                        resp.status_code, user_log.id, resp.text[:300],
+                    )
+                    raw_response = "I encountered a service issue. Could you please try again?"
             except Exception as e:
-                content = "Service temporarily unavailable."
                 logger.warning("FastAPI call failed: %s", e)
                 raw_response = ""
 

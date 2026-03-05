@@ -296,12 +296,21 @@ class AdminUsersListView(APIView):
 
         from apps.accounts.models import User
 
+        # Use a safe Subquery for chat count so we don't depend on
+        # the ChatSession.user related_name being 'chatsession'.
+        chat_count_sq = (
+            ChatSession.objects
+            .filter(user=dm.OuterRef('pk'))
+            .values('user')
+            .annotate(c=dm.Count('id'))
+            .values('c')
+        )
         users = (
             User.objects
             .annotate(
                 total_quizzes=dm.Count('quiz_sessions', distinct=True),
                 total_flashcard_sets=dm.Count('decks', distinct=True),
-                total_chats=dm.Count('chatsession', distinct=True),
+                total_chats=Coalesce(dm.Subquery(chat_count_sq), Value(0)),
             )
             .order_by('-date_joined')[:50]
         )
@@ -365,20 +374,28 @@ class AdminUserDeleteView(APIView):
             total_questions=Coalesce(dm.Sum('total_questions'), Value(0)),
         )
 
-        # Recent per-user activity (quizzes + flashcards only)
+        # Recent per-user activity (quizzes + flashcards + chat)
         recent_activity = []
-        for q in quizzes_qs.order_by('-created_at')[:15]:
+        for q in quizzes_qs.order_by('-created_at')[:10]:
             recent_activity.append({
                 "type": "quiz",
                 "text": f"completed a {(q.subject or 'General')} quiz ({q.score_percentage}%)",
                 "created_at": q.created_at,
             })
 
-        for d in decks_qs.order_by('-created_at')[:15]:
+        for d in decks_qs.order_by('-created_at')[:10]:
             recent_activity.append({
                 "type": "flashcards",
                 "text": f"created flashcard deck '{d.title}'",
                 "created_at": d.created_at,
+            })
+
+        for s in chat_sessions_qs.order_by('-created_at')[:10]:
+            msg_count = ChatMessage.objects.filter(session=s).count()
+            recent_activity.append({
+                "type": "chat",
+                "text": f"chat session ({msg_count} message{'s' if msg_count != 1 else ''})",
+                "created_at": s.created_at,
             })
 
         recent_activity.sort(key=lambda item: item["created_at"], reverse=True)
