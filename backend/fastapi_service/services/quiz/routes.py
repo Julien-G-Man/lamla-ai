@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 import httpx
 from fastapi import APIRouter, HTTPException
 from .schemas import QuizQuestion, QuizRequest, QuizResponse
@@ -19,6 +20,49 @@ except Exception:  # pragma: no cover - fallback paths
         ai_service = None
 
 
+def _strip_fences(text: str) -> str:
+    """
+    Strip markdown code fences from LLM responses.
+    Handles ```json ... ```, ``` ... ```, and leading/trailing whitespace.
+    """
+    text = text.strip()
+    # Remove opening fence: ```json or ```
+    text = re.sub(r'^```(?:json)?\s*', '', text, flags=re.IGNORECASE)
+    # Remove closing fence
+    text = re.sub(r'\s*```$', '', text)
+    return text.strip()
+
+
+def _parse_json_safe(text: str, provider_hint: str = "") -> dict | None:
+    """
+    Robustly parse a JSON string from an LLM response.
+    Strips markdown fences, then falls back to finding the first {...} block.
+    Returns None if parsing fails entirely.
+    """
+    clean = _strip_fences(text)
+
+    # Attempt 1: direct parse of cleaned text
+    try:
+        return json.loads(clean)
+    except json.JSONDecodeError:
+        pass
+
+    # Attempt 2: extract the first {...} or [...] block (handles preamble/postamble text)
+    match = re.search(r'(\{[\s\S]*\}|\[[\s\S]*\])', clean)
+    if match:
+        try:
+            return json.loads(match.group(0))
+        except json.JSONDecodeError:
+            pass
+
+    logger.warning(
+        "Could not parse JSON from %s response. First 300 chars: %s",
+        provider_hint or "provider",
+        text[:300],
+    )
+    return None
+
+
 @quiz_router.post("/", response_model=QuizResponse)
 async def quiz_endpoint(payload: QuizRequest):
     """
@@ -34,54 +78,50 @@ async def quiz_endpoint(payload: QuizRequest):
             # Increase max_tokens for quiz generation (need more tokens for multiple questions)
             raw = await ai_service.generate_content(client, prompt, max_tokens=2048)
 
-        logger.debug(f"Quiz provider returned type: {type(raw).__name__}")
-        
-        # Handle different response types
+        logger.debug("Quiz provider returned type: %s", type(raw).__name__)
+
         data = None
-        
-        # If raw is a dict, check if it's an Azure response with choices array
+
         if isinstance(raw, dict):
             if "choices" in raw and isinstance(raw.get("choices"), list):
-                # Azure response format - extract content from choices
+                # Azure response format – extract content string from choices
                 try:
-                    choice = raw["choices"][0]
-                    if "message" in choice and "content" in choice["message"]:
-                        content_str = choice["message"]["content"]
-                        logger.debug(f"Extracted Azure content: {content_str[:100]}...")
-                        data = json.loads(content_str)
-                except (KeyError, IndexError, json.JSONDecodeError) as e:
-                    logger.error(f"Failed to extract Azure quiz content: {e}")
+                    content_str = raw["choices"][0]["message"]["content"]
+                    logger.debug("Extracted Azure content (first 100): %s", content_str[:100])
+                    data = _parse_json_safe(content_str, provider_hint="Azure")
+                    if data is None:
+                        raise HTTPException(status_code=502, detail="Failed to parse Azure response")
+                except (KeyError, IndexError) as e:
+                    logger.error("Malformed Azure choices structure: %s", e)
                     raise HTTPException(status_code=502, detail="Failed to parse Azure response")
             else:
-                # Regular dict response (already parsed JSON)
+                # Already a parsed dict (e.g. DeepSeek / Gemini returning clean JSON)
                 data = raw
         else:
-            # String response - parse as JSON
-            text = str(raw)
-            try:
-                data = json.loads(text)
-            except Exception:
-                logger.warning("Quiz provider did not return valid JSON. Raw: %s", text[:300])
-                raise HTTPException(status_code=502, detail="Invalid quiz format from AI provider")
+            # String response – strip fences then parse
+            data = _parse_json_safe(str(raw))
+            if data is None:
+                raise HTTPException(
+                    status_code=502,
+                    detail="Invalid quiz format from AI provider",
+                )
 
-        # Validate response structure - check for mcq_questions and short_questions
+        # Validate response structure
         mcq_questions = data.get("mcq_questions", []) if data else []
         short_questions = data.get("short_questions", []) if data else []
-        
+
         if not isinstance(mcq_questions, list):
             mcq_questions = []
         if not isinstance(short_questions, list):
             short_questions = []
-        
-        # Ensure we have at least some questions
-        if len(mcq_questions) == 0 and len(short_questions) == 0:
+
+        if not mcq_questions and not short_questions:
             logger.warning("Quiz response has no questions. Data: %s", data)
             raise HTTPException(
-                status_code=502, 
-                detail="Quiz response missing both mcq_questions and short_questions"
+                status_code=502,
+                detail="Quiz response missing both mcq_questions and short_questions",
             )
-        
-        # Normalize question format - ensure each has required fields
+
         def normalize_question(q, q_type):
             if not isinstance(q, dict):
                 return None
@@ -90,11 +130,15 @@ async def quiz_endpoint(payload: QuizRequest):
                 "type": q_type,
                 "options": q.get("options", []) if q_type == "mcq" else [],
                 "answer": q.get("answer", ""),
-                "explanation": q.get("explanation", "")
+                "explanation": q.get("explanation", ""),
             }
-        
-        normalized_mcq = [normalize_question(q, "mcq") for q in mcq_questions if normalize_question(q, "mcq")]
-        normalized_short = [normalize_question(q, "short") for q in short_questions if normalize_question(q, "short")]
+
+        normalized_mcq = [
+            norm for q in mcq_questions if (norm := normalize_question(q, "mcq"))
+        ]
+        normalized_short = [
+            norm for q in short_questions if (norm := normalize_question(q, "short"))
+        ]
 
         return {
             "subject": payload.subject,
