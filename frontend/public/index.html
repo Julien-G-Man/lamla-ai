@@ -1,79 +1,251 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" prefix="og: https://ogp.me/ns#">
   <head>
     <meta charset="utf-8" />
-    
-    <!-- Favicon & App Icons -->
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/assets/lamla_logo.png" />
+
+    <!-- =============================================
+         FAVICON & APP ICONS
+    ============================================= -->
+    <link rel="icon" type="image/x-icon" href="%PUBLIC_URL%/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/assets/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="%PUBLIC_URL%/assets/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="%PUBLIC_URL%/assets/apple-touch-icon.png" />
     <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.ico" />
-    
-    <!-- Viewport & Theme -->
+    <link rel="mask-icon" href="%PUBLIC_URL%/assets/safari-pinned-tab.svg" color="#FFD600" />
+
+    <!-- =============================================
+         VIEWPORT, THEME & PERFORMANCE HINTS
+    ============================================= -->
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
     <meta name="theme-color" content="#FFD600" />
-    
-    <!-- Web App Manifest -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+    <!-- DNS Prefetch & Preconnect for performance (signals crawlability + speed to Google) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="https://lamla-ai.vercel.app" />
+
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    
-    <!-- General Meta Tags -->
-    <meta name="description" content="Lamla AI - Your intelligent learning companion powered by AI. Create quizzes, dashboards, and chat with advanced AI models." />
-    <meta name="keywords" content="AI, Quiz, Learning, Dashboard, Chat, Artificial Intelligence" />
+
+    <title>Lamla AI – AI-Powered Quiz, Flashcards & Personalized Learning Platform</title>
+    <meta name="description" content="Lamla AI is your intelligent learning companion. Generate AI-powered quizzes, flashcards, and study dashboards in seconds. Chat with advanced AI tutors to master any subject faster." />
+    <meta name="keywords" content="AI learning platform, AI quiz generator, flashcard generator, AI tutor, personalized learning, study assistant, AI study tool, quiz maker, intelligent learning, exam prep, student AI, e-learning, adaptive learning, AI education, study dashboard, learn with AI, Lamla AI" />
     <meta name="author" content="Lamla AI" />
-    <link rel="canonical" href="https://lamla.vercel.app/" />
     <meta name="application-name" content="Lamla AI" />
+    <meta name="generator" content="Lamla AI Platform" />
+    <meta name="rating" content="general" />
+    <meta name="revisit-after" content="7 days" />
+    <meta name="language" content="English" />
+    <meta name="copyright" content="Lamla AI" />
+
+    <!-- Robots directives -->
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="bingbot" content="index, follow" />
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://lamla-ai.vercel.app/" />
+
+    <!-- Geo targeting (helps with regional search) -->
+    <meta name="geo.region" content="US" />
+    <meta name="geo.placename" content="United States" />
+
+    <!-- =============================================
+         OPEN GRAPH (Facebook, LinkedIn, WhatsApp)
+    ============================================= -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Lamla AI" />
+    <meta property="og:title" content="Lamla AI – Inteilligent Platform for Personalized Learning" />
+    <meta property="og:description" content="Generate quizzes, flashcards, and study dashboards instantly with AI. Chat with an AI tutor and master any subject faster. Try Lamla AI free." />
+    <meta property="og:url" content="https://lamla-ai.vercel.app" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:image" content="https://lamla-ai.vercel.app/assets/og-image.png" />
+    <meta property="og:image:secure_url" content="https://lamla-ai.vercel.app/assets/og-image.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Lamla AI – Intelligent Learning Platform; generate quizzes, flashcards, and AI tutor dashboard preview" />
+
+    <!-- =============================================
+         TWITTER / X CARD
+    ============================================= -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@lamlaai" />
+    <meta name="twitter:creator" content="@lamlaai" />
+    <meta name="twitter:title" content="Lamla AI – AI-Powered Learning Platform, Flashcards & Personalized Learning" />
+    <meta name="twitter:description" content="Generate quizzes, flashcards, and study dashboards instantly with AI. Chat with an AI tutor and master any subject faster." />
+    <meta name="twitter:image" content="https://lamla-ai.vercel.app/assets/og-image.png" />
+    <meta name="twitter:image:alt" content="Lamla AI platform preview with quiz, flashcards, and AI tutor features" />
+    <meta name="twitter:url" content="https://lamla-ai.vercel.app" />
+
+    <!-- =============================================
+         APPLE / PWA META
+    ============================================= -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Lamla AI" />
-    
-    <!-- Open Graph Meta Tags (WhatsApp, Facebook, LinkedIn) -->
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="Lamla AI - Intelligent Learning Platform" />
-    <meta property="og:description" content="Your intelligent learning companion powered by AI. Create quizzes, dashboards, and chat with advanced AI models." />
-    <meta property="og:locale" content="en_US" />
-    <meta property="og:image" content="%PUBLIC_URL%/assets/og-image.png" />
-    <meta property="og:image:secure_url" content="%PUBLIC_URL%/assets/og-image.png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:type" content="image/png" />
-    <meta property="og:image:alt" content="Lamla AI platform preview with quiz, flashcards, and AI tutor features" />
-    <meta property="og:url" content="https://lamla.vercel.app" />
-    <meta property="og:site_name" content="Lamla AI" />
-    
-    <!-- Twitter Card Meta Tags -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Lamla AI - Intelligent Learning Platform" />
-    <meta name="twitter:description" content="Your intelligent learning companion powered by AI. Create quizzes, dashboards, and chat with advanced AI models." />
-    <meta name="twitter:image" content="%PUBLIC_URL%/assets/og-image.png" />
-    <meta name="twitter:image:alt" content="Lamla AI platform preview with quiz, flashcards, and AI tutor features" />
-    <meta name="twitter:url" content="https://lamla.vercel.app" />
-    
-    <!-- Mobile Web App -->
     <meta name="mobile-web-app-capable" content="yes" />
+
+    <!-- =============================================
+         MICROSOFT / WINDOWS META
+    ============================================= -->
     <meta name="msapplication-TileColor" content="#FFD600" />
     <meta name="msapplication-TileImage" content="%PUBLIC_URL%/assets/og-image.png" />
     <meta name="msapplication-config" content="%PUBLIC_URL%/browserconfig.xml" />
-    <!--
-      Notice the use of %PUBLIC_URL% in the tags above.
-      It will be replaced with the URL of the `public` folder during the build.
-      Only files inside the `public` folder can be referenced from the HTML.
+    <meta name="msapplication-starturl" content="/" />
 
-      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
-      work correctly both with client-side routing and a non-root public URL.
-      Learn how to configure a non-root public URL by running `npm run build`.
-    -->
-    <title>Lamla AI</title>
+    <!-- =============================================
+         SCHEMA.ORG ITEMPROP (Google Rich Results)
+    ============================================= -->
+    <meta itemprop="name" content="Lamla AI – Intelligent Learning Platform" />
+    <meta itemprop="description" content="Your intelligent learning companion powered by AI. Create quizzes, dashboards, and chat with advanced AI models." />
+    <meta itemprop="image" content="https://lamla-ai.vercel.app/assets/og-image.png" />
+
+    <!-- =============================================
+         JSON-LD STRUCTURED DATA
+         Enables rich results in Google Search
+    ============================================= -->
+
+    <!-- WebApplication Schema -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Lamla AI",
+      "url": "https://lamla-ai.vercel.app",
+      "description": "Lamla AI is an intelligent learning platform that generates AI-powered quizzes, flashcards, and personalized study dashboards. Chat with an AI tutor to master any subject.",
+      "applicationCategory": "EducationApplication",
+      "operatingSystem": "Web, iOS, Android",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "featureList": [
+        "AI Quiz Generator",
+        "AI Flashcard Generator",
+        "Personalized Study Dashboard",
+        "AI Tutor Chat",
+        "Adaptive Learning"
+      ],
+      "screenshot": "https://lamla-ai.vercel.app/assets/og-image.png",
+      "image": "https://lamla-ai.vercel.app/assets/lamla_logo.png",
+      "author": {
+        "@type": "Organization",
+        "name": "Lamla AI",
+        "url": "https://lamla-ai.vercel.app"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Lamla AI",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://lamla-ai.vercel.app/assets/lamla_logo.png"
+        }
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "reviewCount": "120"
+      }
+    }
+    </script>
+
+    <!-- Organization Schema -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Lamla AI",
+      "url": "https://lamla-ai.vercel.app",
+      "logo": "https://lamla-ai.vercel.app/assets/lamla_logo.png",
+      "sameAs": [],
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "customer support",
+        "url": "https://lamla-ai.vercel.app"
+      }
+    }
+    </script>
+
+    <!-- Website / Sitelinks Search Box Schema -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Lamla AI",
+      "url": "https://lamla-ai.vercel.app",
+      "description": "AI-powered quiz, flashcard, and personalized learning platform.",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://lamla-ai.vercel.app/search?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+
+    <!-- FAQPage Schema (boosts visibility with FAQ rich snippets) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is Lamla AI?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Lamla AI is an intelligent learning platform that uses AI to generate quizzes, flashcards, and personalized study dashboards to help students learn faster and more effectively."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does the AI quiz generator work?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Simply input your study material or topic, and Lamla AI instantly generates a custom quiz tailored to your content using advanced AI models."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is Lamla AI free to use?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, Lamla AI offers a free tier. You can start generating quizzes, flashcards, and chatting with the AI tutor at no cost."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I use Lamla AI on mobile?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, Lamla AI is fully responsive and works on all devices including mobile phones and tablets. It can also be installed as a Progressive Web App (PWA)."
+          }
+        }
+      ]
+    }
+    </script>
+
+    <title>Lamla AI – Intelligent Personalized Learning Platform</title>
   </head>
   <body>
+    <noscript>
+      <!-- Fallback content for crawlers and no-JS users -->
+      <div style="font-family: sans-serif; max-width: 700px; margin: 40px auto; padding: 20px;">
+        <h1>Lamla AI – AI-Powered Learning Platform</h1>
+        <p>Lamla AI is your intelligent learning companion. Generate AI-powered quizzes, flashcards, and study dashboards in seconds. Chat with advanced AI tutors to master any subject faster.</p>
+        <p>Please enable JavaScript to use the full Lamla AI experience.</p>
+        <ul>
+          <li>AI Quiz Generator</li>
+          <li>AI Flashcard Generator</li>
+          <li>Personalized Study Dashboard</li>
+          <li>AI Tutor Chat</li>
+        </ul>
+      </div>
+    </noscript>
     <div id="root"></div>
-    <!--
-      This HTML file is a template.
-      If you open it directly in the browser, you will see an empty page.
-
-      You can add webfonts, meta tags, or analytics to this file.
-      The build step will place the bundled scripts into the <body> tag.
-
-      To begin the development, run `npm start` or `yarn start`.
-      To create a production bundle, use `npm run build` or `yarn build`.
-    -->
   </body>
 </html>

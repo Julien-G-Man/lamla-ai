@@ -22,7 +22,7 @@ import Chatbot from "./pages/Chatbot/Chatbot";
 import Profile from "./pages/UserProfile/Profile";
 import NotFound from "./pages/NotFound/NotFound";
 
-const WAKE_INTERVAL_MS = 10 * 60 * 1000;
+const WAKE_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
 
 function App() {
   useEffect(() => {
@@ -71,6 +71,8 @@ function App() {
             <Route path="/flashcard" element={<Navigate to="/flashcards" replace />} />
 
             <Route path="/ai-tutor" element={<Chatbot />} />
+            <Route path="/ai" element={<Navigate to="/ai-tutor" replace />} />
+            <Route path="/chat" element={<Navigate to="/ai-tutor" replace />} />
             <Route path="/chatbot" element={<Navigate to="/ai-tutor" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

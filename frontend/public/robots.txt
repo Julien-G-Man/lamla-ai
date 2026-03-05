@@ -1,3 +1,17 @@
+# robots.txt for Lamla AI
 # https://www.robotstxt.org/robotstxt.html
+
+# Allow all crawlers full access
 User-agent: *
 Disallow:
+
+# Block access to private/internal paths 
+# Disallow: /api/
+# Disallow: /admin/
+# Disallow: /private/
+
+# Crawl-delay for polite bots
+Crawl-delay: 1
+
+# Sitemap location (submit this to Google Search Console & Bing Webmaster Tools)
+Sitemap: https://lamla-ai.vercel.app/sitemap.xml

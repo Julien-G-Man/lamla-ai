@@ -1,7 +1,7 @@
 {
   "short_name": "Lamla AI",
-  "name": "Lamla AI - Intelligent Learning Platform",
-  "description": "Your intelligent learning companion powered by AI. Create quizzes, dashboards, and chat with advanced AI models.",
+  "name": "Lamla AI – AI-Powered Quiz, Flashcards & Learning Platform",
+  "description": "Your intelligent learning companion powered by AI. Generate quizzes, flashcards, and chat with an AI tutor to master any subject faster.",
   "icons": [
     {
       "src": "favicon.ico",
@@ -12,13 +12,21 @@
       "src": "assets/lamla_logo.png",
       "type": "image/png",
       "sizes": "192x192",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
       "src": "assets/lamla_logo.png",
       "type": "image/png",
       "sizes": "512x512",
-      "purpose": "any"
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "assets/og-image.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "label": "Lamla AI – Quiz, flashcards and AI tutor dashboard"
     }
   ],
   "start_url": "/",
@@ -26,5 +34,25 @@
   "display": "standalone",
   "orientation": "portrait-primary",
   "theme_color": "#FFD600",
-  "background_color": "#121212"
+  "background_color": "#121212",
+  "categories": ["education", "productivity", "utilities"],
+  "lang": "en-US",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Create Quiz",
+      "short_name": "Quiz",
+      "description": "Generate an AI-powered quiz instantly",
+      "url": "/quiz/create",
+      "icons": [{ "src": "assets/lamla_logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "AI Tutor Chat",
+      "short_name": "Chat",
+      "description": "Chat with your AI tutor",
+      "url": "/chat",
+      "icons": [{ "src": "assets/lamla_logo.png", "sizes": "192x192" }]
+    }
+  ]
 }
