@@ -341,14 +341,15 @@ const Profile = () => {
               </div>
             </div>
 
-            {/* ── Danger zone ── */}
+            {/* ── Danger zone ── 
             <div className="db-card danger">
               <h2>Danger Zone</h2>
               <p style={{ color: 'var(--text-secondary)', marginBottom: 16, fontSize: '0.9rem' }}>
                 Permanently delete your account and all associated data. This cannot be undone.
               </p>
               <button className="db-btn db-btn-danger">Delete My Account</button>
-            </div>
+            </div> 
+            */}
 
           </div>
         </main>

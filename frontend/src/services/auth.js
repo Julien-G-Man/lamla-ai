@@ -12,7 +12,7 @@ if (!API_URL) {
 const authApi = axios.create({
   baseURL: API_URL,
   headers: { "Content-Type": "application/json" },
-  withCredentials: true, // for cookies if using DRF auth
+  // withCredentials: true, // for cookies if using DRF auth
 });
 
 // Request interceptor: attach token if present
