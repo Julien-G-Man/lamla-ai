@@ -1,18 +1,48 @@
 import json
 import logging
+import httpx
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST, require_http_methods
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from asgiref.sync import sync_to_async
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 from django.utils import timezone
+from django.db import transaction
 from django.db.models import Count, Q
 from .models import Deck, Flashcard
 from .scheduling import update_sm2
+from .serializers import (
+    GenerateFlashcardsRequestSerializer,
+    SaveDeckRequestSerializer,
+    ReviewFlashcardRequestSerializer,
+    ExplainFlashcardRequestSerializer,
+    UpdateFlashcardRequestSerializer,
+)
 from apps.core.async_client import call_fastapi, build_fastapi_headers
 
 logger = logging.getLogger(__name__)
+
+
+def _parse_json_body(request):
+    if not request.body:
+        return None, JsonResponse({"error": "Request body is required"}, status=400)
+
+    try:
+        return json.loads(request.body), None
+    except json.JSONDecodeError:
+        return None, JsonResponse({"error": "Invalid JSON body"}, status=400)
+
+
+def _serializer_error_response(serializer):
+    return JsonResponse(
+        {
+            "error": "Invalid request data",
+            "details": serializer.errors,
+        },
+        status=400,
+    )
 
 def _get_authenticated_user(request):
     """
@@ -66,42 +96,54 @@ async def _get_authenticated_user_async(request):
 @csrf_exempt
 @require_POST
 async def generate_flashcards(request):
-
-    import json
-
     try:
-        user, auth_error = await _get_authenticated_user_async(request)
+        _user, auth_error = await _get_authenticated_user_async(request)
         if auth_error:
             return auth_error
 
-        data = json.loads(request.body)
+        data, json_error = _parse_json_body(request)
+        if json_error:
+            return json_error
 
-        subject = data.get("subject")
-        text = data.get("text")
-        prompt = data.get("prompt", "")
-        num_cards = int(data.get("num_cards", 10))
-        difficulty = data.get("difficulty", "intermediate")
+        serializer = GenerateFlashcardsRequestSerializer(data=data)
+        if not serializer.is_valid():
+            return _serializer_error_response(serializer)
+
+        payload = serializer.validated_data
 
         resp = await call_fastapi(
             "POST",
             "/flashcards/generate",
-            timeout=90,
+            timeout=30,
             headers=build_fastapi_headers(),
             json={
-                "subject": subject,
-                "text": text,
-                "prompt": prompt,
-                "num_cards": num_cards,
-                "difficulty": difficulty,
+                "subject": payload["subject"],
+                "text": payload["text"],
+                "prompt": payload.get("prompt", ""),
+                "num_cards": payload["num_cards"],
+                "difficulty": payload["difficulty"],
             },
         )
         resp.raise_for_status()
         result = resp.json()
 
+        if not isinstance(result, dict):
+            logger.error("Unexpected flashcards/generate response type: %s", type(result).__name__)
+            return JsonResponse({"error": "Invalid response from AI service"}, status=502)
+
         return JsonResponse(result)
 
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+    except httpx.TimeoutException:
+        return JsonResponse({"error": "Flashcard generation timed out"}, status=504)
+    except httpx.HTTPStatusError as exc:
+        logger.warning("Flashcards upstream HTTP error: %s", exc)
+        return JsonResponse({"error": "Flashcard generation service is unavailable"}, status=503)
+    except httpx.RequestError as exc:
+        logger.warning("Flashcards upstream request error: %s", exc)
+        return JsonResponse({"error": "Unable to reach flashcard generation service"}, status=503)
+    except Exception:
+        logger.exception("Unexpected error in generate_flashcards")
+        return JsonResponse({"error": "Failed to generate flashcards"}, status=500)
           
         
 @csrf_exempt
@@ -111,33 +153,40 @@ def save_flashcard_deck(request):
     if auth_error:
         return auth_error
 
-    data = json.loads(request.body)
+    data, json_error = _parse_json_body(request)
+    if json_error:
+        return json_error
 
-    subject = data.get("subject")
-    cards = data.get("cards")
+    serializer = SaveDeckRequestSerializer(data=data)
+    if not serializer.is_valid():
+        return _serializer_error_response(serializer)
 
-    deck = Deck.objects.create(
-        user=user,
-        title=subject,
-        subject=subject
-    )
+    payload = serializer.validated_data
 
-    objs = []
-
-    for c in cards:
-        objs.append(
-            Flashcard(
-                deck=deck,
-                question=c["question"],
-                answer=c["answer"]
+    try:
+        with transaction.atomic():
+            deck = Deck.objects.create(
+                user=user,
+                title=payload["subject"],
+                subject=payload["subject"],
             )
-        )
 
-    Flashcard.objects.bulk_create(objs)
+            cards = payload["cards"]
+            objs = [
+                Flashcard(
+                    deck=deck,
+                    question=c["question"],
+                    answer=c["answer"],
+                )
+                for c in cards
+            ]
 
-    return JsonResponse({
-        "deck_id": deck.id
-    })
+            Flashcard.objects.bulk_create(objs)
+
+        return JsonResponse({"deck_id": deck.id}, status=201)
+    except Exception:
+        logger.exception("Failed to save flashcard deck for user_id=%s", user.id)
+        return JsonResponse({"error": "Failed to save flashcard deck"}, status=500)
     
 
 def get_decks(request):
@@ -145,27 +194,57 @@ def get_decks(request):
     if auth_error:
         return auth_error
 
-    decks = Deck.objects.filter(
-        user=user
-    ).annotate(
-        card_count=Count("cards"),
-        due_today=Count("cards", filter=Q(cards__next_review__lte=timezone.now()))
-    )
+    try:
+        now = timezone.now()
+        decks = Deck.objects.filter(user=user).annotate(
+            card_count=Count("cards"),
+            due_today=Count("cards", filter=Q(cards__next_review__lte=now)),
+        ).order_by("-created_at")
 
-    return JsonResponse(
-        {
-            "decks": [
-                {
-                    "id": d.id,
-                    "title": d.title,
-                    "created_at": d.created_at,
-                    "card_count": d.card_count,
-                    "due_today": d.due_today,
+        # Pagination support
+        page = request.GET.get("page", 1)
+        page_size = request.GET.get("page_size", 20)
+
+        try:
+            page = int(page)
+            page_size = min(int(page_size), 100)  # Max 100 per page
+        except (ValueError, TypeError):
+            return JsonResponse({"error": "Invalid pagination parameters"}, status=400)
+
+        paginator = Paginator(decks, page_size)
+
+        try:
+            page_obj = paginator.page(page)
+        except PageNotAnInteger:
+            page_obj = paginator.page(1)
+        except EmptyPage:
+            page_obj = paginator.page(paginator.num_pages)
+
+        return JsonResponse(
+            {
+                "decks": [
+                    {
+                        "id": d.id,
+                        "title": d.title,
+                        "created_at": d.created_at.isoformat(),
+                        "card_count": d.card_count,
+                        "due_today": d.due_today,
+                    }
+                    for d in page_obj
+                ],
+                "pagination": {
+                    "current_page": page_obj.number,
+                    "total_pages": paginator.num_pages,
+                    "total_count": paginator.count,
+                    "page_size": page_size,
+                    "has_next": page_obj.has_next(),
+                    "has_previous": page_obj.has_previous(),
                 }
-                for d in decks
-            ]
-        }
-    )
+            }
+        )
+    except Exception:
+        logger.exception("Failed to fetch decks for user_id=%s", user.id)
+        return JsonResponse({"error": "Failed to fetch decks"}, status=500)
 
 
 def get_flashcards_history(request):
@@ -173,26 +252,30 @@ def get_flashcards_history(request):
     if auth_error:
         return auth_error
 
-    decks = (
-        Deck.objects.filter(user=user)
-        .annotate(card_count=Count("cards"))
-        .order_by("-created_at")[:30]
-    )
+    try:
+        decks = (
+            Deck.objects.filter(user=user)
+            .annotate(card_count=Count("cards"))
+            .order_by("-created_at")[:30]
+        )
 
-    return JsonResponse(
-        {
-            "history": [
-                {
-                    "id": d.id,
-                    "title": d.title,
-                    "subject": d.subject,
-                    "card_count": d.card_count,
-                    "created_at": d.created_at.isoformat(),
-                }
-                for d in decks
-            ]
-        }
-    )
+        return JsonResponse(
+            {
+                "history": [
+                    {
+                        "id": d.id,
+                        "title": d.title,
+                        "subject": d.subject,
+                        "card_count": d.card_count,
+                        "created_at": d.created_at.isoformat(),
+                    }
+                    for d in decks
+                ]
+            }
+        )
+    except Exception:
+        logger.exception("Failed to fetch flashcards history for user_id=%s", user.id)
+        return JsonResponse({"error": "Failed to fetch flashcards history"}, status=500)
     
 @csrf_exempt
 @require_http_methods(["GET", "DELETE"])
@@ -202,25 +285,36 @@ def get_deck_cards(request, deck_id):
         return auth_error
 
     deck = Deck.objects.filter(id=deck_id, user=user).first()
-    
+
     if request.method == "DELETE":
-        deleted, _ = deck.delete()
-        if deleted == 0:
+        if not deck:
             return JsonResponse({"error": "Deck not found"}, status=404)
-        return JsonResponse({"status": "deleted"})
+
+        try:
+            deck.delete()
+            return JsonResponse({"status": "deleted"})
+        except Exception:
+            logger.exception("Failed to delete deck_id=%s for user_id=%s", deck_id, user.id)
+            return JsonResponse({"error": "Failed to delete deck"}, status=500)
 
     if not deck:
         return JsonResponse({"error": "Deck not found"}, status=404)
-    
-    cards = Flashcard.objects.filter(
-        deck_id=deck_id,
-        deck__user=user,
-    ).values("id", "question", "answer")
 
-    return JsonResponse({
-        "title": deck.title,
-        "cards": list(cards)
-    })
+    try:
+        cards = Flashcard.objects.filter(
+            deck_id=deck_id,
+            deck__user=user,
+        ).values("id", "question", "answer")
+
+        return JsonResponse(
+            {
+                "title": deck.title,
+                "cards": list(cards),
+            }
+        )
+    except Exception:
+        logger.exception("Failed to fetch deck cards for deck_id=%s user_id=%s", deck_id, user.id)
+        return JsonResponse({"error": "Failed to fetch deck cards"}, status=500)
     
 @csrf_exempt
 @require_POST
@@ -230,28 +324,28 @@ def review_flashcard(request):
         return auth_error
 
     try:
-        data = json.loads(request.body)
-        card_id = data.get("card_id")
-        quality = data.get("quality")
+        data, json_error = _parse_json_body(request)
+        if json_error:
+            return json_error
 
-        if not card_id:
-            return JsonResponse({"error": "card_id is required"}, status=400)
-        if quality is None:
-            return JsonResponse({"error": "quality is required"}, status=400)
+        serializer = ReviewFlashcardRequestSerializer(data=data)
+        if not serializer.is_valid():
+            return _serializer_error_response(serializer)
+
+        payload = serializer.validated_data
 
         card = Flashcard.objects.get(
-            id=card_id,
-            deck__user=user
+            id=payload["card_id"],
+            deck__user=user,
         )
 
-        update_sm2(card, int(quality))
+        update_sm2(card, payload["quality"])
         return JsonResponse({"status": "updated"})
     except Flashcard.DoesNotExist:
         return JsonResponse({"error": "Flashcard not found"}, status=404)
-    except (TypeError, ValueError):
-        return JsonResponse({"error": "quality must be an integer between 0 and 5"}, status=400)
-    except json.JSONDecodeError:
-        return JsonResponse({"error": "Invalid JSON body"}, status=400)
+    except Exception:
+        logger.exception("Failed to review flashcard for user_id=%s", user.id)
+        return JsonResponse({"error": "Failed to review flashcard"}, status=500)
 
 
 @csrf_exempt
@@ -261,24 +355,143 @@ async def explain_flashcard(request):
     if auth_error:
         return auth_error
 
-    import json
+    try:
+        data, json_error = _parse_json_body(request)
+        if json_error:
+            return json_error
 
-    data = json.loads(request.body)
+        serializer = ExplainFlashcardRequestSerializer(data=data)
+        if not serializer.is_valid():
+            return _serializer_error_response(serializer)
 
-    question = data.get("question")
-    answer = data.get("answer")
+        payload = serializer.validated_data
+        card_id = payload.get("card_id")
+        
+        # If card_id is provided, check cache first
+        if card_id:
+            try:
+                card = await sync_to_async(Flashcard.objects.get)(
+                    id=card_id,
+                    deck__user=user,
+                )
+                
+                # Return cached explanation if available
+                if card.explanation:
+                    return JsonResponse({"explanation": card.explanation})
+                
+                # Use card's question and answer
+                question = card.question
+                answer = card.answer
+            except Flashcard.DoesNotExist:
+                return JsonResponse({"error": "Flashcard not found"}, status=404)
+        else:
+            # Use provided question and answer
+            question = payload["question"]
+            answer = payload["answer"]
 
-    resp = await call_fastapi(
-        "POST",
-        "/flashcards/explain",
-        timeout=60,
-        headers=build_fastapi_headers(),
-        json={
-            "question": question,
-            "answer": answer
-        },
-    )
-    resp.raise_for_status()
-    result = resp.json()
+        # Fetch explanation from AI service
+        resp = await call_fastapi(
+            "POST",
+            "/flashcards/explain",
+            timeout=40,
+            headers=build_fastapi_headers(),
+            json={
+                "question": question,
+                "answer": answer,
+            },
+        )
+        resp.raise_for_status()
+        result = resp.json()
 
-    return JsonResponse(result)
+        if not isinstance(result, dict):
+            logger.error("Unexpected flashcards/explain response type: %s", type(result).__name__)
+            return JsonResponse({"error": "Invalid response from AI service"}, status=502)
+
+        # Cache the explanation if card_id was provided
+        if card_id and "explanation" in result:
+            card.explanation = result["explanation"]
+            await sync_to_async(card.save)(update_fields=["explanation"])
+
+        return JsonResponse(result)
+    except httpx.TimeoutException:
+        return JsonResponse({"error": "Flashcard explanation timed out"}, status=504)
+    except httpx.HTTPStatusError as exc:
+        logger.warning("Flashcards explain upstream HTTP error: %s", exc)
+        return JsonResponse({"error": "Flashcard explanation service is unavailable"}, status=503)
+    except httpx.RequestError as exc:
+        logger.warning("Flashcards explain upstream request error: %s", exc)
+        return JsonResponse({"error": "Unable to reach flashcard explanation service"}, status=503)
+    except Exception:
+        logger.exception("Unexpected error in explain_flashcard")
+        return JsonResponse({"error": "Failed to explain flashcard"}, status=500)
+
+
+@csrf_exempt
+@require_POST
+def update_flashcard(request):
+    """Update a flashcard's question and answer."""
+    user, auth_error = _get_authenticated_user(request)
+    if auth_error:
+        return auth_error
+
+    try:
+        data, json_error = _parse_json_body(request)
+        if json_error:
+            return json_error
+
+        serializer = UpdateFlashcardRequestSerializer(data=data)
+        if not serializer.is_valid():
+            return _serializer_error_response(serializer)
+
+        payload = serializer.validated_data
+
+        card = Flashcard.objects.select_for_update().get(
+            id=payload["card_id"],
+            deck__user=user,
+        )
+
+        card.question = payload["question"]
+        card.answer = payload["answer"]
+        card.save(update_fields=["question", "answer"])
+
+        return JsonResponse({
+            "status": "updated",
+            "card": {
+                "id": card.id,
+                "question": card.question,
+                "answer": card.answer,
+            }
+        })
+    except Flashcard.DoesNotExist:
+        return JsonResponse({"error": "Flashcard not found"}, status=404)
+    except Exception:
+        logger.exception("Failed to update flashcard for user_id=%s", user.id)
+        return JsonResponse({"error": "Failed to update flashcard"}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["DELETE", "POST"])
+def delete_flashcard(request, card_id):
+    """Delete a specific flashcard."""
+    user, auth_error = _get_authenticated_user(request)
+    if auth_error:
+        return auth_error
+
+    try:
+        card = Flashcard.objects.get(
+            id=card_id,
+            deck__user=user,
+        )
+
+        deck_id = card.deck_id
+        card.delete()
+
+        return JsonResponse({
+            "status": "deleted",
+            "deck_id": deck_id,
+        })
+    except Flashcard.DoesNotExist:
+        return JsonResponse({"error": "Flashcard not found"}, status=404)
+    except Exception:
+        logger.exception("Failed to delete flashcard card_id=%s for user_id=%s", card_id, user.id)
+        return JsonResponse({"error": "Failed to delete flashcard"}, status=500)

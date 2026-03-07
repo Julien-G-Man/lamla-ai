@@ -1,10 +1,39 @@
 from fastapi import APIRouter
 from core.ai_client import ai_service, APIIntegrationError
 from core.http import get_async_client
+from .schemas import FlashcardRequest, FlashcardExplainRequest
 import json
 import re
+import os
+import asyncio
+import logging
 
 flashcards_router = APIRouter()
+logger = logging.getLogger(__name__)
+
+def _env_int(name: str, default: int) -> int:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _env_float(name: str, default: float) -> float:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+AI_MAX_CONCURRENT = max(20, _env_int("FLASHCARDS_AI_MAX_CONCURRENT", 250))
+AI_SEMAPHORE_WAIT_SECONDS = _env_float("FLASHCARDS_AI_SEMAPHORE_WAIT_SECONDS", 0.35)
+_ai_semaphore = asyncio.Semaphore(AI_MAX_CONCURRENT)
 
 DIFFICULTY_PROMPTS = {
 
@@ -46,7 +75,7 @@ def _normalize_cards(raw):
                 q = (item.get("question") or item.get("front") or "").strip()
                 a = (item.get("answer") or item.get("back") or "").strip()
                 if q and a:
-                    out.append({"question": q, "answer": a})
+                    out.append({"question": q[:2000], "answer": a[:4000]})
         return out
 
     if isinstance(raw, dict):
@@ -72,6 +101,14 @@ def _normalize_cards(raw):
                 pass
 
     return []
+
+
+async def _try_acquire_ai_slot() -> bool:
+    try:
+        await asyncio.wait_for(_ai_semaphore.acquire(), timeout=AI_SEMAPHORE_WAIT_SECONDS)
+        return True
+    except TimeoutError:
+        return False
 
 
 def _build_fallback_cards(text: str, subject: str, num_cards: int):
@@ -126,14 +163,14 @@ def _build_fallback_cards(text: str, subject: str, num_cards: int):
 
 
 @flashcards_router.post("/generate")
-async def generate_flashcards(data: dict):
+async def generate_flashcards(data: FlashcardRequest):
     client = await get_async_client()
 
-    subject = data.get("subject")
-    text = data.get("text")
-    num_cards = int(data.get("num_cards", 10))
-    difficulty = data.get("difficulty", "intermediate")
-    user_prompt = data.get("prompt", "")
+    subject = data.subject
+    text = data.text
+    num_cards = data.num_cards
+    difficulty = data.difficulty
+    user_prompt = data.prompt or ""
 
     difficulty_prompt = DIFFICULTY_PROMPTS.get(
         difficulty,
@@ -168,12 +205,17 @@ Return ONLY valid JSON in this format:
 
     fallback_cards = _build_fallback_cards(text, subject, num_cards)
 
+    if not await _try_acquire_ai_slot():
+        logger.warning("Flashcards generation overload: fallback served without LLM")
+        return {
+            "cards": fallback_cards,
+            "fallback_used": True,
+            "warning": "Service is under high load. Showing fallback flashcards.",
+            "overloaded": True,
+        }
+
     try:
-        result = await ai_service.generate_content(
-            client=client,
-            prompt=prompt,
-            max_tokens=1200
-        )
+        result = await ai_service.generate_content(client=client, prompt=prompt, max_tokens=1200)
 
         cards = _normalize_cards(result)
         if cards:
@@ -200,31 +242,41 @@ Return ONLY valid JSON in this format:
             "fallback_used": True,
             "warning": "Unexpected AI error. Showing fallback flashcards.",
         }
+    finally:
+        _ai_semaphore.release()
 
 
 @flashcards_router.post("/explain")
-async def explain_flashcard(data: dict):
+async def explain_flashcard(data: FlashcardExplainRequest):
     client = await get_async_client()
+
+    question = data.question
+    answer = data.answer
 
     prompt = f"""
 A student failed a flashcard.
 
 Question:
-{data["question"]}
+{question}
 
 Correct Answer:
-{data["answer"]}
+{answer}
 
 Explain this concept clearly in 3 short sentences
 like a tutor helping a beginner.
 """
 
+    if not await _try_acquire_ai_slot():
+        logger.warning("Flashcards explanation overload: fallback served without LLM")
+        return {
+            "explanation": f"Focus on this key idea: {answer}",
+            "fallback_used": True,
+            "warning": "Service is under high load. Showing fallback guidance.",
+            "overloaded": True,
+        }
+
     try:
-        result = await ai_service.generate_content(
-            client=client,
-            prompt=prompt,
-            max_tokens=200
-        )
+        result = await ai_service.generate_content(client=client, prompt=prompt, max_tokens=200)
 
         if isinstance(result, str) and result.strip():
             return {
@@ -233,14 +285,16 @@ like a tutor helping a beginner.
             }
 
         return {
-            "explanation": f"Review this carefully: {data.get('answer', '')}",
+            "explanation": f"Review this carefully: {answer}",
             "fallback_used": True,
             "warning": "AI explanation unavailable. Showing fallback guidance.",
         }
 
     except Exception:
         return {
-            "explanation": f"Focus on this key idea: {data.get('answer', '')}",
+            "explanation": f"Focus on this key idea: {answer}",
             "fallback_used": True,
             "warning": "AI explanation unavailable. Showing fallback guidance.",
         }
+    finally:
+        _ai_semaphore.release()

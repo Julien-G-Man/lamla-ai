@@ -20,6 +20,11 @@ class Deck(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=["user", "created_at"], name="fc_deck_user_created_idx"),
+        ]
+
     def __str__(self):
         return f"{self.title} - {self.user}"
 
@@ -38,6 +43,7 @@ class Flashcard(models.Model):
 
     question = models.TextField()
     answer = models.TextField()
+    explanation = models.TextField(blank=True, default="")
 
     # SM-2 scheduling fields
     repetition = models.IntegerField(default=0)
@@ -48,6 +54,12 @@ class Flashcard(models.Model):
     last_review = models.DateTimeField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["deck", "next_review"], name="fc_card_deck_due_idx"),
+            models.Index(fields=["next_review"], name="fc_card_due_idx"),
+        ]
 
     def __str__(self):
         return f"Card {self.id} in deck {self.deck_id}"

@@ -8,7 +8,9 @@ from .views import (
     get_flashcards_history,
     get_deck_cards,
     review_flashcard,
-    explain_flashcard
+    explain_flashcard,
+    update_flashcard,
+    delete_flashcard,
 )
 
 urlpatterns = [
@@ -31,4 +33,8 @@ urlpatterns = [
 
     # AI tutor follow-up
     path("flashcards/explain/",explain_flashcard,name="flashcards_explain"),
+
+    # Card management
+    path("flashcards/cards/update/", update_flashcard, name="flashcards_update_card"),
+    path("flashcards/cards/<int:card_id>/delete/", delete_flashcard, name="flashcards_delete_card"),
 ]

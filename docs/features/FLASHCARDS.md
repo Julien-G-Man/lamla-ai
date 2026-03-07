@@ -15,13 +15,15 @@ From `backend/apps/flashcards/urls.py`:
 
 - `POST /api/flashcards/ajax-extract-text/`
 - `POST /api/flashcards/generate/`
-- `GET /api/flashcards/decks/`
+- `GET /api/flashcards/decks/` (supports pagination: `?page=1&page_size=20`)
 - `GET /api/flashcards/decks/:id/`
 - `GET /api/flashcards/deck/:id/` (alias)
 - `POST /api/flashcards/decks/save/`
 - `POST /api/flashcards/save/` (alias)
 - `POST /api/flashcards/review/`
-- `POST /api/flashcards/explain/`
+- `POST /api/flashcards/explain/` (supports `card_id` for caching or `question`+`answer` for ad-hoc)
+- `POST /api/flashcards/cards/update/` (edit card)
+- `DELETE /api/flashcards/cards/:id/delete/` (also accepts POST)
 
 ## FastAPI Endpoints (Internal)
 
@@ -31,7 +33,7 @@ From `backend/apps/flashcards/urls.py`:
 ## Models
 
 - `Deck` (owner, title, subject, created_at)
-- `Flashcard` (question, answer + SM-2 fields: repetition, interval, ease_factor, next_review)
+- `Flashcard` (question, answer, explanation + SM-2 fields: repetition, interval, ease_factor, next_review)
 
 ## Fallback Behavior
 
@@ -50,3 +52,221 @@ This ensures user flow does not hard-fail.
 - Easy -> quality 5
 
 Posted to `/api/flashcards/review/`.
+
+## Security + Validation Hardening (2026-03-07)
+
+The Django flashcards endpoints now enforce stricter request validation and safer failure handling.
+
+### Request Validation
+
+- `POST /api/flashcards/generate/`
+	- `subject`: required, non-empty, max 255 chars
+	- `text`: required, 30-50,000 chars
+	- `prompt`: optional, max 1,500 chars
+	- `num_cards`: integer, range 1-25
+	- `difficulty`: one of `beginner`, `intermediate`, `exam`
+
+- `POST /api/flashcards/save/` and `POST /api/flashcards/decks/save/`
+	- `subject`: required, non-empty, max 255 chars
+	- `cards`: required array, 1-100 items
+	- card shape:
+		- `question`: required, 1-2,000 chars
+		- `answer`: required, 1-4,000 chars
+
+- `POST /api/flashcards/review/`
+	- `card_id`: integer, >= 1
+	- `quality`: integer, 0-5
+
+- `POST /api/flashcards/explain/`
+	- `question`: required, 1-2,000 chars
+	- `answer`: required, 1-4,000 chars
+
+Validation failures now return a consistent `400` payload:
+
+```json
+{
+	"error": "Invalid request data",
+	"details": {"field_name": ["...validation message..."]}
+}
+```
+
+### Error Handling and Upstream Safety
+
+- Invalid/missing JSON body is handled with `400` (`Invalid JSON body` / `Request body is required`).
+- Unexpected internal exceptions are now logged server-side and return generic error messages.
+- Raw exception text is no longer exposed to API clients.
+- FastAPI upstream errors are mapped safely:
+	- timeout -> `504`
+	- request/upstream failures -> `503`
+	- invalid upstream payload shape -> `502`
+
+### Auth/Access Safety
+
+- Deck deletion now checks ownership/existence before delete to avoid `NoneType` crash paths.
+- All deck/card reads and writes continue to require valid token authentication.
+
+### File Upload Security (Text Extraction)
+
+- Accepted extensions are now explicitly allowlisted: `.pdf`, `.docx`, `.pptx`, `.txt`.
+- MIME type is validated against extension allowlists (with `application/octet-stream` fallback support).
+- Uploaded filename is normalized using `basename` before processing/logging.
+- 10 MB max file size remains enforced.
+
+## Scalability Hardening (2026-03-07)
+
+This release adds practical safeguards for high concurrency, especially during AI traffic spikes.
+
+### FastAPI Service (AI Layer)
+
+- `flashcards` endpoints now use strict Pydantic request schemas (`subject/text/prompt/num_cards/difficulty`, and explain input bounds).
+- AI generation/explanation calls are protected by an in-process semaphore.
+	- If the semaphore cannot be acquired quickly, the endpoint serves deterministic fallback content instead of queueing unboundedly.
+- Overload responses include `fallback_used: true` and an `overloaded` flag.
+- Outbound provider HTTP client now uses pooled connections, HTTP/2, and configurable limits/timeouts.
+
+Environment variables:
+
+- `FLASHCARDS_AI_MAX_CONCURRENT` (default `250`)
+- `FLASHCARDS_AI_SEMAPHORE_WAIT_SECONDS` (default `0.35`)
+- `FASTAPI_OUTBOUND_MAX_CONNECTIONS` (default `1000`)
+- `FASTAPI_OUTBOUND_MAX_KEEPALIVE` (default `250`)
+- `FASTAPI_OUTBOUND_CONNECT_TIMEOUT` (default `4`)
+- `FASTAPI_OUTBOUND_READ_TIMEOUT` (default `45`)
+- `FASTAPI_OUTBOUND_WRITE_TIMEOUT` (default `10`)
+- `FASTAPI_OUTBOUND_POOL_TIMEOUT` (default `6`)
+- `DJANGO_FASTAPI_MAX_CONNECTIONS` (default `1000`)
+- `DJANGO_FASTAPI_MAX_KEEPALIVE` (default `200`)
+- `DJANGO_FASTAPI_CONNECT_TIMEOUT` (default `5`)
+- `DJANGO_FASTAPI_READ_TIMEOUT` (default `60`)
+- `DJANGO_FASTAPI_WRITE_TIMEOUT` (default `10`)
+- `DJANGO_FASTAPI_POOL_TIMEOUT` (default `6`)
+
+### Django/Data Layer
+
+- Added indexes for deck listing and due-card calculations:
+	- Deck: `(user, created_at)`
+	- Flashcard: `(deck, next_review)`
+	- Flashcard: `(next_review)`
+- Migration added: `backend/apps/flashcards/migrations/0002_flashcards_indexes.py`
+
+### Frontend Resilience
+
+- Added request timeout defaults in API client.
+- Added centralized API error-message extraction for user-facing feedback.
+- Flashcards pages now prevent duplicate in-flight actions:
+	- duplicate generate
+	- duplicate save
+	- duplicate explain
+	- duplicate review submissions
+- Study mode now performs optimistic card advance with rollback on failed review writes.
+
+### Important Capacity Note
+
+For a target like ~5k concurrent users on AI features, these code changes improve graceful degradation and reduce failure cascades, but production capacity still depends on:
+
+- horizontal scaling (multiple FastAPI workers/instances),
+- provider-side throughput limits,
+- database sizing,
+- queueing and observability.
+
+Recommended operational approach is load testing with realistic prompts and setting semaphore/pool limits from observed provider and infra saturation points.
+
+## UX Improvements (2026-03-07)
+
+This release adds essential content management capabilities and optimizations requested by users.
+
+### Card Editing
+
+**Backend:**
+- New endpoint: `POST /api/flashcards/cards/update/`
+- Request payload:
+  ```json
+  {
+    "card_id": 123,
+    "question": "Updated question text",
+    "answer": "Updated answer text"
+  }
+  ```
+- Validation: Same bounds as card creation (question: 1-2,000 chars, answer: 1-4,000 chars)
+- Ownership is verified via `deck__user` join
+- Returns updated card data on success
+
+**Frontend (FlashcardDeck.jsx):**
+- Each card now has an "Edit" button
+- Inline editing mode with textarea fields for question/answer
+- Save/Cancel buttons during edit
+- Cached explanations are cleared when a card is edited
+
+### Individual Card Deletion
+
+**Backend:**
+- New endpoint: `DELETE /api/flashcards/cards/<card_id>/delete/` (also accepts POST for compatibility)
+- Ownership is verified before deletion
+- Returns deleted card's deck_id for reference
+
+**Frontend (FlashcardDeck.jsx):**
+- Each card now has a "Delete" button
+- Confirmation dialog before deletion
+- Card is removed from UI immediately on success
+- Deletion state prevents duplicate requests
+
+### Deck List Pagination
+
+**Backend:**
+- `GET /api/flashcards/decks/` now supports pagination query params:
+  - `?page=1` (default: 1)
+  - `?page_size=20` (default: 20, max: 100)
+- Response includes pagination metadata:
+  ```json
+  {
+    "decks": [...],
+    "pagination": {
+      "current_page": 1,
+      "total_pages": 5,
+      "total_count": 87,
+      "page_size": 20,
+      "has_next": true,
+      "has_previous": false
+    }
+  }
+  ```
+- Decks are ordered by `created_at` (descending)
+
+**Frontend:**
+- Backward compatible: if no pagination params are provided, defaults apply
+- Frontend can be updated to add pagination UI controls as needed
+
+### Explanation Caching
+
+**Backend:**
+- Added `explanation` field to `Flashcard` model (TextField, blank=True)
+- Migration: `backend/apps/flashcards/migrations/0003_add_explanation_cache.py`
+- Updated `POST /api/flashcards/explain/` to accept optional `card_id`:
+  ```json
+  {
+    "card_id": 123  // Option 1: Explain and cache for a specific card
+  }
+  ```
+  or
+  ```json
+  {
+    "question": "...",  // Option 2: Ad-hoc explanation (no caching)
+    "answer": "..."
+  }
+  ```
+- When `card_id` is provided:
+  - Checks if explanation already exists → returns cached value immediately
+  - Otherwise fetches from AI and caches in database
+- When only question/answer provided: no caching (for flexibility)
+
+**Frontend (FlashcardDeck.jsx):**
+- Updated explain call to pass `card_id` for caching
+- In-memory cache still prevents duplicate API calls during same session
+- Cached explanations persist across page reloads
+
+### Benefits
+
+- **Editing**: Users can fix typos, improve clarity, or update outdated information without recreating decks
+- **Deletion**: Remove low-quality or duplicate cards without deleting entire deck
+- **Pagination**: Improved performance for users with large deck collections
+- **Explanation Caching**: Reduces AI API costs and improves response time for repeated explanations

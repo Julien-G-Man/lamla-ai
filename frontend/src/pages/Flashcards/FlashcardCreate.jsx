@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../components/Navbar";
 import { useAuth } from "../../context/AuthContext";
-import djangoApi from "../../services/api";
+import djangoApi, { getApiErrorMessage } from "../../services/api";
 import "./Flashcards.css";
 
 const SUBJECT_OPTIONS = [
@@ -97,6 +97,7 @@ export default function FlashcardCreate() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [info, setInfo] = useState("");
+  const [error, setError] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const [fileNameDisplay, setFileNameDisplay] = useState("");
   const [activeTab, setActiveTab] = useState("fileContent");
@@ -114,8 +115,15 @@ export default function FlashcardCreate() {
 
   const extractText = async (file) => {
     if (!file) return;
+    if (isExtracting) return;
 
     setInfo("");
+    setError("");
+    if (file.size > 10 * 1024 * 1024) {
+      setError("File is too large. Maximum allowed size is 10MB.");
+      return;
+    }
+
     setIsExtracting(true);
     setFileNameDisplay(`${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
 
@@ -131,6 +139,7 @@ export default function FlashcardCreate() {
       setInfo("Text extracted successfully.");
     } catch (err) {
       console.error("Flashcard text extraction failed", err);
+      setError(getApiErrorMessage(err, "Failed to extract text from file."));
     } finally {
       setIsExtracting(false);
     }
@@ -138,10 +147,22 @@ export default function FlashcardCreate() {
 
   const generate = async (e) => {
     e.preventDefault();
+    if (isGenerating) return;
     setInfo("");
+    setError("");
 
     if (!finalSubject || text.trim().length < 30) {
-      console.error("Generate validation failed", { finalSubject, textLength: text.trim().length });
+      setError("Please provide a subject and at least 30 characters of study text.");
+      return;
+    }
+
+    const boundedNumCards = Math.max(1, Math.min(25, Number(numCards) || 10));
+    if (boundedNumCards !== Number(numCards)) {
+      setNumCards(boundedNumCards);
+    }
+
+    if (prompt.trim().length > 1500) {
+      setError("Prompt is too long. Maximum allowed length is 1500 characters.");
       return;
     }
 
@@ -151,30 +172,38 @@ export default function FlashcardCreate() {
         subject: finalSubject,
         text,
         prompt: prompt.trim(),
-        num_cards: Number(numCards),
+        num_cards: boundedNumCards,
         difficulty,
       });
 
       const generated = normalizeCards(res.data?.cards);
-      const safeCards = generated.length ? generated : buildFallbackCards(text, finalSubject, numCards);
+      const safeCards = generated.length ? generated : buildFallbackCards(text, finalSubject, boundedNumCards);
       setCards(safeCards);
 
       if (res.data?.fallback_used) {
-        setInfo("Fallback flashcards generated.");
+        setInfo(res.data?.warning || "Fallback flashcards generated.");
       } else {
         setInfo(`Generated ${safeCards.length} flashcards.`);
       }
     } catch (err) {
       console.error("Flashcard generation failed", err);
-      setCards(buildFallbackCards(text, finalSubject, numCards));
-      setInfo("Fallback flashcards generated.");
+      const message = getApiErrorMessage(err, "Flashcard generation failed.");
+      const status = err?.response?.status;
+
+      if (!status || status >= 500) {
+        setCards(buildFallbackCards(text, finalSubject, boundedNumCards));
+        setInfo("AI service unavailable. Fallback flashcards generated.");
+      } else {
+        setError(message);
+      }
     } finally {
       setIsGenerating(false);
     }
   };
 
   const saveDeck = async () => {
-    if (!cards.length) return;
+    if (!cards.length || isSaving) return;
+    setError("");
     setIsSaving(true);
 
     try {
@@ -186,6 +215,7 @@ export default function FlashcardCreate() {
       if (deckId) navigate(`/flashcards/deck/${deckId}`);
     } catch (err) {
       console.error("Save flashcard deck failed", err);
+      setError(getApiErrorMessage(err, "Failed to save deck."));
     } finally {
       setIsSaving(false);
     }
@@ -316,6 +346,7 @@ export default function FlashcardCreate() {
             </form>
 
             {info && <p className="fc-info">{info}</p>}
+            {error && <p className="fc-error">{error}</p>}
           </article>
 
           <aside className="fc-panel fc-preview-panel">

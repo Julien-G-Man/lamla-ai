@@ -5,6 +5,7 @@ This module provides a persistent httpx.AsyncClient with connection pooling
 for high-performance async proxying from Django to FastAPI.
 """
 import asyncio
+import os
 import httpx
 import logging
 from django.conf import settings
@@ -13,6 +14,26 @@ logger = logging.getLogger(__name__)
 
 # Global persistent client instances keyed by base URL
 _async_clients: dict[str, httpx.AsyncClient] = {}
+
+
+def _env_int(name: str, default: int) -> int:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _env_float(name: str, default: float) -> float:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
 
 
 def _normalize_base_url(url: str) -> str:
@@ -64,21 +85,21 @@ def get_async_client(base_url: str | None = None) -> httpx.AsyncClient:
     if fastapi_base not in _async_clients:
         base_urls = get_fastapi_base_urls()
         timeout = httpx.Timeout(
-            connect=5.0,      # Connection timeout
-            read=60.0,       # Read timeout (for LLM responses)
-            write=5.0,       # Write timeout
-            pool=5.0         # Pool timeout
+            connect=_env_float("DJANGO_FASTAPI_CONNECT_TIMEOUT", 5.0),
+            read=_env_float("DJANGO_FASTAPI_READ_TIMEOUT", 60.0),
+            write=_env_float("DJANGO_FASTAPI_WRITE_TIMEOUT", 10.0),
+            pool=_env_float("DJANGO_FASTAPI_POOL_TIMEOUT", 6.0),
         )
-        
+
         _async_clients[fastapi_base] = httpx.AsyncClient(
             base_url=fastapi_base,
             timeout=timeout,
             limits=httpx.Limits(
-                max_keepalive_connections=20,  # Keep connections alive
-                max_connections=100,            # Max concurrent connections
-                keepalive_expiry=30.0           # Keep connections for 30s
+                max_keepalive_connections=_env_int("DJANGO_FASTAPI_MAX_KEEPALIVE", 200),
+                max_connections=_env_int("DJANGO_FASTAPI_MAX_CONNECTIONS", 1000),
+                keepalive_expiry=30.0,
             ),
-            http2=True,  # Enable HTTP/2 for better performance
+            http2=True,
         )
         logger.info("Initialized FastAPI AsyncClient. primary=%s all=%s", fastapi_base, base_urls)
     

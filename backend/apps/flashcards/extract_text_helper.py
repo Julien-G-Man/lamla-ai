@@ -4,11 +4,25 @@ import PyPDF2
 import logging
 import re
 import unicodedata
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
  
 logger = logging.getLogger(__name__)
+
+ALLOWED_EXTENSIONS = {".pdf", ".docx", ".pptx", ".txt"}
+ALLOWED_MIME_TYPES = {
+    ".pdf": {"application/pdf"},
+    ".docx": {
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/msword",
+    },
+    ".pptx": {
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "application/vnd.ms-powerpoint",
+    },
+    ".txt": {"text/plain"},
+}
 
 
 def _clean_extracted_text(raw_text: str) -> str:
@@ -51,9 +65,17 @@ async def ajax_extract_text(request):
         return JsonResponse({'error': 'No file uploaded'}, status=400)
 
     file = request.FILES['slide_file']
-    filename = file.name.lower()
+    filename = os.path.basename((file.name or "").strip().lower())
     file_ext = os.path.splitext(filename)[1]
+    content_type = (getattr(file, "content_type", "") or "").lower().strip()
     max_size = 10 * 1024 * 1024  # 10MB
+
+    if file_ext not in ALLOWED_EXTENSIONS:
+        return JsonResponse({'error': f'Unsupported file format: {file_ext or "unknown"}'}, status=400)
+
+    allowed_types = ALLOWED_MIME_TYPES.get(file_ext, set())
+    if content_type and content_type not in allowed_types and content_type != "application/octet-stream":
+        return JsonResponse({'error': 'Unsupported file MIME type for this extension.'}, status=400)
     
     if file.size > max_size:
         return JsonResponse({'error': 'File too large (max 10MB)'}, status=400)

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "../../components/Navbar";
 import { useAuth } from "../../context/AuthContext";
-import djangoApi from "../../services/api";
+import djangoApi, { getApiErrorMessage } from "../../services/api";
 import "./Flashcards.css";
 
 const qualityMap = {
@@ -22,6 +22,8 @@ export default function FlashcardStudy() {
   const [showAnswer, setShowAnswer] = useState(false);
   const [explanation, setExplanation] = useState("");
   const [isExplaining, setIsExplaining] = useState(false);
+  const [isReviewing, setIsReviewing] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -30,12 +32,14 @@ export default function FlashcardStudy() {
     }
 
     const load = async () => {
+      setError("");
       try {
         const res = await djangoApi.get(`/flashcards/deck/${id}/`);
         setCards(res.data?.cards || []);
         setIdx(0);
       } catch (err) {
         console.error("Load study deck failed", err);
+        setError(getApiErrorMessage(err, "Failed to load deck for study."));
       }
     };
 
@@ -45,24 +49,34 @@ export default function FlashcardStudy() {
   const current = useMemo(() => cards[idx], [cards, idx]);
 
   const submitReview = async (qualityKey) => {
-    if (!current?.id) return;
+    if (!current?.id || isReviewing) return;
+
+    setError("");
+    setIsReviewing(true);
+    const currentIndex = idx;
+    const nextIndex = Math.min(currentIndex + 1, cards.length - 1);
+
+    setExplanation("");
+    setShowAnswer(false);
+    setIdx(nextIndex);
 
     try {
       await djangoApi.post("/flashcards/review/", {
         card_id: current.id,
         quality: qualityMap[qualityKey],
       });
-
-      setExplanation("");
-      setShowAnswer(false);
-      setIdx((prev) => Math.min(prev + 1, cards.length - 1));
     } catch (err) {
       console.error("Submit flashcard review failed", err);
+      setIdx(currentIndex);
+      setError(getApiErrorMessage(err, "Failed to save review. Please try again."));
+    } finally {
+      setIsReviewing(false);
     }
   };
 
   const explainCurrent = async () => {
-    if (!current) return;
+    if (!current || isExplaining) return;
+    setError("");
     setIsExplaining(true);
     try {
       const res = await djangoApi.post("/flashcards/explain/", {
@@ -72,6 +86,7 @@ export default function FlashcardStudy() {
       setExplanation(res.data?.explanation || "No explanation available.");
     } catch (err) {
       console.error("Explain flashcard failed", err);
+      setError(getApiErrorMessage(err, "Failed to generate explanation."));
     } finally {
       setIsExplaining(false);
     }
@@ -89,6 +104,7 @@ export default function FlashcardStudy() {
             </div>
 
             {!cards.length && <p className="fc-empty">No cards to study.</p>}
+            {!!error && <p className="fc-error">{error}</p>}
 
             {!!cards.length && current && (
               <>
@@ -115,10 +131,10 @@ export default function FlashcardStudy() {
                     )}
                     <p className="fc-info">How well did you remember?</p>
                     <div className="fc-actions stretch">
-                      <button className="fc-danger" onClick={() => submitReview("again")}>Again</button>
-                      <button className="fc-secondary" onClick={() => submitReview("hard")}>Hard</button>
-                      <button className="fc-secondary" onClick={() => submitReview("good")}>Good</button>
-                      <button className="fc-primary" onClick={() => submitReview("easy")}>Easy</button>
+                      <button className="fc-danger" onClick={() => submitReview("again")} disabled={isReviewing}>Again</button>
+                      <button className="fc-secondary" onClick={() => submitReview("hard")} disabled={isReviewing}>Hard</button>
+                      <button className="fc-secondary" onClick={() => submitReview("good")} disabled={isReviewing}>Good</button>
+                      <button className="fc-primary" onClick={() => submitReview("easy")} disabled={isReviewing}>Easy</button>
                     </div>
                   </>
                 )}

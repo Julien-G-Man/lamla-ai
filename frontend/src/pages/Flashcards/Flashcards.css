@@ -330,6 +330,11 @@
   margin-top: 10px;
 }
 
+.fc-error {
+  color: #ff8f8f;
+  margin-top: 10px;
+}
+
 .fc-explain-box {
   margin-top: 10px;
   border: 1px solid rgba(255, 214, 0, 0.3);
@@ -347,6 +352,36 @@
 .fc-explain-box p {
   margin: 0;
   color: var(--fc-text);
+}
+
+.fc-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.fc-edit-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fc-edit-form textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--fc-border);
+  border-radius: 6px;
+  background: var(--fc-bg);
+  color: var(--fc-text);
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
+
+.fc-edit-form textarea:focus {
+  outline: none;
+  border-color: var(--fc-primary);
 }
 
 @media (max-width: 1050px) {
