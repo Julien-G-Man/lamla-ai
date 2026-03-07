@@ -28,11 +28,11 @@ class AuthThrottle(SimpleRateThrottle):
     """Allow 5 auth attempts per hour per IP address."""
     scope = "auth"
     
-    def get_cache_key(self):
+    def get_cache_key(self, request, view):
         # Rate limit per IP address for public endpoints (no user context)
-        if self.request.user and self.request.user.is_authenticated:
-            return f"auth_{self.request.user.id}"
-        return f"auth_{self.get_ident(self.request)}"
+        if request.user and request.user.is_authenticated:
+            return f"auth_{request.user.id}"
+        return f"auth_{self.get_ident(request)}"
 
 
 class SignupView(APIView):
