@@ -2,3 +2,6 @@ context_files/
 docker-compose.yml
 # Added by ggshield
 .cache_ggshield
+
+.env.google-oauth-template
+client_secret.json

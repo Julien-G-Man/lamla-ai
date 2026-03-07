@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { GoogleLogin } from '@react-oauth/google';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faUser,
@@ -12,6 +13,7 @@ import {
   faTriangleExclamation,
 } from '@fortawesome/free-solid-svg-icons';
 import '../Login/Login.css';
+import '../Login/GoogleAuth.css';
 
 // ── Brand-panel feature list ──────────────────────────────────────────────────
 const FEATURES = [
@@ -41,7 +43,25 @@ const Signup = () => {
   });
 
   const navigate = useNavigate();
-  const { signup } = useAuth();
+  const { signup, googleAuth } = useAuth();
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const { user } = await googleAuth(credentialResponse.credential);
+      const isAdmin = user?.is_admin;
+      navigate(isAdmin ? '/admin-dashboard' : '/dashboard', { replace: true });
+    } catch (err) {
+      setError(err?.message || 'Google signup failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    setError('Google signup was canceled or failed.');
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -279,6 +299,23 @@ const Signup = () => {
               )}
             </button>
           </form>
+
+          {/* Divider */}
+          <div className="auth-divider">
+            <span>or</span>
+          </div>
+
+          {/* Google Sign-Up */}
+          <div className="google-auth-wrapper">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              size="large"
+              width="100%"
+              theme="outline"
+              text="signup_with"
+            />
+          </div>
 
           {/* Footer */}
           <footer className="auth-form-footer">

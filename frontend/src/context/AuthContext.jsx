@@ -1,5 +1,4 @@
-// src/context/AuthContext.js
-import React, { createContext, useContext, useState, useEffect } from "react";
+﻿import React, { createContext, useContext, useState, useEffect } from "react";
 import authService from "../services/auth";
 
 const AuthContext = createContext();
@@ -31,7 +30,7 @@ export const AuthProvider = ({ children }) => {
     setIsLoading(false);
   }, []);
 
-  // ── Auth actions ───────────────────────────────────────────────────────────
+  //  Auth actions 
 
   const login = async (identifier, password) => {
     setIsLoading(true);
@@ -52,6 +51,21 @@ export const AuthProvider = ({ children }) => {
     setIsLoading(true);
     try {
       const { user } = await authService.signup(email, password, username);
+      setUser(user);
+      setIsAuthenticated(true);
+      return { user };
+    } catch (err) {
+      setIsAuthenticated(false);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const googleAuth = async (googleToken) => {
+    setIsLoading(true);
+    try {
+      const { user } = await authService.googleAuth(googleToken);
       setUser(user);
       setIsAuthenticated(true);
       return { user };
@@ -104,7 +118,7 @@ export const AuthProvider = ({ children }) => {
     return user.is_admin ? "admin" : "user";
   };
 
-  // ── Context value ─────────────────────────────────────────────────────────
+  //  Context value 
   const value = {
     user,
     isLoading,
@@ -112,6 +126,7 @@ export const AuthProvider = ({ children }) => {
     isEmailVerified: user?.is_email_verified ?? false,
     login,
     signup,
+    googleAuth,
     logout,
     markEmailVerified,
     resendVerificationEmail,

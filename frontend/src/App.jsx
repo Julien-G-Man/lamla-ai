@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect } from "react";
 import "./App.css";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider } from "./context/AuthContext";
 import { DJANGO_WARMUP_ENDPOINT, FASTAPI_HEALTH_ENDPOINT } from "./services/api";
@@ -27,6 +28,8 @@ import NotFound from "./pages/NotFound/NotFound";
 
 const WAKE_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
 
+const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID;
+
 function App() {
   useEffect(() => {
     const wakeServices = async () => {
@@ -42,7 +45,8 @@ function App() {
   }, []);
 
   return (
-    <ThemeProvider>
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <ThemeProvider>
       <AuthProvider>
         <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Routes>
@@ -85,7 +89,8 @@ function App() {
           </Routes>
         </Router>
       </AuthProvider>
-    </ThemeProvider>
+      </ThemeProvider>
+    </GoogleOAuthProvider>
   );
 }
 

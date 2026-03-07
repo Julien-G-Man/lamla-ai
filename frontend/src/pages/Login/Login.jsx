@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { GoogleLogin} from '@react-oauth/google';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faEnvelope,
@@ -10,6 +11,7 @@ import {
   faTriangleExclamation,
 } from '@fortawesome/free-solid-svg-icons';
 import './Login.css';
+import './GoogleAuth.css';
 
 // ── Brand-panel feature list ──────────────────────────────────────────────────
 const FEATURES = [
@@ -28,7 +30,25 @@ const Login = () => {
   const [error, setError]               = useState('');
 
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, googleAuth } = useAuth();
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const { user } = await googleAuth(credentialResponse.credential);
+      const isAdmin = user?.is_admin;
+      navigate(isAdmin ? '/admin-dashboard' : '/dashboard', { replace: true });
+    } catch (err) {
+      setError(err?.message || 'Google sign-in failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    setError('Google sign-in was canceled or failed.');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -168,6 +188,23 @@ const Login = () => {
               )}
             </button>
           </form>
+
+          {/* Divider */}
+          <div className="auth-divider">
+            <span>or</span>
+          </div>
+
+          {/* Google Sign-In */}
+          <div className="google-auth-wrapper">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              size="large"
+              width="100%"
+              theme="outline"
+              text="continue_with"
+            />
+          </div>
 
           {/* Footer */}
           <footer className="auth-form-footer">

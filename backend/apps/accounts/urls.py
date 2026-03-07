@@ -12,11 +12,13 @@ from .views import (
     DebugUsers,
     ProfileView
 )
+from .google_auth import GoogleAuthView
 
 urlpatterns = [
     # ── Auth ──────────────────────────────────────────────────────────────────
     path("auth/signup/",               SignupView.as_view(),              name="auth-signup"),
     path("auth/login/",                LoginView.as_view(),               name="auth-login"),
+        path("auth/google/",               GoogleAuthView.as_view(),          name="auth-google"),
     path("auth/logout/",               LogoutView.as_view(),              name="auth-logout"),
     path("auth/change-password/",      ChangePasswordView.as_view(),      name="auth-change-password"),
 
