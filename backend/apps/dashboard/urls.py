@@ -10,6 +10,8 @@ urlpatterns = [
     # admin
     path('dashboard/admin/stats/',                views.AdminDashboardStatsView.as_view()),
     path('dashboard/admin/usage-trends/',         views.AdminUsageTrendsView.as_view()),
+    path('dashboard/admin/activity/',             views.AdminActivityFeedView.as_view()),
     path('dashboard/admin/users/',                views.AdminUsersListView.as_view()),
     path('dashboard/admin/users/<int:user_id>/',  views.AdminUserDeleteView.as_view()),
+    path('dashboard/admin/settings/',             views.AdminSystemSettingsView.as_view()),
 ]

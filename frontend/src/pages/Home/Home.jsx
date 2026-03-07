@@ -224,13 +224,13 @@ const Home = ({ user }) => {
                   </div>
                 </a>
 
-                <a href="/quiz/create" className="feature-card">
+                <a href="/materials" className="feature-card">
                   <div className="feature-image">
                     <img src="/assets/steam.jpg" alt="Subject Selection" />
                   </div>
                   <div className="feature-card-content">
-                    <h3 className="feature-title">Subject Selection</h3>
-                    <p className="feature-desc">Select your subject or topic before quiz generation for targeted study.</p>
+                    <h3 className="feature-title">Materials</h3>
+                    <p className="feature-desc">Don't have slides? Select from a wide range of material uploaded by our students community.</p>
                     <span className="feature-link">Explore Feature →</span>
                   </div>
                 </a>

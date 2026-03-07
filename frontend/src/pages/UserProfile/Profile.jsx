@@ -6,20 +6,29 @@ import { useTheme } from '../../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faHome, faHistory, faCloudUploadAlt, faLock, faUser,
+  faHome, faHistory, faCloudUploadAlt, faUser,
   faCheckCircle, faExclamationCircle,
+  faChartBar, faUsers, faFileAlt, faCog,
 } from '@fortawesome/free-solid-svg-icons';
 import './Profile.css';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// Same nav items as Dashboard — profile is active here
-const NAV_ITEMS = [
+// User sidebar nav items
+const USER_NAV_ITEMS = [
   { id: 'overview', icon: faHome,          label: 'Dashboard'    },
   { id: 'history',  icon: faHistory,        label: 'Past Quizzes' },
   { id: 'uploads',  icon: faCloudUploadAlt, label: 'Materials'    },
   { id: 'profile',  icon: faUser,           label: 'Profile'      },
-  { id: 'security', icon: faLock,           label: 'Security'     },
+];
+
+// Admin sidebar nav items
+const ADMIN_NAV_ITEMS = [
+  { id: 'overview', icon: faChartBar, label: 'Overview' },
+  { id: 'users', icon: faUsers, label: 'Users' },
+  { id: 'content', icon: faFileAlt, label: 'Content' },
+  { id: 'settings', icon: faCog, label: 'Settings' },
+  { id: 'profile', icon: faUser, label: 'Profile' },
 ];
 
 const Profile = () => {
@@ -67,10 +76,14 @@ const Profile = () => {
   }, [form, user]);
 
   // ── Sidebar navigation ───────────────────────────────────────
-  // Non-profile items go back to dashboard with the requested tab
+  // Non-profile items go back to appropriate dashboard with requested tab
+  const isAdmin = user?.is_admin;
+  const NAV_ITEMS = isAdmin ? ADMIN_NAV_ITEMS : USER_NAV_ITEMS;
+  
   const handleNavigate = (id) => {
     if (id === 'profile') return; // already here
-    navigate('/dashboard', { state: { tab: id } });
+    const dashboardRoute = isAdmin ? '/admin-dashboard' : '/dashboard';
+    navigate(dashboardRoute, { state: { tab: id } });
   };
 
   const handleLogout = async () => { await logout(); navigate('/'); };
@@ -168,7 +181,7 @@ const Profile = () => {
           activeId="profile"
           onNavigate={handleNavigate}
           onLogout={handleLogout}
-          variant="user"
+          variant={isAdmin ? 'admin' : 'user'}
         />
 
         <main className="db-main">
@@ -190,7 +203,9 @@ const Profile = () => {
                 <h2>{user?.username}</h2>
                 <p>{user?.email}</p>
                 <div className="db-profile-hero-meta">
-                  <span className="db-badge db-badge-yellow">Student</span>
+                  <span className={`db-badge ${user?.is_admin ? 'db-badge-red' : 'db-badge-yellow'}`}>
+                    {user?.is_admin ? 'Admin' : 'Student'}
+                  </span>
                   {user?.is_email_verified
                     ? <span className="db-badge db-badge-green">✓ Verified</span>
                     : <span className="db-badge db-badge-gray">Unverified</span>}

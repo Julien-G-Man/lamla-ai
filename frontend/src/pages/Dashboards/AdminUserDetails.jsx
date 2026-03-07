@@ -72,6 +72,7 @@ export default function AdminUserDetails() {
     { label: 'Flashcards', value: nfmt(summary.total_flashcards) },
     { label: 'Chat Sessions', value: nfmt(summary.total_chat_sessions) },
     { label: 'Chat Messages', value: nfmt(summary.total_chat_messages) },
+    { label: 'Materials Uploaded', value: nfmt(summary.total_materials) },
     { label: 'Average Score', value: `${summary.average_score ?? 0}%` },
     { label: 'Token Burn (Total)', value: nfmt(tokens.total) },
   ];
@@ -137,7 +138,9 @@ export default function AdminUserDetails() {
                     <div className="db-timeline-item" key={`${a.type}-${a.created_at}-${idx}`}>
                       <div className="db-timeline-dot" />
                       <div className="db-timeline-body">
-                        <h4>{a.type === 'quiz' ? 'Quiz Activity' : 'Flashcard Activity'}</h4>
+                        <h4>{a.type === 'quiz' ? 'Quiz Activity' 
+                        : a.type === 'material' ? 'Material Uploaded'
+                        : 'Flashcard Activity'}</h4>
                         <p>{a.text}</p>
                         <span>{relTime(a.created_at)}</span>
                       </div>

@@ -139,7 +139,7 @@ Focus on extracting knowledge and providing educational guidance based on this m
     user_context = ""
     if user_name:
         user_context = (
-            f"Authenticated user context: name={user_name}. "
+            f"Authenticated user context: name={user_name}. If name=Admin, that's the superuser, the manager of the whole system, your builder."
             "This is from information provided by the user in the system."
         )
 

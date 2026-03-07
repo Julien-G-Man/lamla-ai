@@ -4,9 +4,10 @@ from django.utils import timezone
 from django.db import models as dm
 from django.db.models import Value, TextField
 from django.db.models.functions import TruncDate, Length, Cast, Coalesce
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated, AllowAny, BasePermission
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework import status
 
 from apps.quiz.models import QuizSession
 from apps.chatbot.models import ChatSession, ChatMessage
@@ -14,44 +15,10 @@ from apps.accounts.serializers import user_to_dict
 from apps.accounts.services import EmailDeliveryError
 from .services import send_contact_emails, send_newsletter_emails
 from .serializers import ContactFormSerializer, NewsletterSerializer
+from .helpers import _calculate_streak, _tokens_from_chars, _safe_char_sum, _collect_admin_activity
+
 
 logger = logging.getLogger(__name__)
-
-
-def _calculate_streak(user):
-    """Consecutive days (ending today) on which user completed at least one quiz."""
-    dates = (
-        QuizSession.objects
-        .filter(user=user)
-        .annotate(day=TruncDate('created_at'))
-        .values_list('day', flat=True)
-        .distinct()
-        .order_by('-day')
-    )
-    streak = 0
-    today = timezone.now().date()
-    for i, day in enumerate(dates):
-        if day == today - datetime.timedelta(days=i):
-            streak += 1
-        else:
-            break
-    return streak
-
-
-def _tokens_from_chars(char_count: int) -> int:
-    """
-    Approximate token count from character count.
-    Rule of thumb: ~4 characters/token for English mixed text.
-    """
-    if not char_count:
-        return 0
-    return int(round(char_count / 4))
-
-
-def _safe_char_sum(qs, expression):
-    result = qs.aggregate(total=Coalesce(dm.Sum(expression), Value(0)))
-    return int(result.get("total") or 0)
-
 
 class DashboardStatsView(APIView):
     """GET /api/dashboard/stats/"""
@@ -91,6 +58,7 @@ class AdminDashboardStatsView(APIView):
 
         from apps.accounts.models import User
         from apps.flashcards.models import Deck, Flashcard
+        from apps.materials.models import Material
 
         now = timezone.now()
         day_ago = now - datetime.timedelta(days=1)
@@ -103,10 +71,11 @@ class AdminDashboardStatsView(APIView):
 
         total_users = User.objects.count()
         verified_users = User.objects.filter(is_email_verified=True).count()
-        total_flashcard_sets = Deck.objects.count()
+        total_flashcard_decks = Deck.objects.count()
         total_flashcards = Flashcard.objects.count()
         total_chat_sessions = ChatSession.objects.exclude(user__isnull=True).count()
         total_chat_messages = ChatMessage.objects.count()
+        total_materials = Material.objects.count()
 
         # 24h activity
         quizzes_24h = QuizSession.objects.filter(created_at__gte=day_ago).count()
@@ -114,6 +83,7 @@ class AdminDashboardStatsView(APIView):
         cards_24h = Flashcard.objects.filter(created_at__gte=day_ago).count()
         chat_messages_24h = ChatMessage.objects.filter(created_at__gte=day_ago).count()
         new_users_24h = User.objects.filter(date_joined__gte=day_ago).count()
+        materials_24h = Material.objects.filter(created_at__gte=day_ago).count()
 
         # Character volume for token estimates
         chat_chars = _safe_char_sum(ChatMessage.objects.all(), Length('content'))
@@ -145,63 +115,19 @@ class AdminDashboardStatsView(APIView):
         avg_quizzes_per_user = round((quiz_stats['total'] or 0) / max(total_users, 1), 2)
         avg_chats_per_user = round(total_chat_sessions / max(total_users, 1), 2)
 
-        # Recent real activity (who did what)
-        def _actor(user_obj):
-            if not user_obj:
-                return "Unknown user"
-            return getattr(user_obj, "username", None) or getattr(user_obj, "email", "User")
-
-        recent_activity = []
-
-        recent_quizzes = (
-            QuizSession.objects
-            .select_related("user")
-            .order_by("-created_at")[:12]
-        )
-        for q in recent_quizzes:
-            subject = q.subject or "General"
-            recent_activity.append({
-                "type": "quiz",
-                "actor": _actor(q.user),
-                "text": f"completed a {subject} quiz ({q.score_percentage}%)",
-                "created_at": q.created_at,
-            })
-
-        recent_decks = (
-            Deck.objects
-            .select_related("user")
-            .order_by("-created_at")[:12]
-        )
-        for d in recent_decks:
-            subject = d.subject or "General"
-            recent_activity.append({
-                "type": "flashcards",
-                "actor": _actor(d.user),
-                "text": f"created flashcard deck '{d.title}' ({subject})",
-                "created_at": d.created_at,
-            })
-
-        recent_activity.sort(key=lambda item: item["created_at"], reverse=True)
-        recent_activity = recent_activity[:20]
-        recent_activity_payload = [
-            {
-                "type": item["type"],
-                "actor": item["actor"],
-                "text": item["text"],
-                "created_at": item["created_at"].isoformat(),
-            }
-            for item in recent_activity
-        ]
+        # Last-24h activity feed for dashboard overview only
+        recent_activity_payload, _, _ = _collect_admin_activity(start_at=day_ago, limit=20, offset=0)
 
         return Response({
             'total_users': total_users,
             'verified_users': verified_users,
             'total_quizzes': quiz_stats['total'] or 0,
-            'total_materials': total_flashcard_sets,
+            'total_quiz_questions': int(quiz_stats['total_questions'] or 0),
+            'total_materials': total_materials,
+            'total_flashcard_decks': total_flashcard_decks,
             'total_flashcards': total_flashcards,
             'total_chat_sessions': total_chat_sessions,
             'total_chat_messages': total_chat_messages,
-            'total_quiz_questions': int(quiz_stats['total_questions'] or 0),
             'average_score': round(float(quiz_stats['avg'] or 0), 1),
             'avg_quizzes_per_user': avg_quizzes_per_user,
             'avg_chats_per_user': avg_chats_per_user,
@@ -211,6 +137,7 @@ class AdminDashboardStatsView(APIView):
                 'decks': decks_24h,
                 'flashcards': cards_24h,
                 'chat_messages': chat_messages_24h,
+                'uploaded_materials': materials_24h
             },
             'recent_activity': recent_activity_payload,
             'estimated_tokens': {
@@ -234,6 +161,7 @@ class AdminUsageTrendsView(APIView):
 
         from apps.accounts.models import User
         from apps.flashcards.models import Deck
+        from apps.materials.models import Material
 
         try:
             days = int(request.query_params.get("days", 14))
@@ -258,12 +186,14 @@ class AdminUsageTrendsView(APIView):
         quizzes_map = _series(QuizSession.objects.all(), "created_at")
         decks_map = _series(Deck.objects.all(), "created_at")
         chats_map = _series(ChatMessage.objects.all(), "created_at")
+        materials_map = _series(Material.objects.all(), "created_at")
 
         labels = []
         users = []
         quizzes = []
         decks = []
         chats = []
+        materials = []
         for offset in range(days):
             day = start_day + datetime.timedelta(days=offset)
             labels.append(day.isoformat())
@@ -271,6 +201,7 @@ class AdminUsageTrendsView(APIView):
             quizzes.append(quizzes_map.get(day, 0))
             decks.append(decks_map.get(day, 0))
             chats.append(chats_map.get(day, 0))
+            materials.append(materials_map.get(day, 0))
 
         return Response(
             {
@@ -281,7 +212,76 @@ class AdminUsageTrendsView(APIView):
                     "quizzes": quizzes,
                     "decks": decks,
                     "chat_messages": chats,
+                    "uploaded_materials": materials,
                 },
+            }
+        )
+
+
+class AdminActivityFeedView(APIView):
+    """GET /api/dashboard/admin/activity/?period=day|week|month|quarter|year|all&limit=50&offset=0"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not request.user.is_admin:
+            return Response({'detail': 'Forbidden.'}, status=403)
+
+        period = (request.query_params.get("period") or "day").strip().lower()
+
+        custom_days_raw = request.query_params.get("custom_days")
+        custom_days = None
+        if custom_days_raw is not None:
+            try:
+                custom_days = max(1, min(int(custom_days_raw), 365))
+            except (TypeError, ValueError):
+                custom_days = None
+
+        period_days_map = {
+            "day": 1,
+            "week": 7,
+            "month": 30,
+            "quarter": 90,
+            "year": 365,
+            "all": None,
+        }
+
+        if custom_days is not None:
+            days = custom_days
+            resolved_period = f"custom_{custom_days}_days"
+        else:
+            days = period_days_map.get(period, 1)
+            resolved_period = period if period in period_days_map else "day"
+
+        try:
+            limit = int(request.query_params.get("limit", 50))
+        except (TypeError, ValueError):
+            limit = 50
+        limit = max(1, min(limit, 200))
+
+        try:
+            offset = int(request.query_params.get("offset", 0))
+        except (TypeError, ValueError):
+            offset = 0
+        offset = max(0, offset)
+
+        start_at = None if days is None else timezone.now() - datetime.timedelta(days=days)
+
+        activities, total_count, counts_by_type = _collect_admin_activity(
+            start_at=start_at,
+            limit=limit,
+            offset=offset,
+        )
+
+        return Response(
+            {
+                "period": resolved_period,
+                "days": days,
+                "limit": limit,
+                "offset": offset,
+                "total": total_count,
+                "has_more": (offset + len(activities)) < total_count,
+                "counts": counts_by_type,
+                "activities": activities,
             }
         )
 
@@ -480,3 +480,47 @@ class NewsletterSubscribeView(APIView):
             )
 
         return Response({"detail": "Subscription successful."})
+
+
+class IsAdminUser(BasePermission):
+    """Permission class to check if user is an admin."""
+    
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated and getattr(request.user, 'is_admin', False)
+
+
+class AdminSystemSettingsView(APIView):
+    """GET/PUT /api/dashboard/admin/settings/
+    
+    Manage system-wide settings accessible only to admin users.
+    """
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        """Get current system settings."""
+        from .settings_model import SystemSettings
+        from .settings_serializers import SystemSettingsSerializer
+        
+        settings = SystemSettings.get_instance()
+        serializer = SystemSettingsSerializer(settings)
+        return Response(serializer.data)
+    
+    def put(self, request):
+        """Update system settings."""
+        from .settings_model import SystemSettings
+        from .settings_serializers import SystemSettingsSerializer
+        
+        settings = SystemSettings.get_instance()
+        serializer = SystemSettingsSerializer(settings, data=request.data, partial=True)
+        
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Track who made the update
+        serializer.validated_data['updated_by'] = request.user
+        serializer.save()
+        
+        return Response({
+            "detail": "Settings updated successfully.",
+            "data": serializer.data
+        })

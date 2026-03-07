@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Sidebar from '../../components/sidebar/Sidebar';
 import { useAuth } from '../../context/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faUsers, faChartBar, faFileAlt, faComments, faLayerGroup,
-  faCog, faTriangleExclamation, faTrophy,
+  faCog, faTriangleExclamation, faTrophy, faBook, faUser
 } from '@fortawesome/free-solid-svg-icons';
 import './AdminDashboard.css';
 import { dashboardService } from '../../services/dashboard';
@@ -16,9 +16,176 @@ const NAV_ITEMS = [
   { id: 'users', icon: faUsers, label: 'Users' },
   { id: 'content', icon: faFileAlt, label: 'Content' },
   { id: 'settings', icon: faCog, label: 'Settings' },
+  { id: 'profile', icon: faUser, label: 'Profile' },
 ];
 
 const nfmt = (v) => (typeof v === 'number' ? v.toLocaleString() : (v ?? '0'));
+
+const FEATURE_TOGGLES = [
+  { name: 'features_quiz_enabled', label: 'Quiz Feature' },
+  { name: 'features_flashcard_enabled', label: 'Flashcard Feature' },
+  { name: 'features_chat_enabled', label: 'Chat Feature' },
+  { name: 'features_materials_enabled', label: 'Materials Upload' },
+];
+
+const SettingsTab = ({ settings, loading, saving, message, onSettingsChange, onMessageChange, onSavingChange }) => {
+  const [formData, setFormData] = useState(settings || {});
+
+  useEffect(() => {
+    if (settings) {
+      setFormData(settings);
+    }
+  }, [settings]);
+
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : (type === 'number' ? parseInt(value) || 0 : value)
+    }));
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    onMessageChange({ ok: '', err: '' });
+    onSavingChange(true);
+
+    try {
+      const result = await dashboardService.updateSystemSettings(formData);
+      onSettingsChange(result.data);
+      onMessageChange({ ok: 'Settings saved successfully.', err: '' });
+    } catch (err) {
+      onMessageChange({ ok: '', err: err?.detail || 'Failed to save settings.' });
+    } finally {
+      onSavingChange(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="db-tab">
+        <div className="db-page-header">
+          <h1>System Settings</h1>
+          <p>Configure platform parameters.</p>
+        </div>
+        <div className="db-card" style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-secondary)' }}>
+          <p>Loading settings...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="db-tab">
+      <div className="db-page-header">
+        <h1>System Settings</h1>
+        <p>Configure platform parameters and feature toggles.</p>
+      </div>
+
+      {message.err && (
+        <div className="db-card" style={{ background: '#fef2f2', borderLeft: '4px solid #dc2626', padding: '16px' }}>
+          <span style={{ color: '#dc2626' }}>{message.err}</span>
+        </div>
+      )}
+      {message.ok && (
+        <div className="db-card" style={{ background: '#f0fdf4', borderLeft: '4px solid #16a34a', padding: '16px' }}>
+          <span style={{ color: '#16a34a' }}>{message.ok}</span>
+        </div>
+      )}
+
+      <form onSubmit={handleSave}>
+        <div className="db-card">
+          <h2>General</h2>
+          <div className="db-form-row">
+            <div className="db-field">
+              <label>Platform Name</label>
+              <input type="text" name="platform_name" value={formData.platform_name || ''} onChange={handleInputChange} />
+            </div>
+            <div className="db-field">
+              <label>Support Email</label>
+              <input type="email" name="support_email" value={formData.support_email || ''} onChange={handleInputChange} />
+            </div>
+          </div>
+        </div>
+
+        <div className="db-card">
+          <h2>Feature Toggles</h2>
+          <div style={{ display: 'grid', gap: '16px' }}>
+            {FEATURE_TOGGLES.map(({ name, label }) => (
+              <div key={name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'var(--bg-secondary)', borderRadius: '6px' }}>
+                <span>{label}</span>
+                <input type="checkbox" name={name} checked={formData[name] || false} onChange={handleInputChange} style={{ width: '20px', height: '20px', cursor: 'pointer' }} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="db-card">
+          <h2>File Upload</h2>
+          <div className="db-form-row">
+            <div className="db-field">
+              <label>Max Upload Size (MB)</label>
+              <input type="number" name="max_upload_size_mb" min="1" max="1000" value={formData.max_upload_size_mb || 25} onChange={handleInputChange} />
+            </div>
+            <div className="db-field">
+              <label>Allowed File Types (comma-separated)</label>
+              <input type="text" name="allowed_file_types" value={formData.allowed_file_types || ''} onChange={handleInputChange} placeholder="pdf,docx,txt,..." />
+            </div>
+          </div>
+        </div>
+
+        <div className="db-card">
+          <h2>Quiz Settings</h2>
+          <div className="db-form-row">
+            <div className="db-field">
+              <label>Default Time Limit (minutes)</label>
+              <input type="number" name="default_quiz_time_limit_minutes" min="1" max="300" value={formData.default_quiz_time_limit_minutes || 30} onChange={handleInputChange} />
+            </div>
+            <div className="db-field">
+              <label>Max Questions Per Quiz</label>
+              <input type="number" name="max_quiz_questions" min="1" max="500" value={formData.max_quiz_questions || 100} onChange={handleInputChange} />
+            </div>
+          </div>
+        </div>
+
+        <div className="db-card">
+          <h2>Rate Limiting</h2>
+          <div className="db-form-row">
+            <div className="db-field">
+              <label>Chat Messages Per Day (0 = unlimited)</label>
+              <input type="number" name="chatbot_daily_limit" min="0" value={formData.chatbot_daily_limit || 0} onChange={handleInputChange} />
+            </div>
+            <div className="db-field">
+              <label>Quizzes Per Day (0 = unlimited)</label>
+              <input type="number" name="quiz_daily_limit" min="0" value={formData.quiz_daily_limit || 0} onChange={handleInputChange} />
+            </div>
+          </div>
+        </div>
+
+        <div className="db-card danger">
+          <h2><FontAwesomeIcon icon={faTriangleExclamation} style={{ marginRight: 8 }} />Maintenance Mode</h2>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: 16, fontSize: '0.9rem' }}>
+            Enable maintenance mode to temporarily disable user access. Admins will still have full access.
+          </p>
+          <div style={{ marginBottom: '16px', padding: '12px', background: 'var(--bg-secondary)', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>Enable Maintenance Mode</span>
+            <input type="checkbox" name="maintenance_mode" checked={formData.maintenance_mode || false} onChange={handleInputChange} style={{ width: '20px', height: '20px', cursor: 'pointer' }} />
+          </div>
+          <div className="db-field">
+            <label>Maintenance Message (shown to users)</label>
+            <textarea name="maintenance_message" value={formData.maintenance_message || ''} onChange={handleInputChange} placeholder="We're performing scheduled maintenance..." rows="3" style={{ width: '100%', padding: '8px', border: '1px solid var(--border-color)', borderRadius: '4px' }} />
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button type="submit" className="db-btn db-btn-primary" disabled={saving}>
+            {saving ? 'Saving...' : 'Save Settings'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+};
 
 const formatRelativeTime = (isoDate) => {
   const dt = new Date(isoDate);
@@ -38,7 +205,8 @@ const AnalyticsLineChart = ({ labels = [], series = {} }) => {
     { id: 'new_users', label: 'New Users', color: '#f59e0b' },
     { id: 'quizzes', label: 'Quizzes', color: '#22c55e' },
     { id: 'decks', label: 'Decks', color: '#38bdf8' },
-    { id: 'chat_messages', label: 'Chat Messages', color: '#ef4444' },
+    { id: 'chat_messages', label: 'Chat Messages', color: '#0d2170' },
+    { id: 'uploaded_materials', label: 'Materials', color: '#921e1e' },
   ];
 
   const maxVal = Math.max(
@@ -133,14 +301,19 @@ const AnalyticsLineChart = ({ labels = [], series = {} }) => {
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, isAuthenticated, logout, getUserRole } = useAuth();
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(location.state?.tab || 'overview');
   const [adminStats, setAdminStats] = useState({});
   const [users, setUsers] = useState([]);
   const [usageTrends, setUsageTrends] = useState({ labels: [], series: {} });
   const [loadingStats, setLoadingStats] = useState(true);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [loadingTrends, setLoadingTrends] = useState(true);
+  const [systemSettings, setSystemSettings] = useState(null);
+  const [loadingSettings, setLoadingSettings] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [settingsMessage, setSettingsMessage] = useState({ ok: '', err: '' });
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -169,9 +342,37 @@ const AdminDashboard = () => {
       .finally(() => setLoadingTrends(false));
   }, [isAuthenticated, getUserRole]);
 
+  useEffect(() => {
+    if (location.state?.tab) {
+      setActiveTab(location.state.tab);
+    }
+  }, [location.state]);
+
+  // Load settings when component mounts or settings tab is clicked
+  useEffect(() => {
+    if (activeTab === 'settings' && !systemSettings && !loadingSettings) {
+      setLoadingSettings(true);
+      dashboardService.getSystemSettings()
+        .then(setSystemSettings)
+        .catch(err => {
+          console.error('Failed to load settings:', err);
+          setSettingsMessage({ ok: '', err: 'Failed to load settings' });
+        })
+        .finally(() => setLoadingSettings(false));
+    }
+  }, [activeTab, systemSettings, loadingSettings]);
+
   const handleLogout = async () => {
     await logout();
     navigate('/');
+  };
+
+  const handleNavigate = (id) => {
+    if (id === 'profile') {
+      navigate('/profile');
+      return;
+    }
+    setActiveTab(id);
   };
 
   const handleRemoveUser = async (userId) => {
@@ -186,10 +387,12 @@ const AdminDashboard = () => {
 
   const statCards = [
     { icon: faUsers, label: 'Total Users', value: nfmt(adminStats.total_users) },
-    { icon: faChartBar, label: 'Quizzes', value: nfmt(adminStats.total_quizzes) },
-    { icon: faLayerGroup, label: 'Flashcards', value: nfmt(adminStats.total_flashcards) },
     { icon: faComments, label: 'Chat Messages', value: nfmt(adminStats.total_chat_messages) },
-    { icon: faFileAlt, label: 'Decks', value: nfmt(adminStats.total_materials) },
+    { icon: faChartBar, label: 'Quizzes', value: nfmt(adminStats.total_quizzes) },
+    { icon: faChartBar, label: 'Quiz Questions', value: nfmt(adminStats.total_quiz_questions) },
+    { icon: faFileAlt, label: 'Flashcard Decks', value: nfmt(adminStats.total_flashcard_decks) },
+    { icon: faLayerGroup, label: 'Flashcards', value: nfmt(adminStats.total_flashcards) },
+    { icon: faBook, label: 'Uploaded Materials', value: nfmt(adminStats.total_materials) },
     {
       icon: faTrophy,
       label: 'Avg Score',
@@ -210,7 +413,7 @@ const AdminDashboard = () => {
           user={user}
           navItems={NAV_ITEMS}
           activeId={activeTab}
-          onNavigate={setActiveTab}
+          onNavigate={handleNavigate}
           onLogout={handleLogout}
           variant="admin"
         />
@@ -245,10 +448,19 @@ const AdminDashboard = () => {
               </div>
 
               <div className="db-card">
-                <div className="db-card-header"><h2>Recent Real Activity</h2></div>
+                <div className="db-card-header">
+                  <h2>Recent Real Activity (Last 24 Hours)</h2>
+                  <button
+                    type="button"
+                    className="db-btn db-btn-ghost db-btn-sm"
+                    onClick={() => navigate('/admin-dashboard/activity')}
+                  >
+                    View All Activity
+                  </button>
+                </div>
                 <div className="db-timeline">
                   {(adminStats.recent_activity || []).length === 0 ? (
-                    <p style={{ color: 'var(--text-secondary)', margin: 0 }}>No recent activity found.</p>
+                    <p style={{ color: 'var(--text-secondary)', margin: 0 }}>No activity in the past 24 hours.</p>
                   ) : (
                     (adminStats.recent_activity || []).map((item, idx) => (
                       <div className="db-timeline-item" key={`${item.type}-${item.created_at}-${idx}`}>
@@ -381,43 +593,15 @@ const AdminDashboard = () => {
           )}
 
           {activeTab === 'settings' && (
-            <div className="db-tab">
-              <div className="db-page-header">
-                <h1>System Settings</h1>
-                <p>Configure platform parameters.</p>
-              </div>
-
-              <div className="db-card">
-                <h2>General</h2>
-                <form className="db-form" onSubmit={(e) => e.preventDefault()}>
-                  <div className="db-form-row">
-                    <div className="db-field">
-                      <label>Platform Name</label>
-                      <input type="text" defaultValue="Lamla AI" />
-                    </div>
-                    <div className="db-field">
-                      <label>Max Upload Size (MB)</label>
-                      <input type="number" defaultValue="25" />
-                    </div>
-                  </div>
-                  <div className="db-field" style={{ maxWidth: 300 }}>
-                    <label>Quiz Time Limit (min)</label>
-                    <input type="number" defaultValue="30" />
-                  </div>
-                  <button type="submit" className="db-btn db-btn-primary">Save Settings</button>
-                </form>
-              </div>
-
-              <div className="db-card danger">
-                <h2><FontAwesomeIcon icon={faTriangleExclamation} style={{ marginRight: 8 }} />Danger Zone</h2>
-                <p style={{ color: 'var(--text-secondary)', marginBottom: 16, fontSize: '0.9rem' }}>
-                  Irreversible system actions. Proceed with caution.
-                </p>
-                <button className="db-btn db-btn-danger">
-                  <FontAwesomeIcon icon={faTriangleExclamation} /> Clear All Cache
-                </button>
-              </div>
-            </div>
+            <SettingsTab
+              settings={systemSettings}
+              loading={loadingSettings}
+              saving={savingSettings}
+              message={settingsMessage}
+              onSettingsChange={setSystemSettings}
+              onMessageChange={setSettingsMessage}
+              onSavingChange={setSavingSettings}
+            />
           )}
         </main>
       </div>

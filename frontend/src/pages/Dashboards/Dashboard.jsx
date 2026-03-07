@@ -10,6 +10,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import './Dashboard.css';
 import { dashboardService } from '../../services/dashboard';
+import { materialsService } from '../../services/materials';
 
 const NAV_ITEMS = [
   { id: 'overview', icon: faHome,          label: 'Dashboard'    },
@@ -42,8 +43,9 @@ const Dashboard = () => {
       dashboardService.getStats(),
       dashboardService.getQuizHistory(),
       dashboardService.getFlashcardHistory().catch(() => []),
+      materialsService.getMine(),
     ])
-      .then(([statsData, quizzes, flashcardDecks]) => {
+      .then(([statsData, quizzes, flashcardDecks, materials]) => {
         setStats({
           totalQuizzes:    statsData.total_quizzes,
           averageScore:    statsData.average_score,
@@ -52,7 +54,7 @@ const Dashboard = () => {
         });
         setQuizHistory(quizzes || []);
 
-        // Merge quizzes + flashcard decks into a single activity feed
+        // Merge quizzes + flashcard decks + materials into a single activity feed
         const quizActivity = (quizzes || []).map(q => ({
           id:         `quiz-${q.id}`,
           type:       'quiz',
@@ -70,7 +72,15 @@ const Dashboard = () => {
           created_at: d.created_at,
         }));
 
-        const merged = [...quizActivity, ...deckActivity].sort(
+        const materialActivity = (materials || []).map(m => ({
+          id:   `material-${m.id}`,
+          type: `material`,
+          title: m.title,
+          subtitle: `${m.file_size_display} · ${m.download_count} downloads`,
+          created_at: m.created_at,
+        }));
+
+        const merged = [...quizActivity, ...deckActivity, ...materialActivity].sort(
           (a, b) => new Date(b.created_at) - new Date(a.created_at)
         );
         setRecentActivity(merged);
@@ -98,8 +108,8 @@ const Dashboard = () => {
     { icon: faRobot,      title: 'AI Tutor',     desc: 'Get instant personalised help',   path: '/ai-tutor'    },
   ];
 
-  const activityIcon = (type) => type === 'quiz' ? faBook : faLayerGroup;
-  const activityLabel = (type) => type === 'quiz' ? 'Quiz' : 'Flashcards';
+  const activityIcon  = (type) => type === 'quiz' ? faBook : type === 'material' ? faCloudUploadAlt : faLayerGroup;
+  const activityLabel = (type) => type === 'quiz' ? 'Quiz'  : type === 'material' ? 'Material uploaded' : 'Flashcards';
 
   return (
     <div className="db-container">

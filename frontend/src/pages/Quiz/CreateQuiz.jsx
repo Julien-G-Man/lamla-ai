@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import djangoApi from '../../services/api';
 import './CreateQuiz.css';
@@ -13,22 +13,27 @@ import {
     faChartLine,
     faSpinner,
     faExclamationCircle,
-    faInfoCircle
+    faInfoCircle,
+    faFilePdf,
 } from '@fortawesome/free-solid-svg-icons';
 
 const CreateQuiz = ({ user }) => {
-    const navigate = useNavigate();
+    const navigate  = useNavigate();
+    const location  = useLocation();
+
+    // Pre-fill from Materials "Use for Quiz" navigation
+    const prefill = location.state || {};
 
     // --- State Variables ---
-    const [activeTab, setActiveTab] = useState('fileContent');
-    const [subject, setSubject] = useState('');
+    const [activeTab, setActiveTab]     = useState(prefill.studyText ? 'textContent' : 'fileContent');
+    const [subject, setSubject]         = useState(prefill.subject || '');
     const [customSubject, setCustomSubject] = useState('');
     const [isOtherSelected, setIsOtherSelected] = useState(false);
-    const [studyText, setStudyText] = useState('');
-    const [numMcq, setNumMcq] = useState(7);
-    const [numShort, setNumShort] = useState(3);
-    const [quizTime, setQuizTime] = useState(10);
-    const [difficulty, setDifficulty] = useState('random');
+    const [studyText, setStudyText]     = useState(prefill.studyText || '');
+    const [numMcq, setNumMcq]           = useState(7);
+    const [numShort, setNumShort]       = useState(3);
+    const [quizTime, setQuizTime]       = useState(10);
+    const [difficulty, setDifficulty]   = useState('random');
 
     const [isExtracting, setIsExtracting] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -36,7 +41,6 @@ const CreateQuiz = ({ user }) => {
     const [errorMessages, setErrorMessages] = useState([]);
     const [toast, setToast] = useState({ message: '', type: '', visible: false });
 
-    // --- Refs ---
     const fileInputRef = useRef(null);
 
     // --- Helpers ---
@@ -46,12 +50,18 @@ const CreateQuiz = ({ user }) => {
 
     useEffect(() => {
         if (toast.visible) {
-            const timer = setTimeout(() => {
-                setToast(prev => ({ ...prev, visible: false }));
-            }, 5000);
+            const timer = setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 5000);
             return () => clearTimeout(timer);
         }
     }, [toast.visible]);
+
+    // Show banner if pre-filled from a material
+    useEffect(() => {
+        if (prefill.studyText && prefill.sourceTitle) {
+            showToast(`Loaded: "${prefill.sourceTitle}"`, 'success');
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const handleSubjectChange = (e) => {
         const val = e.target.value;
@@ -71,15 +81,14 @@ const CreateQuiz = ({ user }) => {
 
         try {
             const response = await djangoApi.post('/quiz/ajax-extract-text/', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
+                headers: { 'Content-Type': 'multipart/form-data' },
             });
-
             if (response.data.text) {
                 setStudyText(response.data.text);
                 setActiveTab('textContent');
                 showToast('Text extracted successfully!', 'success');
             }
-        } catch (err) {
+        } catch {
             showToast('Failed to extract text.', 'error');
         } finally {
             setIsExtracting(false);
@@ -89,20 +98,16 @@ const CreateQuiz = ({ user }) => {
     const validateForm = () => {
         const errors = [];
         const finalSubject = isOtherSelected ? customSubject.trim() : subject;
-
         if (!finalSubject) errors.push('Please select or enter a subject');
-
         if (activeTab === 'textContent') {
             if (studyText.trim().length < 30) errors.push('Please enter at least 30 characters of text');
             if (studyText.length > 50000) errors.push('Text is too long (max 50,000)');
         } else {
             if (!fileInputRef.current?.files.length) errors.push('Please upload a file');
         }
-
         if (numMcq <= 0 && numShort <= 0) errors.push('Select at least one question type');
-        if (numMcq > 20) errors.push('Maximum MCQ is 20');
+        if (numMcq > 20)  errors.push('Maximum MCQ is 20');
         if (numShort > 10) errors.push('Maximum Short Answer is 10');
-
         setErrorMessages(errors);
         return errors.length === 0;
     };
@@ -112,11 +117,7 @@ const CreateQuiz = ({ user }) => {
         if (!validateForm()) return;
 
         const finalSubject = isOtherSelected ? customSubject.trim() : subject;
-
-        if (!finalSubject) {
-            setErrorMessages(['Please select a subject']);
-            return;
-        }
+        if (!finalSubject) { setErrorMessages(['Please select a subject']); return; }
 
         setIsGenerating(true);
         try {
@@ -126,7 +127,7 @@ const CreateQuiz = ({ user }) => {
                 num_mcq: numMcq,
                 num_short: numShort,
                 quiz_time: quizTime,
-                difficulty: difficulty
+                difficulty,
             });
             navigate('/quiz/play', { state: { quizData: response.data } });
         } catch (err) {
@@ -137,14 +138,9 @@ const CreateQuiz = ({ user }) => {
 
     const handleClear = () => {
         if (window.confirm('Clear all fields?')) {
-            setSubject('');
-            setCustomSubject('');
-            setIsOtherSelected(false);
-            setStudyText('');
-            setFileNameDisplay('');
-            setNumMcq(7);
-            setNumShort(3);
-            setQuizTime(10);
+            setSubject(''); setCustomSubject(''); setIsOtherSelected(false);
+            setStudyText(''); setFileNameDisplay('');
+            setNumMcq(7); setNumShort(3); setQuizTime(10);
             setErrorMessages([]);
             if (fileInputRef.current) fileInputRef.current.value = '';
             showToast('Form cleared', 'info');
@@ -158,10 +154,20 @@ const CreateQuiz = ({ user }) => {
                 <div className="quiz-card-container">
                     <h1 className="main-page-title">Quiz Mode</h1>
                     <p className="main-page-description">
-                        Upload your study materials or paste content to create customized quiz questions with AI.
+                        Upload your study materials or paste content to create customised quiz questions with AI.
                     </p>
 
+                    {/* Banner when pre-filled from a material */}
+                    {prefill.sourceTitle && (
+                        <div className="file-name-display success" style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <FontAwesomeIcon icon={faFilePdf} style={{ color: '#e53e3e' }} />
+                            Content loaded from: <strong>{prefill.sourceTitle}</strong>
+                        </div>
+                    )}
+
                     <form onSubmit={handleSubmit}>
+
+                        {/* Subject */}
                         <div className="subject-section">
                             <label className="subject-label">
                                 <span>Subject / Topic</span>
@@ -182,7 +188,6 @@ const CreateQuiz = ({ user }) => {
                                 <option value="History">History</option>
                                 <option value="Geography">Geography</option>
                                 <option value="Economics">Economics</option>
-                                <option value="Programming">Programming</option>
                                 <option value="Other">Other (type your own)</option>
                             </select>
 
@@ -193,7 +198,7 @@ const CreateQuiz = ({ user }) => {
                                         className="subject-input"
                                         placeholder="Type subject/topic (e.g. Quantum Mechanics)"
                                         value={customSubject}
-                                        onChange={(e) => setCustomSubject(e.target.value)}
+                                        onChange={e => setCustomSubject(e.target.value)}
                                         autoFocus
                                     />
                                 </div>
@@ -204,17 +209,18 @@ const CreateQuiz = ({ user }) => {
                             </div>
                         </div>
 
+                        {/* Tabs */}
                         <div className="tab-group">
                             <button
                                 type="button"
-                                className={`tab ${activeTab === 'fileContent' ? 'active' : ''}`}
+                                className={`tab${activeTab === 'fileContent' ? ' active' : ''}`}
                                 onClick={() => setActiveTab('fileContent')}
                             >
                                 <FontAwesomeIcon icon={faCloudUploadAlt} /> Upload File
                             </button>
                             <button
                                 type="button"
-                                className={`tab ${activeTab === 'textContent' ? 'active' : ''}`}
+                                className={`tab${activeTab === 'textContent' ? ' active' : ''}`}
                                 onClick={() => setActiveTab('textContent')}
                             >
                                 <FontAwesomeIcon icon={faKeyboard} /> Enter Text
@@ -225,9 +231,9 @@ const CreateQuiz = ({ user }) => {
                             <div className="tab-content active slide-in">
                                 <div
                                     className="upload-zone"
-                                    onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = '#FFD600'; }}
-                                    onDragLeave={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = '#E6C200'; }}
-                                    onDrop={(e) => {
+                                    onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = '#FFD600'; }}
+                                    onDragLeave={e => { e.preventDefault(); e.currentTarget.style.borderColor = '#E6C200'; }}
+                                    onDrop={e => {
                                         e.preventDefault();
                                         handleFileChange({ target: { files: e.dataTransfer.files } });
                                     }}
@@ -235,7 +241,6 @@ const CreateQuiz = ({ user }) => {
                                     <div className="upload-icon">📖</div>
                                     <div className="upload-text">Upload your study materials</div>
                                     <div className="upload-description">PDF, DOCX, PPT, PPTX, or TXT</div>
-
                                     <input
                                         type="file"
                                         ref={fileInputRef}
@@ -257,7 +262,7 @@ const CreateQuiz = ({ user }) => {
                                 <textarea
                                     placeholder="Paste your study materials here..."
                                     value={studyText}
-                                    onChange={(e) => setStudyText(e.target.value)}
+                                    onChange={e => setStudyText(e.target.value)}
                                 />
                                 <div className="character-count">
                                     <span>{studyText.length}</span> / 50000 characters
@@ -265,22 +270,23 @@ const CreateQuiz = ({ user }) => {
                             </div>
                         )}
 
+                        {/* Options */}
                         <div className="options-row">
                             <div className="option-group">
                                 <span><FontAwesomeIcon icon={faListUl} /> MCQ Questions</span>
-                                <input type="number" value={numMcq} onChange={(e) => setNumMcq(e.target.value)} min="0" max="20" className="number-input" />
+                                <input type="number" value={numMcq} onChange={e => setNumMcq(e.target.value)} min="0" max="20" className="number-input" />
                             </div>
                             <div className="option-group">
                                 <span><FontAwesomeIcon icon={faPen} /> Short Answer</span>
-                                <input type="number" value={numShort} onChange={(e) => setNumShort(e.target.value)} min="0" max="10" className="number-input" />
+                                <input type="number" value={numShort} onChange={e => setNumShort(e.target.value)} min="0" max="10" className="number-input" />
                             </div>
                             <div className="option-group">
                                 <span><FontAwesomeIcon icon={faClock} /> Quiz Time (min)</span>
-                                <input type="number" value={quizTime} onChange={(e) => setQuizTime(Math.max(1, parseInt(e.target.value, 10) || 10))} min="1" max="120" className="number-input" />
+                                <input type="number" value={quizTime} onChange={e => setQuizTime(Math.max(1, parseInt(e.target.value, 10) || 10))} min="1" max="120" className="number-input" />
                             </div>
                             <div className="option-group">
                                 <span><FontAwesomeIcon icon={faChartLine} /> Difficulty</span>
-                                <select id="difficultySelect" value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
+                                <select id="difficultySelect" value={difficulty} onChange={e => setDifficulty(e.target.value)}>
                                     <option value="random">Random</option>
                                     <option value="easy">Easy</option>
                                     <option value="medium">Medium</option>
@@ -291,7 +297,9 @@ const CreateQuiz = ({ user }) => {
 
                         <div className="actions-row">
                             <button type="submit" className="main-btn" disabled={isGenerating || isExtracting}>
-                                {isGenerating ? <><FontAwesomeIcon icon={faSpinner} spin /> Generating...</> : 'Generate Questions'}
+                                {isGenerating
+                                    ? <><FontAwesomeIcon icon={faSpinner} spin /> Generating…</>
+                                    : 'Generate Questions'}
                             </button>
                             <button type="button" className="clear-btn" onClick={handleClear}>Clear</button>
                         </div>

@@ -12,9 +12,18 @@ import './Sidebar.css';
  *   activeId   - currently highlighted nav item id
  *   onNavigate - (id) => void
  *   onLogout   - () => void
+ *   showMobileLogout - show logout button in bottom mobile nav
  *   variant    - 'user' | 'admin'  (controls accent colour)
  */
-const Sidebar = ({ user, navItems, activeId, onNavigate, onLogout, variant = 'user' }) => {
+const Sidebar = ({
+  user,
+  navItems,
+  activeId,
+  onNavigate,
+  onLogout,
+  showMobileLogout = false,
+  variant = 'user',
+}) => {
   return (
     <>
       <aside className={`db-sidebar db-sidebar--${variant}`}>
@@ -60,10 +69,12 @@ const Sidebar = ({ user, navItems, activeId, onNavigate, onLogout, variant = 'us
             <span>{label}</span>
           </button>
         ))}
-        <button className="db-mobile-nav-item" onClick={onLogout}>
-          <FontAwesomeIcon icon={faRightFromBracket} />
-          <span>Logout</span>
-        </button>
+        {showMobileLogout && (
+          <button className="db-mobile-nav-item" onClick={onLogout}>
+            <FontAwesomeIcon icon={faRightFromBracket} />
+            <span>Logout</span>
+          </button>
+        )}
       </nav>
     </>
   );

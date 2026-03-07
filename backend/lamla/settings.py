@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 import environ
+import cloudinary
 from dotenv import load_dotenv
 from pathlib import Path
 from corsheaders.defaults import default_headers
@@ -27,6 +28,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 DEBUG = os.getenv("DEBUG", "False").lower() == "true"
+
+cloudinary.config(
+    cloud_name = os.getenv('CLOUDINARY_CLOUD_NAME'),
+    api_key    = os.getenv('CLOUDINARY_API_KEY'),
+    api_secret = os.getenv('CLOUDINARY_API_SECRET'),
+    secure=True
+)
 
 ALLOWED_HOSTS = [
     "*",
@@ -64,7 +72,8 @@ INSTALLED_APPS = [
     'apps.chatbot',
     'apps.quiz',
     'apps.flashcards',
-    'apps.dashboard'
+    'apps.dashboard',
+    'apps.materials'
 ]
 
 MIDDLEWARE = [
@@ -261,6 +270,9 @@ CSRF_TRUSTED_ORIGINS = [
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Enable WhiteNoise to serve static files without Nginx
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'

@@ -11,6 +11,7 @@ import VerifyEmail from "./pages/Auth/VerifyEmail";
 import Dashboard from "./pages/Dashboards/Dashboard";
 import AdminDashboard from "./pages/Dashboards/AdminDashboard";
 import AdminUserDetails from "./pages/Dashboards/AdminUserDetails";
+import AdminActivity from "./pages/Dashboards/AdminActivity";
 import CreateQuiz from "./pages/Quiz/CreateQuiz";
 import Quiz from "./pages/Quiz/Quiz";
 import QuizResults from "./pages/Quiz/QuizResults";
@@ -20,6 +21,8 @@ import FlashcardDeck from "./pages/Flashcards/FlashcardDeck";
 import FlashcardStudy from "./pages/Flashcards/FlashcardStudy";
 import Chatbot from "./pages/Chatbot/Chatbot";
 import Profile from "./pages/UserProfile/Profile";
+import Materials from "./pages/Materials/Materials";
+import MaterialUpload from "./pages/Materials/MaterialUpload";
 import NotFound from "./pages/NotFound/NotFound";
 
 const WAKE_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
@@ -57,6 +60,7 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/admin-dashboard" element={<AdminDashboard />} />
             <Route path="/admin-dashboard/user/:id" element={<AdminUserDetails />} />
+            <Route path="/admin-dashboard/activity" element={<AdminActivity />} />
             <Route path="/profile" element={<Profile />} />
 
             <Route path="/quiz/create" element={<CreateQuiz />} />
@@ -69,6 +73,9 @@ function App() {
             <Route path="/flashcards/deck/:id" element={<FlashcardDeck />} />
             <Route path="/flashcards/study/:id" element={<FlashcardStudy />} />
             <Route path="/flashcard" element={<Navigate to="/flashcards" replace />} />
+
+            <Route path="/materials" element={<Materials />} />
+            <Route path="/materials/upload" element={<MaterialUpload />} />
 
             <Route path="/ai-tutor" element={<Chatbot />} />
             <Route path="/ai" element={<Navigate to="/ai-tutor" replace />} />

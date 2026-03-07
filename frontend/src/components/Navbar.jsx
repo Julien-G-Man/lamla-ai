@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import "../App.css";
 
 const Navbar = ({ user, brandOnly = false }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const isHome = location.pathname === "/";
 
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
 
   const [isScrolled, setIsScrolled] = useState(!isHome || window.scrollY > 50);
@@ -43,6 +44,12 @@ const Navbar = ({ user, brandOnly = false }) => {
     }
   };
 
+  const handleLogout = async () => {
+    closeMenu();
+    await logout();
+    navigate("/");
+  };
+
   return (
     <>
       <header className={`main-header ${isScrolled ? "scrolled" : ""}`}>
@@ -62,9 +69,10 @@ const Navbar = ({ user, brandOnly = false }) => {
                   <li><Link to="/ai-tutor">AI Tutor</Link></li>
                   <li><Link to="/quiz/create">Quiz</Link></li>
                   <li><Link to="/flashcards">Flashcards</Link></li>
+                  <li><Link to="/dashboard">Dashboard</Link></li>
                   {isAuthenticated || user ? (
                     <li className="nav-item-cta">
-                      <Link to="/dashboard" className="btn btn-nav-secondary">Dashboard</Link>
+                      <button type="button" className="btn btn-nav-secondary" onClick={handleLogout}>Logout</button>
                     </li>
                   ) : (
                     <li className="nav-item-cta">
@@ -101,9 +109,12 @@ const Navbar = ({ user, brandOnly = false }) => {
             <li><Link to="/quiz/create" onClick={closeMenu}>Quiz</Link></li>
             <li><Link to="/flashcards" onClick={closeMenu}>Flashcards</Link></li>
             {isAuthenticated || user ? (
-              <li className="nav-item-cta">
-                <Link to="/dashboard" className="btn btn-nav-secondary" onClick={closeMenu}>Dashboard</Link>
-              </li>
+              <>
+                <li><Link to="/dashboard" onClick={closeMenu}>Dashboard</Link></li>
+                <li className="nav-item-cta">
+                  <button type="button" className="btn btn-nav-secondary" onClick={handleLogout}>Logout</button>
+                </li>
+              </>
             ) : (
               <>
                 <li><Link to="/auth/login" onClick={closeMenu}>Login</Link></li>
