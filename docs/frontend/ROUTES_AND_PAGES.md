@@ -1,4 +1,4 @@
-﻿# Frontend Routes and Pages
+# Frontend Routes and Pages
 
 Source of truth: `frontend/src/App.jsx`.
 
@@ -21,6 +21,8 @@ Legacy redirects:
 
 - `/dashboard` -> Dashboard
 - `/admin-dashboard` -> AdminDashboard
+- `/admin-dashboard/user/:id` -> AdminUserDetails
+- `/admin-dashboard/activity` -> AdminActivity
 - `/profile` -> Profile
 
 ## Quiz
@@ -38,9 +40,19 @@ Legacy redirects:
 - `/flashcards/study/:id` -> FlashcardStudy
 - `/flashcard` -> redirect `/flashcards`
 
+## Materials
+
+- `/materials` -> Materials
+- `/materials/upload` -> MaterialUpload
+
 ## AI Tutor
 
 - `/ai-tutor` -> Chatbot
+
+Aliases:
+
+- `/ai` -> redirect `/ai-tutor`
+- `/chat` -> redirect `/ai-tutor`
 - `/chatbot` -> redirect `/ai-tutor`
 
 ## Fallback

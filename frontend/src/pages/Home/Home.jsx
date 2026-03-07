@@ -226,7 +226,7 @@ const Home = ({ user }) => {
 
                 <a href="/materials" className="feature-card">
                   <div className="feature-image">
-                    <img src="/assets/steam.jpg" alt="Subject Selection" />
+                    <img src="/assets/steam.jpg" alt="Uploaded Materials" />
                   </div>
                   <div className="feature-card-content">
                     <h3 className="feature-title">Materials</h3>
