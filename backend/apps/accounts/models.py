@@ -63,12 +63,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff  = models.BooleanField(default=False)
 
     profile_image = models.URLField(blank=True, null=True)
-
-    # Email verification
+    
     is_email_verified  = models.BooleanField(default=False)
     email_verified_at  = models.DateTimeField(null=True, blank=True)
 
-    # Audit / security
     last_login_ip = models.GenericIPAddressField(null=True, blank=True)
 
     date_joined = models.DateTimeField(default=timezone.now)

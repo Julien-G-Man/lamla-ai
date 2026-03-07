@@ -13,12 +13,19 @@ from apps.quiz.models import QuizSession
 from apps.chatbot.models import ChatSession, ChatMessage
 from apps.accounts.serializers import user_to_dict
 from apps.accounts.services import EmailDeliveryError
-from .services import send_contact_emails, send_newsletter_emails
 from .serializers import ContactFormSerializer, NewsletterSerializer
+from .services import send_contact_emails, send_newsletter_emails
 from .helpers import _calculate_streak, _tokens_from_chars, _safe_char_sum, _collect_admin_activity
 
 
 logger = logging.getLogger(__name__)
+
+
+class IsAdminUser(BasePermission):
+    """Permission class to check if user is an admin."""
+    
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated and getattr(request.user, 'is_admin', False)
 
 class DashboardStatsView(APIView):
     """GET /api/dashboard/stats/"""
@@ -50,12 +57,9 @@ class DashboardStatsView(APIView):
 
 class AdminDashboardStatsView(APIView):
     """GET /api/dashboard/admin/stats/"""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsAdminUser]
 
     def get(self, request):
-        if not request.user.is_admin:
-            return Response({'detail': 'Forbidden.'}, status=403)
-
         from apps.accounts.models import User
         from apps.flashcards.models import Deck, Flashcard
         from apps.materials.models import Material
@@ -153,11 +157,9 @@ class AdminDashboardStatsView(APIView):
 
 class AdminUsageTrendsView(APIView):
     """GET /api/dashboard/admin/usage-trends/?days=14"""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsAdminUser]
 
     def get(self, request):
-        if not request.user.is_admin:
-            return Response({'detail': 'Forbidden.'}, status=403)
 
         from apps.accounts.models import User
         from apps.flashcards.models import Deck
@@ -220,11 +222,9 @@ class AdminUsageTrendsView(APIView):
 
 class AdminActivityFeedView(APIView):
     """GET /api/dashboard/admin/activity/?period=day|week|month|quarter|year|all&limit=50&offset=0"""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsAdminUser]
 
     def get(self, request):
-        if not request.user.is_admin:
-            return Response({'detail': 'Forbidden.'}, status=403)
 
         period = (request.query_params.get("period") or "day").strip().lower()
 
@@ -287,14 +287,23 @@ class AdminActivityFeedView(APIView):
 
 
 class AdminUsersListView(APIView):
-    """GET /api/dashboard/admin/users/"""
-    permission_classes = [IsAuthenticated]
+    """GET /api/dashboard/admin/users/ - paginated list of users"""
+    permission_classes = [IsAuthenticated, IsAdminUser]
 
     def get(self, request):
-        if not request.user.is_admin:
-            return Response({'detail': 'Forbidden.'}, status=403)
-
         from apps.accounts.models import User
+        from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+
+        # Pagination params
+        page = request.query_params.get('page', 1)
+        page_size = request.query_params.get('page_size', 50)
+        
+        try:
+            page = int(page)
+            page_size = min(int(page_size), 200)  # Max 200 per page
+        except (ValueError, TypeError):
+            page = 1
+            page_size = 50
 
         # Use a safe Subquery for chat count so we don't depend on
         # the ChatSession.user related_name being 'chatsession'.
@@ -305,17 +314,27 @@ class AdminUsersListView(APIView):
             .annotate(c=dm.Count('id'))
             .values('c')
         )
-        users = (
+        
+        all_users = (
             User.objects
             .annotate(
                 total_quizzes=dm.Count('quiz_sessions', distinct=True),
                 total_flashcard_sets=dm.Count('decks', distinct=True),
                 total_chats=Coalesce(dm.Subquery(chat_count_sq), Value(0)),
             )
-            .order_by('-date_joined')[:50]
+            .order_by('-date_joined')
         )
+        
+        paginator = Paginator(all_users, page_size)
+        try:
+            page_obj = paginator.page(page)
+        except PageNotAnInteger:
+            page_obj = paginator.page(1)
+        except EmptyPage:
+            page_obj = paginator.page(paginator.num_pages)
+        
         data = []
-        for u in users:
+        for u in page_obj:
             d = user_to_dict(u)
             d['total_quizzes'] = int(getattr(u, 'total_quizzes', 0) or 0)
             d['total_flashcard_sets'] = int(getattr(u, 'total_flashcard_sets', 0) or 0)
@@ -327,12 +346,10 @@ class AdminUsersListView(APIView):
 
 
 class AdminUserDeleteView(APIView):
-    """DELETE /api/dashboard/admin/users/<user_id>/"""
-    permission_classes = [IsAuthenticated]
+    """DELETE /api/dashboard/admin/users/<user_id>/ - get user details and delete"""
+    permission_classes = [IsAuthenticated, IsAdminUser]
 
     def get(self, request, user_id):
-        if not request.user.is_admin:
-            return Response({'detail': 'Forbidden.'}, status=403)
 
         from apps.accounts.models import User
         from apps.flashcards.models import Deck, Flashcard
@@ -426,18 +443,20 @@ class AdminUserDeleteView(APIView):
         })
 
     def delete(self, request, user_id):
-        if not request.user.is_admin:
-            return Response({'detail': 'Forbidden.'}, status=403)
-
         from apps.accounts.models import User
         try:
             target = User.objects.get(id=user_id)
             if target.is_admin:
                 return Response({'detail': 'Cannot delete an admin.'}, status=400)
+            
+            # Audit log the deletion
+            logger.warning("AUDIT: Admin %s deleted user %s (%s) at %s", 
+                          request.user.email, target.id, target.email, timezone.now())
+            
             target.delete()
-            return Response({'detail': 'User removed.'})
+            return Response({'detail': f'User {target.username} removed.'})
         except User.DoesNotExist:
-            return Response({'detail': 'User not found.'}, status=404)
+            return Response({'detail': f'User {target.username} not found.'}, status=404)
 
 
 class ContactMessageView(APIView):

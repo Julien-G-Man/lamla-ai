@@ -161,12 +161,22 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle"
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "100/hour",
+        "user": "1000/hour",
+        "auth": "5/hour",  # Auth endpoints (signup, login, verify) - strict
+    },
     # Return clean 401s instead of redirecting to login page
     "UNAUTHENTICATED_USER": None,
 }
 
 AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.ModelBackend',
+    'apps.accounts.backend.EmailOrUsernameBackend',  # Supports email & username login
+    'django.contrib.auth.backends.ModelBackend',     # Fallback
 ]
 
 AUTH_PASSWORD_VALIDATORS = [

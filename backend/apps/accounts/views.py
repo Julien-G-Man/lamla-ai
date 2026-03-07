@@ -6,6 +6,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import SimpleRateThrottle
 from rest_framework.views import APIView
 
 from .serializers import (
@@ -22,9 +23,22 @@ from .services import send_verification_email
 logger = logging.getLogger(__name__)
 
 
+# Rate limiting for authentication endpoints
+class AuthThrottle(SimpleRateThrottle):
+    """Allow 5 auth attempts per hour per IP address."""
+    scope = "auth"
+    
+    def get_cache_key(self):
+        # Rate limit per IP address for public endpoints (no user context)
+        if self.request.user and self.request.user.is_authenticated:
+            return f"auth_{self.request.user.id}"
+        return f"auth_{self.get_ident(self.request)}"
+
+
 class SignupView(APIView):
     """POST /api/auth/signup/ - public, creates user, sends verification email, returns token + user."""
     permission_classes = [AllowAny]
+    throttle_classes = [AuthThrottle]
 
     def post(self, request):
         serializer = SignupSerializer(data=request.data)
@@ -55,6 +69,7 @@ class SignupView(APIView):
 class LoginView(APIView):
     """POST /api/auth/login/ - public, returns token + user (including is_email_verified)."""
     permission_classes = [AllowAny]
+    throttle_classes = [AuthThrottle]
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data, context={"request": request})
@@ -65,11 +80,14 @@ class LoginView(APIView):
             return Response({"detail": detail}, status=status.HTTP_401_UNAUTHORIZED)
 
         user = serializer.validated_data["user"]
-        token, _ = Token.objects.get_or_create(user=user)
-
+        
         user.last_login = timezone.now()
         user.last_login_ip = _get_client_ip(request)
         user.save(update_fields=["last_login", "last_login_ip"])
+
+        # Invalidate old tokens and create new one (security: prevent token reuse)
+        Token.objects.filter(user=user).delete()
+        token = Token.objects.create(user=user)
 
         logger.info("User logged in: %s (admin=%s)", user.email, user.is_admin)
         print("User logged in: %s (admin=%s)", user.email, user.is_admin)
@@ -101,11 +119,6 @@ class MeView(APIView):
 
 
 class VerifyEmailView(APIView):
-    """
-    POST /api/auth/verify-email/
-    Public - React sends uid + token extracted from the link in the verification email.
-    """
-    permission_classes = [AllowAny]
 
     def post(self, request):
         serializer = VerifyEmailSerializer(data=request.data)
@@ -129,6 +142,7 @@ class ResendVerificationEmailView(APIView):
     Authenticated - lets unverified users request a new verification email.
     """
     permission_classes = [IsAuthenticated]
+    throttle_classes = [AuthThrottle]
 
     def post(self, request):
         serializer = ResendVerificationSerializer(data={}, context={"request": request})
@@ -288,9 +302,15 @@ def _get_client_ip(request) -> str | None:
 
 
 class DebugUsers(APIView):
-    permission_classes = [AllowAny]
+    """List all users for debugging. Admin-only."""
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        if not request.user.is_admin:
+            return Response(
+                {"detail": "Admin access required."},
+                status=status.HTTP_403_FORBIDDEN
+            )
         from .models import User
-        users = User.objects.all().values("email", "username", "is_email_verified", "is_admin")
-        return Response(list(users))
+        users = User.objects.all().values("id", "email", "username", "is_email_verified", "is_admin", "date_joined")
+        return Response({"users": list(users)})

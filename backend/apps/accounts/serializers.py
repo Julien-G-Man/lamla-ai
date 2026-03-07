@@ -143,8 +143,8 @@ class ResendVerificationSerializer(serializers.Serializer):
 # ── Profile update ────────────────────────────────────────────────────────────
 
 class UpdateProfileSerializer(serializers.Serializer):
-    username = serializers.CharField(max_length=50, required=False)
-    email    = serializers.EmailField(required=False)
+    username = serializers.CharField(min_length=3, max_length=50, required=False, allow_blank=False)
+    email    = serializers.EmailField(max_length=254, required=False)
 
     def validate_email(self, value):
         value = value.strip().lower()
