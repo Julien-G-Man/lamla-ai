@@ -40,7 +40,7 @@ Keywords: email verification, verify email, verification link, resend verificati
 **Why verify?** Verified accounts have full platform access and trusted status.
 
 ## Profile Settings
-Keywords: profile, update profile, profile image, avatar, account settings, display name, edit profile, my profile
+Keywords: profile, update profile, profile image, avatar, account settings, display name, edit profile, my profile, photo, profile picture, upload photo
 
 **To access your profile:**
 1. Log in to your account
@@ -48,12 +48,61 @@ Keywords: profile, update profile, profile image, avatar, account settings, disp
 3. In the left sidebar, click **Profile**
 4. Or go directly to `/profile`
 
-**What you can manage:**
-- View and edit your username (display name)
-- See your email address
-- Upload or change your profile picture
-- View account information (join date, last login)
-- Update account preferences
+**Profile page sections:**
+
+### Account Information
+**Edit your username and email:**
+- **Username field** - Your display name on platform
+  - Max 50 characters
+  - Must be unique
+  - Shows validation: ✓ "Looks good" when valid
+- **Email Address field** - Your login email
+  - Shows validation: ✓ "Valid email" when valid
+- **Save Changes button** - Only enabled when changes detected and form is valid
+
+**Validation feedback:**
+- Red ✗ icon if field is invalid
+- Green ✓ icon if field is valid
+- Clear error messages below fields
+
+### Profile Photo Section
+
+**Upload a new profile picture:**
+
+1. Look for the section labeled **Profile Photo**
+2. Click the **file input box**
+3. Select an image file from your device
+4. File info appears: Name and size in MB
+5. Click **Upload Photo** button
+6. Watch for "Uploading..." message (button text changes)
+7. See success message: "Photo updated" (green checkmark)
+
+**Supported image formats:**
+- JPEG (.jpg, .jpeg)
+- PNG (.png)
+- WebP (.webp)
+- GIF (.gif)
+
+**Size requirements:**
+- Maximum: 5 MB per image
+- Larger files show error: "Image must be under 5 MB."
+
+**Your profile picture:**
+- Displays as large avatar in the hero section at top of Profile page
+- If no picture uploaded, shows first letter of your username (e.g., "J" for "John")
+- Can be changed/replaced anytime
+- Each new upload replaces the previous one
+
+**Where your photo appears:**
+- Profile page hero section (large version)
+- Dashboard (in some views)
+- Comments and contributions across platform
+
+**Troubleshooting photo uploads:**
+- "No image selected" → Select a file before clicking Upload
+- "Unsupported format" → Use JPEG, PNG, WebP, or GIF only
+- "Image must be under 5 MB" → Compress image or choose smaller file
+- "Upload failed" → Try again or use different image
 
 ## Dashboard Access
 Keywords: dashboard, where is dashboard, access dashboard, my dashboard, user dashboard

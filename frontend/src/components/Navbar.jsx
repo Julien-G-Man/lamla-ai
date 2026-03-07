@@ -8,8 +8,12 @@ const Navbar = ({ user, brandOnly = false }) => {
   const navigate = useNavigate();
   const isHome = location.pathname === "/";
 
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, user: authUser } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+
+  // Use user from prop or from auth context
+  const currentUser = user || authUser;
+  const profileImageUrl = currentUser?.profile_image || null;
 
   const [isScrolled, setIsScrolled] = useState(!isHome || window.scrollY > 50);
 
@@ -61,37 +65,49 @@ const Navbar = ({ user, brandOnly = false }) => {
 
           {!brandOnly && (
             <>
-              <nav className="main-nav">
-                <ul className="nav-links nav-links--desktop">
-                  <li>
-                    <Link to="/" onClick={handleHomeClick}>Home</Link>
-                  </li>
-                  <li><Link to="/ai-tutor">AI Tutor</Link></li>
-                  <li><Link to="/quiz/create">Quiz</Link></li>
-                  <li><Link to="/flashcards">Flashcards</Link></li>
-                  <li><Link to="/dashboard">Dashboard</Link></li>
-                  {isAuthenticated || user ? (
-                    <li className="nav-item-cta">
-                      <button type="button" className="btn btn-nav-secondary" onClick={handleLogout}>Logout</button>
+              <div className="nav-right-group">
+                <nav className="main-nav">
+                  <ul className="nav-links nav-links--desktop">
+                    <li>
+                      <Link to="/" onClick={handleHomeClick}>Home</Link>
                     </li>
-                  ) : (
-                    <li className="nav-item-cta">
-                      <Link to="/auth/login" className="btn btn-nav-secondary">Login</Link>
-                    </li>
-                  )}
-                </ul>
-              </nav>
+                    <li><Link to="/ai-tutor">AI Tutor</Link></li>
+                    <li><Link to="/quiz/create">Quiz</Link></li>
+                    <li><Link to="/flashcards">Flashcards</Link></li>
+                    <li><Link to="/dashboard">Dashboard</Link></li>
+                    {isAuthenticated || user ? (
+                      <li className="nav-item-cta">
+                        <button type="button" className="btn btn-nav-secondary" onClick={handleLogout}>Logout</button>
+                      </li>
+                    ) : (
+                      <li className="nav-item-cta">
+                        <Link to="/auth/login" className="btn btn-nav-secondary">Login</Link>
+                      </li>
+                    )}
+                  </ul>
+                </nav>
 
-              <button
-                className={`navbar-hamburger ${isOpen ? "open" : ""}`}
-                onClick={() => setIsOpen(!isOpen)}
-                aria-label="Toggle navigation"
-                aria-expanded={isOpen}
-              >
-                <span></span>
-                <span></span>
-                <span></span>
-              </button>
+                {(isAuthenticated || currentUser) && (
+                  <Link to="/profile" className="navbar-profile-link">
+                    <img 
+                      src={profileImageUrl || "/assets/profile_default.png"} 
+                      alt="Profile"
+                      className="navbar-profile-image"
+                    />
+                  </Link>
+                )}
+
+                <button
+                  className={`navbar-hamburger ${isOpen ? "open" : ""}`}
+                  onClick={() => setIsOpen(!isOpen)}
+                  aria-label="Toggle navigation"
+                  aria-expanded={isOpen}
+                >
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </button>
+              </div>
             </>
           )}
         </div>

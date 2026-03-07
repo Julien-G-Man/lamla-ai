@@ -279,18 +279,31 @@ class UploadProfileImageView(APIView):
 
     def _upload(self, file, user):
         import os
+        from dotenv import load_dotenv
+        load_dotenv()
+        env = os.getenv("ENVIRONMENT", "dev")
+        
         if os.getenv("STORAGE_BACKEND") == "cloudinary":
             import cloudinary.uploader
             result = cloudinary.uploader.upload(
                 file,
-                folder=f"lamla/profile_images/{user.id}",
-                public_id="avatar",
-                overwrite=True,
+                folder=f"lamla/{env}/profile_images/{user.id}",
                 resource_type="image",
+                use_filename=True,
+                unique_filename=True,
             )
             return result["secure_url"]
 
-        return f"/media/profile_images/{user.id}/avatar"
+        from django.core.files.storage import default_storage
+        from django.core.files.base import ContentFile
+        from django.conf import settings
+        
+        file.seek(0)
+        path = default_storage.save(
+            f"profile_images/{user.id}/{file.name}",
+            ContentFile(file.read())
+        )
+        return f"{settings.MEDIA_URL}{path}"
 
 
 def _get_client_ip(request) -> str | None:
