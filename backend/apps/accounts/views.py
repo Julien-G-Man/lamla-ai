@@ -105,6 +105,7 @@ class LogoutView(APIView):
         try:
             request.user.auth_token.delete()
             logger.info("User logged out: %s", request.user.email)
+            print("User logged out: %s" % request.user.email)
         except Token.DoesNotExist:
             pass
         return Response({"detail": "Logged out successfully."}, status=status.HTTP_200_OK)

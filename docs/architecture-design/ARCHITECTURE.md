@@ -63,3 +63,44 @@ Also:
 - Flashcards: `apps.flashcards.models.Deck`, `Flashcard`
 - Chat: `apps.chatbot.models.ChatSession`, `ChatMessage`
 - Users/auth: `apps.accounts.models.User`
+
+## Authentication Architecture
+
+### Token-Based Auth (DRF TokenAuthentication)
+
+- **Flow:** User authenticates → Backend returns token → Frontend stores token → All requests include `Authorization: Token <key>`
+- **Token rotation:** On every login (traditional or Google), old tokens are deleted and new token issued
+- **Logout:** Explicitly deletes user's token server-side
+- **No sessions:** Stateless authentication (no Django session cookies)
+
+### Dual Authentication Methods
+
+#### 1. Email/Username + Password
+- Backend: Custom `EmailOrUsernameBackend` accepts either identifier
+- Endpoints: `POST /api/auth/signup/`, `POST /api/auth/login/`
+- Rate limited: 5 attempts per hour per IP
+
+#### 2. Google OAuth 2.0
+- **Custom implementation** (no django-allauth dependency)
+- Backend: `apps.accounts.google_auth.py` - `GoogleAuthView` at `POST /api/auth/google/`
+- Frontend: `@react-oauth/google` package
+- **Token exchange flow:**
+  1. Frontend: Google Sign-In SDK obtains Google ID token
+  2. Frontend sends ID token to `POST /api/auth/google/`
+  3. Backend verifies token with Google's servers
+  4. Backend creates/updates user with `is_email_verified=True`
+  5. Backend returns app auth token (same format as password login)
+  6. Frontend stores token and proceeds to dashboard
+
+- **Dependencies:**
+  - Backend: `google-auth`, `google-auth-oauthlib`, `google-auth-httplib2`
+  - Frontend: `@react-oauth/google`
+  - Environment: `GOOGLE_OAUTH_CLIENT_ID` (backend and frontend must match)
+
+### Frontend Auth Context
+
+- Location: `frontend/src/context/AuthContext.jsx`
+- Wraps app with auth state (`user`, `isAuthenticated`, `isLoading`)
+- Methods: `login()`, `signup()`, `googleAuth()`, `logout()`
+- Rehydrates auth from localStorage on page load
+- All auth methods update context state before navigation (no page reload needed)

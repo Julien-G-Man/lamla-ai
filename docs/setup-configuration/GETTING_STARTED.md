@@ -27,6 +27,10 @@ FASTAPI_BASE_URL=http://localhost:8001
 FASTAPI_SECRET=change-me-shared-secret
 CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 CSRF_TRUSTED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+
+# Optional: Google OAuth (see docs/authentication/GOOGLE_OAUTH.md)
+# GOOGLE_OAUTH_CLIENT_ID=your-client-id.apps.googleusercontent.com
+# GOOGLE_OAUTH_CLIENT_SECRET=your-client-secret
 ```
 
 Run migrations:
@@ -68,6 +72,9 @@ Frontend env (example `.env` in `frontend/`):
 ```bash
 REACT_APP_DJANGO_API_URL=http://localhost:8000/api
 REACT_APP_FASTAPI_URL=http://localhost:8001
+
+# Optional: Google OAuth (must match backend GOOGLE_OAUTH_CLIENT_ID)
+# REACT_APP_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
 ```
 
 ## 4) Smoke test

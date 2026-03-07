@@ -8,6 +8,10 @@ Use this before every production deploy.
 - Django `FASTAPI_BASE_URL` points to live FastAPI service.
 - Frontend `REACT_APP_DJANGO_API_URL` and `REACT_APP_FASTAPI_URL` are valid absolute URLs.
 - All URLs include `http://` or `https://`.
+- **Google OAuth (if enabled):**
+  - Django `GOOGLE_OAUTH_CLIENT_ID` matches frontend `REACT_APP_GOOGLE_CLIENT_ID`
+  - Production domain added to Google Cloud Console authorized origins
+  - Different OAuth credentials used for production vs development
 
 ## Allowed Origins
 
@@ -25,7 +29,8 @@ Use this before every production deploy.
 
 ## Smoke Tests
 
-- Login/signup flow succeeds.
+- Login/signup flow succeeds (email/username + password).
+- **Google OAuth login/signup works** (if enabled, test "Continue with Google" button).
 - Quiz generation works.
 - Flashcard extraction + generation + save + study review works.
 - Chat message and file chat work.

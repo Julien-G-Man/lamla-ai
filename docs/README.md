@@ -15,13 +15,14 @@ This folder is the maintained source of truth for architecture, setup, features,
 - `architecture-design/FRONTEND_INTEGRATION.md` - React to Django/FastAPI contracts
 - `setup-configuration/GETTING_STARTED.md` - local environment setup
 - `setup-configuration/QUICK_REFERENCE.md` - high-signal env vars and common endpoints
-- `setup-configuration/AUTHENTICATION_SETUP.md` - auth integration setup
+- `setup-configuration/AUTHENTICATION_SETUP.md` - auth integration setup (password + Google OAuth)
+- `authentication/CUSTOM_USER_MODEL.md` - user model behavior and admin flag
+- `authentication/EMAIL_VERIFICATION.md` - verification flow and API
+- `authentication/GOOGLE_OAUTH.md` - **Google OAuth 2.0 integration guide (setup, testing, security)**
 - `features/QUIZ.md` - quiz generation and quiz lifecycle
 - `features/FLASHCARDS.md` - flashcards feature and API behavior
 - `features/CHATBOT.md` - AI tutor/chat feature
 - `frontend/ROUTES_AND_PAGES.md` - current route ownership and aliases
-- `authentication/CUSTOM_USER_MODEL.md` - user model behavior and admin flag
-- `authentication/EMAIL_VERIFICATION.md` - verification flow and API
 - `deployment-guides/DEPLOYMENT_CHECKLIST.md` - deploy preflight checklist
 - `deployment-guides/RENDER_DEPLOYMENT_GUIDE.md` - backend deployment specifics
 - `deployment-guides/VERCEL_FRONTEND_DEPLOYMENT.md` - frontend deployment specifics

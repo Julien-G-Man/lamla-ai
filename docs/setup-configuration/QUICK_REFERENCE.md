@@ -11,6 +11,8 @@ Django (`backend/.env`):
 - `CORS_ALLOWED_ORIGINS`
 - `CSRF_TRUSTED_ORIGINS`
 - `ADMIN_EMAIL`
+- `GOOGLE_OAUTH_CLIENT_ID` - **Google OAuth client ID (required for Google Sign-In)**
+- `GOOGLE_OAUTH_CLIENT_SECRET` - Google OAuth secret (not used in current token-exchange flow)
 - `STORAGE_BACKEND` (`local` or `cloudinary`)
 - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` (if Cloudinary is enabled)
 
@@ -24,15 +26,17 @@ Frontend (`frontend/.env`):
 
 - `REACT_APP_DJANGO_API_URL`
 - `REACT_APP_FASTAPI_URL`
+- `REACT_APP_GOOGLE_CLIENT_ID` - **Google OAuth client ID (must match backend)**
 
 ## High-Use APIs
 
 Auth:
 
-- `POST /api/auth/signup/`
-- `POST /api/auth/login/`
-- `POST /api/auth/logout/`
-- `GET /api/auth/me/`
+- `POST /api/auth/signup/` - Create account with email/password
+- `POST /api/auth/login/` - Login with email/username and password
+- `POST /api/auth/google/` - **Sign in/up with Google OAuth**
+- `POST /api/auth/logout/` - Invalidate token
+- `GET /api/auth/me/` - Get current user info
 
 Quiz:
 

@@ -27,7 +27,7 @@ FastAPI:
 - **DRF token auth:** All requests use `Authorization: Token <token>` (not session-based).
 - **Token rotation:** Tokens are invalidated and regenerated on **every login**:
   - Old tokens for the user are immediately deleted.
-  - New token is issued on successful login.
+  - New token is issued on successful login (email/username or Google OAuth).
   - This prevents token reuse attacks if credentials are compromised.
 
 ### Token Security
@@ -37,12 +37,47 @@ FastAPI:
 - **Password change:** Does NOT invalidate tokens (user remains logged in; optional to logout first).
 - **Sensitive operations:** Contact/newsletter endpoints are public; no token required.
 
+### Google OAuth Security
+
+**Custom Implementation (No django-allauth):**
+- Backend verifies Google ID tokens using `google.oauth2.id_token.verify_oauth2_token()`
+- Token verification happens server-side against Google's public keys
+- No redirect-based OAuth flow (uses Google Sign-In SDK token exchange)
+
+**Security Controls:**
+1. **Client ID validation:** Only tokens signed for configured `GOOGLE_OAUTH_CLIENT_ID` are accepted
+2. **Email verification:** Google OAuth users are auto-verified (`is_email_verified=True`) since Google confirms email ownership
+3. **Token rotation:** Same token rotation policy as password login (old tokens deleted, new token issued)
+4. **Rate limiting:** Google auth endpoint shares same rate limits as traditional login (5/hour per IP)
+5. **User matching:** Users matched by email (case-insensitive); duplicate signup prevented
+6. **Profile data:** Only email, name, and profile picture extracted from Google token
+
+**Google Cloud Console Configuration Required:**
+- Authorized JavaScript origins: `http://localhost:3000`, `https://yourdomain.com`
+- Authorized redirect URIs (if using redirect flow in future)
+- API & Services → Credentials → OAuth 2.0 Client ID
+
+**Environment Variables:**
+```bash
+# Backend .env
+GOOGLE_OAUTH_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_OAUTH_CLIENT_SECRET=your-client-secret  # Not currently used in token-exchange flow
+```
+
+**Security Best Practices:**
+- ✅ Never expose `GOOGLE_OAUTH_CLIENT_SECRET` to frontend
+- ✅ Use environment variables, not hardcoded values
+- ✅ Verify tokens server-side (never trust frontend-provided claims)
+- ✅ Keep `google-auth` library updated for security patches
+- ⚠️ Monitor failed verification attempts (logged as warnings)
+
 ### Rate Limiting (Brute Force Protection)
 
 The following endpoints are rate-limited to **5 requests per hour per IP address**:
 
 - `POST /api/auth/signup/`
 - `POST /api/auth/login/`
+- `POST /api/auth/google/` - **Google OAuth endpoint**
 - `POST /api/auth/verify-email/`
 - `POST /api/auth/resend-verification/`
 

@@ -4,9 +4,9 @@ Handles Google sign-in and returns tokens compatible with existing auth system.
 """
 
 import logging
+import os
 from google.oauth2 import id_token
 from google.auth.transport import requests
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import status
@@ -40,7 +40,14 @@ class GoogleAuthView(APIView):
 
         try:
             # Verify Google token
-            client_id = settings.SOCIALACCOUNT_PROVIDERS['google']['APP']['client_id']
+            client_id = os.getenv('GOOGLE_OAUTH_CLIENT_ID', '')
+            if not client_id:
+                logger.error('GOOGLE_OAUTH_CLIENT_ID is not configured')
+                print('GOOGLE_OAUTH_CLIENT_ID is not configured')
+                return Response(
+                    {'detail': 'Google OAuth is not configured on the server.'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
             idinfo = id_token.verify_oauth2_token(
                 google_token,
                 requests.Request(),
@@ -64,8 +71,8 @@ class GoogleAuthView(APIView):
             user, created = User.objects.get_or_create(
                 email=email.lower(),
                 defaults={
-                    'username': email.split('@')[0],  # Use email prefix as username
-                    'is_email_verified': True,  # Google already verified the email
+                    'username': email.split('@')[0], 
+                    'is_email_verified': True, 
                     'profile_image': picture,
                 }
             )
@@ -86,7 +93,7 @@ class GoogleAuthView(APIView):
 
             # Create or get auth token
             Token.objects.filter(user=user).delete()  # Invalidate old tokens
-            token = Token.objects.create(user=user)
+            token = Token.objects.create(user=user) # create new token
 
             logger.info(
                 "Google auth %s for user: %s",
@@ -110,7 +117,6 @@ class GoogleAuthView(APIView):
             )
 
         except ValueError as e:
-            # Invalid token
             logger.warning("Invalid Google token: %s", str(e))
             print("Invalid Google token: %s" % str(e))
             return Response(
