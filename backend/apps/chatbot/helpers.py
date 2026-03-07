@@ -109,8 +109,9 @@ async def _get_conversation_history(session_obj, limit: int = 10):
 
 async def _build_chatbot_prompt(user_message: str, conversation_history=None, context_document=None, user=None):
     """Build full tutor prompt with optional user/document context."""
-    lamla_knowledge = await sync_to_async(chatbot_service.get_lamla_knowledge_base)()
-    edtech_best_practices = chatbot_service.get_edtech_best_practices()
+    platform_context, platform_sources, retrieval_mode = await sync_to_async(
+        chatbot_service.get_platform_context
+    )(user_message)
 
     current_date_and_time = datetime.now()
     document_context = ""
@@ -139,8 +140,8 @@ Focus on extracting knowledge and providing educational guidance based on this m
     user_context = ""
     if user_name:
         user_context = (
-            f"Authenticated user context: name={user_name}. If name=Admin, that's the superuser, the manager of the whole system, your builder."
-            "This is from information provided by the user in the system."
+            f"""Authenticated user context: name={user_name}. If name=Admin, that's the superuser, the manager of the whole system, your builder.
+            This is from information provided by the user in the system."""
         )
 
     system_prompt = f"""You are Lamla AI Tutor, a friendly educational assistant helping students learn.
@@ -152,16 +153,17 @@ Current date and time:
 {current_date_and_time}
 
 About Lamla AI:
-{lamla_knowledge}
+{platform_context}
 
-Educational Best Practices:
-{edtech_best_practices}
+Context sources: {', '.join(platform_sources) if platform_sources else 'none'}
+Retrieval mode used: {retrieval_mode}
 
 RESPONSE GUIDELINES:
 - Be warm, encouraging, and educational in tone
 - Focus on helping the student understand the material
 - DO NOT use markdown symbols like ** or ##
 - If study material was provided above, base your answer on that material
+- If platform details are not present in retrieved context, say so clearly
 - Provide clear, organized explanations
 - Use proper indentation for lists and steps"""
 

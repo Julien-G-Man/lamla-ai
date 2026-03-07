@@ -4,6 +4,7 @@ import requests
 from django.conf import settings
 from .models import ChatbotKnowledge, ChatMessage, ChatSession
 from .websearch import search_engine, SearchResult
+from .platform_retrieval import platform_retriever
 from typing import List
 logger = logging.getLogger(__name__)
 
@@ -22,50 +23,33 @@ class ChatbotService:
             knowledge_text += f"Keywords: {entry.keywords}\n\n"
         return knowledge_text
 
-    def get_edtech_best_practices(self):
-        """Return best practices in educational technology for context"""
-        return """
-Best Practices in Educational Technology:
-1. Student-Centered Learning
-    • Adapt to different learning styles (visual, auditory, kinesthetic).
-    • Encourage self-paced and personalized learning.
-    • Use AI to provide adaptive learning paths.
+    def get_platform_context(self, user_message: str):
+        """
+        Retrieve user-facing platform context from local markdown KB.
+        Falls back to DB knowledge only when file retrieval has no matches.
+        """
+        debug_print = bool(getattr(settings, "CHATBOT_RETRIEVAL_DEBUG_PRINT", False))
+        context_text, sources, mode_used = platform_retriever.retrieve_context(user_message)
 
-2. Active Engagement
-    • Incorporate interactive elements like quizzes, flashcards, and polls.
-    • Use gamification (badges, leaderboards, rewards) to motivate learners.
-    • Encourage participation and critical thinking.
+        if debug_print:
+            source_preview = ", ".join(sources[:5]) if sources else "none"
+            print(
+                f"[CHATBOT_RETRIEVAL] mode={mode_used} sources={source_preview} "
+                f"query={user_message[:120]!r}"
+            )
 
-3. Feedback and Assessment
-    • Provide timely, specific, and actionable feedback.
-    • Mix formative (ongoing) and summative (final) assessments.
-    • Use AI to generate personalized feedback.
+        if context_text.strip():
+            return context_text, sources, mode_used
 
-4. Accessibility and Inclusivity
-    • Support multiple languages and accessibility features (text-to-speech, captions).
-    • Ensure mobile-first and low-bandwidth support.
-    • Provide offline or downloadable resources when possible.
+        # DB fallback stays available, but is not used by default when KB files match.
+        db_knowledge = self.get_lamla_knowledge_base().strip()
+        if db_knowledge:
+            trimmed = db_knowledge[:1800]
+            if debug_print:
+                print("[CHATBOT_RETRIEVAL] fallback=db:ChatbotKnowledge")
+            return trimmed, ["db:ChatbotKnowledge"], "db-fallback"
 
-5. Data-Driven Insights
-    • Track learner progress with dashboards and analytics.
-    • Use predictive analytics to identify at-risk learners.
-    • Share clear progress reports with learners and educators.
-
-6. Collaboration and Community
-    • Enable discussion forums, study groups, or peer-to-peer support.
-    • Encourage mentorship and teamwork.
-    • Use AI chatbots to answer FAQs and provide 24/7 assistance.
-
-7. Privacy and Ethics
-    • Ensure student data is protected and used responsibly.
-    • Be transparent about AI limitations and capabilities.
-    • Avoid bias and ensure fairness in AI-driven tools.
-
-8. Continuous Improvement
-    • Gather user feedback regularly.
-    • Iterate features based on student and teacher needs.
-    • Stay updated with new EdTech trends.
-"""
+        return "", [], mode_used
 
     def clean_markdown(self, text: str) -> str:
         """Remove markdown symbols and fix indentation for lists."""
@@ -86,7 +70,7 @@ Best Practices in Educational Technology:
         text = re.sub(r'\n{3,}', '\n\n', text)
         return text.strip()
 
-    def _should_perform_search(self, user_message: str, lamla_knowledge: str) -> bool:
+    def _should_perform_search(self, user_message: str) -> bool:
         """
         Determines if the query is general and likely needs a web search.
         It checks for general keywords and avoids searching for Lamla-specific questions.
@@ -118,8 +102,7 @@ Best Practices in Educational Technology:
         user_log = ChatMessage.objects.create(content=user_message, role='user')
         
         try:
-            lamla_knowledge = self.get_lamla_knowledge_base()
-            edtech_best_practices = self.get_edtech_best_practices()
+            platform_context, platform_sources, retrieval_mode = self.get_platform_context(user_message)
 
             # --- CONTEXT DOCUMENT INTEGRATION START ---
             document_context = ""
@@ -134,7 +117,7 @@ Please refer to this content when answering questions:
             search_context = ""
             search_results: List[SearchResult] = []
             
-            if not context_document and self._should_perform_search(user_message, lamla_knowledge):
+            if not context_document and self._should_perform_search(user_message):
                 # Only perform search if there is NO document context and the query is deemed general
                 search_results = search_engine.search(user_message, num_results=3)
             
@@ -151,11 +134,11 @@ WEB SEARCH RESULTS:
             system_prompt = f"""You are Lamla AI Tutor, a friendly and helpful AI assistant for an educational platform. Your name is Lamla AI Tutor, and you can answer questions about the platform and general topics.
 {document_context}
 {search_context}
-Context about Lamla AI:
-{lamla_knowledge}
+Platform context (retrieved on-demand):
+{platform_context}
 
-Educational Technology Best Practices:
-{edtech_best_practices}
+Platform context sources: {', '.join(platform_sources) if platform_sources else 'none'}
+Retrieval mode used: {retrieval_mode}
 
 Key Information about Lamla AI:
 
@@ -172,7 +155,7 @@ IMPORTANT RESPONSE GUIDELINES:
 10. Please ensure the response is in plain text format without markdown symbols like bolding or headers.
 11. Maintain a clean, readable text structure.
 12. Immediately identify the user's language and respond in the same language
-13. Follow EdTech Best Practices, but be sincere about your limitations and the features you have
+13. If platform details are missing from retrieved context, state that clearly instead of inventing details
 
 You can also answer general questions and help with various topics. Always maintain a helpful and friendly demeanor."""
 
