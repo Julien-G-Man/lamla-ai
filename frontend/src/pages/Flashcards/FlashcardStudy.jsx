@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "../../components/Navbar";
+import MathRenderer from "../../components/MathRenderer";
 import { useAuth } from "../../context/AuthContext";
 import djangoApi, { getApiErrorMessage } from "../../services/api";
 import "./Flashcards.css";
@@ -110,8 +111,8 @@ export default function FlashcardStudy() {
               <>
                 <p className="fc-progress">Card {idx + 1} / {cards.length}</p>
                 <article className="fc-study-card">
-                  <h3>{current.question}</h3>
-                  {showAnswer && <p>{current.answer}</p>}
+                  <h3><MathRenderer text={current.question} /></h3>
+                  {showAnswer && <p><MathRenderer text={current.answer} /></p>}
                 </article>
 
                 {!showAnswer ? (
@@ -126,7 +127,7 @@ export default function FlashcardStudy() {
                     {explanation && (
                       <div className="fc-explain-box">
                         <strong>Explanation</strong>
-                        <p>{explanation}</p>
+                        <p><MathRenderer text={explanation} /></p>
                       </div>
                     )}
                     <p className="fc-info">How well did you remember?</p>

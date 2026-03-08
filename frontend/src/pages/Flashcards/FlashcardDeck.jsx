@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "../../components/Navbar";
+import MathRenderer from "../../components/MathRenderer";
 import { useAuth } from "../../context/AuthContext";
 import djangoApi, { getApiErrorMessage } from "../../services/api";
 import "./Flashcards.css";
@@ -194,8 +195,8 @@ export default function FlashcardDeck() {
                 </>
               ) : (
                 <>
-                  <h4>{card.question}</h4>
-                  <p>{card.answer}</p>
+                  <h4><MathRenderer text={card.question} /></h4>
+                  <p><MathRenderer text={card.answer} /></p>
                   <div className="fc-actions">
                     <button
                       className="fc-secondary"
@@ -221,7 +222,7 @@ export default function FlashcardDeck() {
                   {explanations[card.id] && (
                     <div className="fc-explain-box">
                       <strong>Explanation</strong>
-                      <p>{explanations[card.id]}</p>
+                      <p><MathRenderer text={explanations[card.id]} /></p>
                     </div>
                   )}
                 </>

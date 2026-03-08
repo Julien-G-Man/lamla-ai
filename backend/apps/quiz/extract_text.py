@@ -5,6 +5,11 @@ import logging
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+
+try:
+    import pdfplumber
+except Exception:  # optional dependency
+    pdfplumber = None
  
 logger = logging.getLogger(__name__)
 
@@ -45,6 +50,13 @@ async def ajax_extract_text(request):
                 pdf_reader = PyPDF2.PdfReader(pdf_file)
                 for page in pdf_reader.pages:
                     text += page.extract_text() or ''
+
+                # Fallback for math-heavy PDFs where PyPDF2 misses glyph streams.
+                if not text.strip() and pdfplumber is not None:
+                    pdf_file.seek(0)
+                    with pdfplumber.open(pdf_file) as pdf:
+                        for page in pdf.pages:
+                            text += (page.extract_text() or '') + '\n'
                     
             # DOCX extraction
             elif file_ext == '.docx':
@@ -75,7 +87,16 @@ async def ajax_extract_text(request):
         text = await asyncio.to_thread(extract_text_sync)
         
         if not text:
-            return JsonResponse({'error': 'No text could be extracted from the file.'}, status=400)
+            return JsonResponse(
+                {
+                    'error': (
+                        'No text could be extracted from this file. '
+                        'If this is a scanned/image-based PDF (common with matrix-heavy slides), '
+                        'please export to DOCX/TXT or upload a text-based PDF.'
+                    )
+                },
+                status=400,
+            )
         
         # Performance truncation 
         if len(text) > 50000:

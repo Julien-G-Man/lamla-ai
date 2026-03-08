@@ -119,6 +119,7 @@ async def generate_quiz_api_async(request):
         # Convert time_limit to integer (minutes) to prevent NaN in frontend timer
         quiz_data['time_limit'] = int(data.get('quiz_time', 10))
         quiz_data['created_at'] = None  # Can be set if storing in DB
+        quiz_data['source_filename'] = data.get('source_filename', '')
         
         return JsonResponse(quiz_data)
         
@@ -213,6 +214,7 @@ async def submit_quiz_api_async(request):
             "quiz_id": quiz_id,
             "subject": quiz_data.get("subject", "Unknown"),
             "difficulty": quiz_data.get("difficulty", "medium"),
+            "source_filename": quiz_data.get("source_filename", ""),  # Include source filename
             "score": correct_count,
             "total": total_questions,
             "score_percent": score_percent,

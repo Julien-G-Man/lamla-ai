@@ -1,10 +1,11 @@
 import json
 import logging
 import re
+import unicodedata
 import httpx
 from fastapi import APIRouter, HTTPException
 from .schemas import QuizQuestion, QuizRequest, QuizResponse
-from .prompts import _build_quiz_prompt
+from .prompts import _build_quiz_prompt, _build_repair_prompt
 
 logger = logging.getLogger(__name__)
 quiz_router = APIRouter()
@@ -33,6 +34,45 @@ def _strip_fences(text: str) -> str:
     return text.strip()
 
 
+def _normalize_study_text(text: str) -> str:
+    """Normalize OCR/PDF artifacts so prompts are cleaner and more stable."""
+    if not text:
+        return ""
+
+    cleaned = unicodedata.normalize("NFKC", text)
+
+    replacements = {
+        "\u00ad": "",      # soft hyphen
+        "\ufeff": "",      # BOM
+        "\u200b": "",      # zero-width space
+        "\u2011": "-",     # non-breaking hyphen
+        "\u2013": "-",
+        "\u2014": "-",
+        "\ufb01": "fi",    # ligature fi
+        "\ufb02": "fl",    # ligature fl
+        "\u2212": "-",     # math minus
+        "\u00d7": " x ",   # multiply symbol
+        "\u00f7": " / ",   # division symbol
+        "~": " ",
+        "!": " ",
+    }
+
+    for old, new in replacements.items():
+        cleaned = cleaned.replace(old, new)
+
+    # Collapse noisy whitespace from slide extraction.
+    cleaned = re.sub(r"[ \t]+", " ", cleaned)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+
+    # Keep prompt within a stable budget to avoid truncated JSON outputs.
+    max_chars = 16000
+    if len(cleaned) > max_chars:
+        logger.info("Study text too long (%s chars), truncating to %s chars", len(cleaned), max_chars)
+        cleaned = cleaned[:max_chars]
+
+    return cleaned.strip()
+
+
 def _parse_json_safe(text: str, provider_hint: str = "") -> dict | None:
     """
     Robustly parse a JSON string from an LLM response.
@@ -47,11 +87,51 @@ def _parse_json_safe(text: str, provider_hint: str = "") -> dict | None:
     except json.JSONDecodeError:
         pass
 
-    # Attempt 2: extract the first {...} or [...] block (handles preamble/postamble text)
-    match = re.search(r'(\{[\s\S]*\}|\[[\s\S]*\])', clean)
-    if match:
+    # Attempt 2: extract first balanced JSON object/array from noisy text.
+    def _extract_balanced_json_block(source: str) -> str | None:
+        start = -1
+        opener = ""
+        for i, ch in enumerate(source):
+            if ch in "[{":
+                start = i
+                opener = ch
+                break
+        if start == -1:
+            return None
+
+        closer = "}" if opener == "{" else "]"
+        depth = 0
+        in_string = False
+        escaped = False
+
+        for i in range(start, len(source)):
+            ch = source[i]
+            if in_string:
+                if escaped:
+                    escaped = False
+                elif ch == "\\":
+                    escaped = True
+                elif ch == '"':
+                    in_string = False
+                continue
+
+            if ch == '"':
+                in_string = True
+                continue
+
+            if ch == opener:
+                depth += 1
+            elif ch == closer:
+                depth -= 1
+                if depth == 0:
+                    return source[start : i + 1]
+
+        return None
+
+    extracted = _extract_balanced_json_block(clean)
+    if extracted:
         try:
-            return json.loads(match.group(0))
+            return json.loads(extracted)
         except json.JSONDecodeError:
             pass
 
@@ -71,40 +151,70 @@ async def quiz_endpoint(payload: QuizRequest):
     if ai_service is None:
         raise HTTPException(status_code=503, detail="AI service not available")
 
-    prompt = _build_quiz_prompt(payload)
+    normalized_study_text = _normalize_study_text(payload.study_text)
+    prompt_payload = QuizRequest(
+        subject=payload.subject,
+        study_text=normalized_study_text,
+        num_mcq=payload.num_mcq,
+        num_short=payload.num_short,
+        difficulty=payload.difficulty,
+    )
+    prompt = _build_quiz_prompt(prompt_payload)
 
     try:
+        data = None
         async with httpx.AsyncClient(timeout=45) as client:
             # Increase max_tokens for quiz generation (need more tokens for multiple questions)
             raw = await ai_service.generate_content(client, prompt, max_tokens=2048)
 
-        logger.debug("Quiz provider returned type: %s", type(raw).__name__)
+            logger.debug("Quiz provider returned type: %s", type(raw).__name__)
 
-        data = None
-
-        if isinstance(raw, dict):
-            if "choices" in raw and isinstance(raw.get("choices"), list):
-                # Azure response format – extract content string from choices
-                try:
-                    content_str = raw["choices"][0]["message"]["content"]
-                    logger.debug("Extracted Azure content (first 100): %s", content_str[:100])
-                    data = _parse_json_safe(content_str, provider_hint="Azure")
-                    if data is None:
+            if isinstance(raw, dict):
+                if "choices" in raw and isinstance(raw.get("choices"), list):
+                    # Azure response format – extract content string from choices
+                    try:
+                        content_str = raw["choices"][0]["message"]["content"]
+                        logger.debug("Extracted Azure content (first 100): %s", content_str[:100])
+                        data = _parse_json_safe(content_str, provider_hint="Azure")
+                        if data is None:
+                            # One-shot repair attempt for malformed/truncated JSON-like output.
+                            repair_raw = await ai_service.generate_content(
+                                client,
+                                _build_repair_prompt(content_str[:6000]),
+                                max_tokens=2048,
+                            )
+                            repair_text = (
+                                repair_raw.get("choices", [{}])[0].get("message", {}).get("content", "")
+                                if isinstance(repair_raw, dict)
+                                else str(repair_raw)
+                            )
+                            data = _parse_json_safe(repair_text, provider_hint="Azure-repair")
+                        if data is None:
+                            raise HTTPException(status_code=502, detail="Failed to parse Azure response")
+                    except (KeyError, IndexError) as e:
+                        logger.error("Malformed Azure choices structure: %s", e)
                         raise HTTPException(status_code=502, detail="Failed to parse Azure response")
-                except (KeyError, IndexError) as e:
-                    logger.error("Malformed Azure choices structure: %s", e)
-                    raise HTTPException(status_code=502, detail="Failed to parse Azure response")
+                else:
+                    # Already a parsed dict (e.g. DeepSeek / Gemini returning clean JSON)
+                    data = raw
             else:
-                # Already a parsed dict (e.g. DeepSeek / Gemini returning clean JSON)
-                data = raw
-        else:
-            # String response – strip fences then parse
-            data = _parse_json_safe(str(raw))
-            if data is None:
-                raise HTTPException(
-                    status_code=502,
-                    detail="Invalid quiz format from AI provider",
-                )
+                # String response – strip fences then parse
+                raw_text = str(raw)
+                data = _parse_json_safe(raw_text)
+                if data is None:
+                    repair_raw = await ai_service.generate_content(
+                        client,
+                        _build_repair_prompt(raw_text[:6000]),
+                        max_tokens=2048,
+                    )
+                    repair_text = (
+                        repair_raw.get("choices", [{}])[0].get("message", {}).get("content", "")
+                        if isinstance(repair_raw, dict)
+                        else str(repair_raw)
+                    )
+                    data = _parse_json_safe(repair_text, provider_hint="repair")
+                if data is None:
+                    raise HTTPException(status_code=502, detail="Invalid quiz format from AI provider")
 
         # Validate response structure
         mcq_questions = data.get("mcq_questions", []) if data else []

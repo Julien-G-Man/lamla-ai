@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
+import MathRenderer from '../../components/MathRenderer';
 import './Quiz.css';
 import djangoApi from '../../services/api';
 
@@ -173,15 +174,19 @@ const Quiz = () => {
                 </section>
 
                 <section className="quiz-meta-shell">
-                    <h2 className="quiz-meta-title">Question {currentIndex + 1}</h2>
-                    <p className="quiz-meta-status">{isAnswered ? 'Answered' : 'Not yet answered'}</p>
+                    <div className="quiz-meta-row">
+                        <h2 className="quiz-meta-title">Question {currentIndex + 1}</h2>
+                        <p className="quiz-meta-status">{isAnswered ? 'Answered' : 'Not yet answered'}</p>
+                    </div>
                     <button className={`quiz-flag-link ${flaggedQuestions[currentIndex] ? 'active' : ''}`} onClick={toggleFlag}>
                         {flaggedQuestions[currentIndex] ? 'Unflag question' : 'Flag question'}
                     </button>
                 </section>
 
                 <section className="quiz-question-shell">
-                    <div className="quiz-question-body" dangerouslySetInnerHTML={{ __html: currentQ.question }} />
+                    <div className="quiz-question-body">
+                        <MathRenderer text={currentQ.question} />
+                    </div>
 
                     {hasOptions ? (
                         <div className="quiz-options-list" role="radiogroup" aria-label="Answer choices">
@@ -196,7 +201,7 @@ const Quiz = () => {
                                         onClick={() => handleAnswer(letter)}
                                     >
                                         <span className="quiz-option-dot" aria-hidden="true" />
-                                        <span className="quiz-option-text">{letter}. {opt}</span>
+                                        <span className="quiz-option-text">{letter}. <MathRenderer text={opt} /></span>
                                     </button>
                                 );
                             })}

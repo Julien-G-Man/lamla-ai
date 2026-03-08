@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Navbar from '../../components/Navbar';
+import MathRenderer from '../../components/MathRenderer';
 import './Chatbot.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
@@ -277,7 +278,7 @@ const Chatbot = ({ user }) => {
                     <span></span><span></span><span></span>
                 </div>
             ) : (
-                <p style={{ whiteSpace: 'pre-wrap' }}>{message.text}</p>
+                <p style={{ whiteSpace: 'pre-wrap' }}><MathRenderer text={message.text} /></p>
             )}
         </div>
     );

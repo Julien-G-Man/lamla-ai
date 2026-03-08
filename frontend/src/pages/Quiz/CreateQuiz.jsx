@@ -38,6 +38,7 @@ const CreateQuiz = ({ user }) => {
     const [isExtracting, setIsExtracting] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
     const [fileNameDisplay, setFileNameDisplay] = useState('');
+    const [sourceFilename, setSourceFilename] = useState(prefill.sourceTitle || '');
     const [errorMessages, setErrorMessages] = useState([]);
     const [toast, setToast] = useState({ message: '', type: '', visible: false });
 
@@ -73,7 +74,9 @@ const CreateQuiz = ({ user }) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        setFileNameDisplay(`Selected: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+        const fileName = file.name;
+        setSourceFilename(fileName);
+        setFileNameDisplay(`Selected: ${fileName} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
         setIsExtracting(true);
 
         const formData = new FormData();
@@ -121,6 +124,9 @@ const CreateQuiz = ({ user }) => {
 
         setIsGenerating(true);
         try {
+            // Always use the current in-memory filename to avoid stale session values.
+            const currentSourceFilename = sourceFilename || prefill.sourceTitle || '';
+            
             const response = await djangoApi.post('/quiz/generate/', {
                 subject: finalSubject,
                 extractedText: studyText,
@@ -128,7 +134,9 @@ const CreateQuiz = ({ user }) => {
                 num_short: numShort,
                 quiz_time: quizTime,
                 difficulty,
+                source_filename: currentSourceFilename,
             });
+            
             navigate('/quiz/play', { state: { quizData: response.data } });
         } catch (err) {
             showToast(err.response?.data?.error || 'Generation failed', 'error');
@@ -140,6 +148,7 @@ const CreateQuiz = ({ user }) => {
         if (window.confirm('Clear all fields?')) {
             setSubject(''); setCustomSubject(''); setIsOtherSelected(false);
             setStudyText(''); setFileNameDisplay('');
+            setSourceFilename('');
             setNumMcq(7); setNumShort(3); setQuizTime(10);
             setErrorMessages([]);
             if (fileInputRef.current) fileInputRef.current.value = '';

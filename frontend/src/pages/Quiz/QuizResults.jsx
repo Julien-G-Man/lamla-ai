@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
+import MathRenderer from '../../components/MathRenderer';
 import './QuizResults.css';
 import djangoApi from '../../services/api';
 
@@ -168,17 +169,17 @@ const QuizResults = ({ user }) => {
                                     detail.is_correct ? 'is-correct' : detail.user_answer ? 'is-incorrect' : 'is-unanswered',
                                 ].join(' ')}
                             >
-                                <h4>Q{idx + 1}. {detail.question}</h4>
+                                <h4>Q{idx + 1}. <MathRenderer text={detail.question} /></h4>
 
                                 <div className="results-answer-rows">
                                     <div className="results-answer-row">
                                         <span className="label">Your answer</span>
-                                        <span className="value">{detail.user_answer || '(Unanswered)'}</span>
+                                        <span className="value"><MathRenderer text={detail.user_answer || '(Unanswered)'} /></span>
                                     </div>
                                     <div className="results-answer-row">
                                         <span className="label">Correct answer</span>
                                         <span className="value with-action">
-                                            {detail.correct_answer}
+                                            <MathRenderer text={detail.correct_answer} />
                                             <button className="results-inline-btn" onClick={(e) => handleCopy(detail.correct_answer, e)}>
                                                 Copy
                                             </button>
@@ -187,13 +188,13 @@ const QuizResults = ({ user }) => {
                                     {detail.reasoning && (
                                         <div className="results-answer-row">
                                             <span className="label">Evaluation</span>
-                                            <span className="value">{detail.reasoning}</span>
+                                            <span className="value"><MathRenderer text={detail.reasoning} /></span>
                                         </div>
                                     )}
                                     {detail.explanation && (
                                         <div className="results-answer-row">
                                             <span className="label">Explanation</span>
-                                            <span className="value">{detail.explanation}</span>
+                                            <span className="value"><MathRenderer text={detail.explanation} /></span>
                                         </div>
                                     )}
                                 </div>
@@ -204,28 +205,47 @@ const QuizResults = ({ user }) => {
 
                 <section className="results-actions-card">
                     <h3>Rate this quiz experience</h3>
-                    <div className="results-stars" role="button" aria-label="Rate quiz experience">
+                       <div className="results-rating-section">
+                           <div className="results-stars" role="group" aria-label="Rate quiz experience">
                         {[1, 2, 3, 4, 5].map((star) => (
                             <button
                                 key={star}
                                 type="button"
                                 className={`results-star ${(hoverRating || rating) >= star ? 'active' : ''}`}
+                                   aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
                                 onMouseEnter={() => !feedbackSent && setHoverRating(star)}
                                 onMouseLeave={() => setHoverRating(0)}
                                 onClick={() => !feedbackSent && submitFeedback(star)}
+                                   disabled={feedbackSent}
                             >
-                                ?
+                                   ★
                             </button>
                         ))}
+                           </div>
+                           {feedbackSent && <p className="results-feedback-done">Thanks for your feedback!</p>}
                     </div>
-                    {feedbackSent && <p className="results-feedback-done">Thanks for your feedback.</p>}
 
-                    <div className="results-actions-grid">
-                        <button className="results-action-btn" onClick={handleShare}>Share</button>
-                        <button className="results-action-btn" onClick={() => downloadAsText(results)}>Download TXT</button>
-                        <button className="results-action-btn" onClick={() => downloadAsPDF(results)}>Download PDF</button>
-                        <button className="results-action-btn" onClick={() => downloadAsDOCX(results)}>Download DOCX</button>
-                        <Link to="/quiz/create" className="results-action-btn primary">Generate New Quiz</Link>
+                    <div className="results-actions-section">
+                        <div className="results-actions-row results-actions-row-downloads">
+                            <button className="results-action-btn download-btn" onClick={() => downloadAsText(results)}>
+                                <span>Download TXT</span>
+                            </button>
+                            <button className="results-action-btn download-btn" onClick={() => downloadAsPDF(results)}>
+                                <span>Download PDF</span>
+                            </button>
+                            <button className="results-action-btn download-btn" onClick={() => downloadAsDOCX(results)}>
+                                <span>Download DOCX</span>
+                            </button>
+                        </div>
+
+                        <div className="results-actions-row results-actions-row-secondary">
+                            <Link to="/quiz/create" className="results-action-btn secondary-btn">
+                                Generate New Quiz
+                            </Link>
+                            <button className="results-action-btn secondary-btn" onClick={handleShare}>
+                                <span>Share Results</span>
+                            </button>
+                        </div>
                     </div>
                 </section>
             </div>
