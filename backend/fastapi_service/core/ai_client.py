@@ -71,6 +71,10 @@ class AIClient:
         # --- Claude (Anthropic) ---
         self.claude_key = os.getenv("CLAUDE_API_KEY")
         self.claude_model = os.getenv("CLAUDE_MODEL", "claude-opus-4-6")
+        self._anthropic_client: Optional[anthropic.AsyncAnthropic] = (
+            anthropic.AsyncAnthropic(api_key=self.claude_key)
+            if self.claude_key else None
+        )
 
         # --- NVIDIA OpenAI-compatible ---
         self.nvidia_openai_key = os.getenv("NVIDIA_OPENAI_API_KEY")
@@ -195,16 +199,16 @@ class AIClient:
         Call Anthropic Claude using the official anthropic SDK.
         Docs: https://docs.anthropic.com/en/api/messages
         """
-        if not self.claude_key:
+        if self._anthropic_client is None:
             raise APIIntegrationError("Claude API key not configured (CLAUDE_API_KEY)")
 
-        async_client = anthropic.AsyncAnthropic(api_key=self.claude_key, timeout=timeout)
         try:
-            message = await async_client.messages.create(
+            message = await self._anthropic_client.messages.create(
                 model=self.claude_model,
                 max_tokens=max_tokens,
                 system="You are a helpful educational assistant. Provide accurate, structured responses.",
                 messages=[{"role": "user", "content": prompt}],
+                timeout=timeout,
             )
         except anthropic.AuthenticationError as e:
             raise APIIntegrationError(f"Claude authentication failed: {e}") from e
@@ -212,8 +216,6 @@ class AIClient:
             raise APIIntegrationError(f"Claude rate limit exceeded: {e}") from e
         except anthropic.APIStatusError as e:
             raise APIIntegrationError(f"Claude API error ({e.status_code}): {e.message}") from e
-        finally:
-            await async_client.close()
 
         text = " ".join(
             block.text
