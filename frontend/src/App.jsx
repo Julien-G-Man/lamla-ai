@@ -13,6 +13,7 @@ import Dashboard from "./pages/Dashboards/Dashboard";
 import AdminDashboard from "./pages/Dashboards/AdminDashboard";
 import AdminUserDetails from "./pages/Dashboards/AdminUserDetails";
 import AdminActivity from "./pages/Dashboards/AdminActivity";
+import AdminRatings from "./pages/Dashboards/AdminRatings";
 import CreateQuiz from "./pages/Quiz/CreateQuiz";
 import Quiz from "./pages/Quiz/Quiz";
 import QuizResults from "./pages/Quiz/QuizResults";
@@ -65,6 +66,7 @@ function App() {
             <Route path="/admin-dashboard" element={<AdminDashboard />} />
             <Route path="/admin-dashboard/user/:id" element={<AdminUserDetails />} />
             <Route path="/admin-dashboard/activity" element={<AdminActivity />} />
+            <Route path="/admin-dashboard/ratings" element={<AdminRatings />} />
             <Route path="/profile" element={<Profile />} />
 
             <Route path="/quiz/create" element={<CreateQuiz />} />

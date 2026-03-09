@@ -10,3 +10,8 @@ class ContactFormSerializer(serializers.Serializer):
 
 class NewsletterSerializer(serializers.Serializer):
     email = serializers.EmailField(max_length=254)
+
+
+class QuizFeedbackSerializer(serializers.Serializer):
+    rating = serializers.IntegerField(min_value=1, max_value=5)
+    source = serializers.CharField(max_length=40, required=False, default="quiz_results")

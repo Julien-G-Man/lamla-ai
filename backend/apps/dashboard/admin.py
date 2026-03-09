@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import SystemSettings
+from .models import SystemSettings, QuizExperienceRating
 
 
 @admin.register(SystemSettings)
@@ -52,4 +52,12 @@ class SystemSettingsAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         # Prevent deleting the singleton instance
         return False
+
+
+@admin.register(QuizExperienceRating)
+class QuizExperienceRatingAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "session_key", "rating", "source", "created_at")
+    list_filter = ("rating", "source", "created_at")
+    search_fields = ("user__email", "session_key", "ip_address")
+    readonly_fields = ("created_at", "updated_at")
 

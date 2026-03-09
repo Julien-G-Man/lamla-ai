@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Sidebar from '../../components/sidebar/Sidebar';
@@ -306,9 +306,11 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState(location.state?.tab || 'overview');
   const [adminStats, setAdminStats] = useState({});
   const [users, setUsers] = useState([]);
+  const [feedbackData, setFeedbackData] = useState({ ratings: [], total: 0, average_rating: 0 });
   const [usageTrends, setUsageTrends] = useState({ labels: [], series: {} });
   const [loadingStats, setLoadingStats] = useState(true);
   const [loadingUsers, setLoadingUsers] = useState(true);
+  const [loadingFeedback, setLoadingFeedback] = useState(true);
   const [loadingTrends, setLoadingTrends] = useState(true);
   const [systemSettings, setSystemSettings] = useState(null);
   const [loadingSettings, setLoadingSettings] = useState(false);
@@ -330,6 +332,11 @@ const AdminDashboard = () => {
       .then(setAdminStats)
       .catch(console.error)
       .finally(() => setLoadingStats(false));
+
+    dashboardService.getAdminQuizFeedback(20)
+      .then(setFeedbackData)
+      .catch(console.error)
+      .finally(() => setLoadingFeedback(false));
 
     dashboardService.getAdminUsers()
       .then(setUsers)
@@ -403,7 +410,19 @@ const AdminDashboard = () => {
       label: 'Token Burn (Est.)',
       value: nfmt(adminStats.estimated_tokens?.total),
     },
+    {
+      icon: faTrophy,
+      label: 'Average Rating',
+      value: adminStats.average_experience_rating != null ? `${adminStats.average_experience_rating}/5 ★` : 'N/A',
+    },
   ];
+
+  const recentRatings = useMemo(() => {
+    if (Array.isArray(adminStats.recent_ratings) && adminStats.recent_ratings.length) {
+      return adminStats.recent_ratings.slice(0, 8);
+    }
+    return (feedbackData.ratings || []).slice(0, 8);
+  }, [adminStats.recent_ratings, feedbackData]);
 
   return (
     <div className="db-container">
@@ -495,6 +514,41 @@ const AdminDashboard = () => {
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginTop: 10 }}>
                   {adminStats.estimated_tokens?.note || 'Approximation based on stored text volume.'}
                 </p>
+              </div>
+
+              <div className="db-card">
+                <div className="db-card-header">
+                  <h2>Recent Quiz Experience Ratings</h2>
+                  <button
+                    type="button"
+                    className="db-btn db-btn-ghost db-btn-sm"
+                    onClick={() => navigate('/admin-dashboard/ratings')}
+                  >
+                    View All Ratings
+                  </button>
+                </div>
+                <div style={{ marginBottom: '12px', padding: '10px', background: 'rgba(251, 191, 36, 0.1)', borderRadius: '8px' }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    {nfmt(adminStats.total_ratings || 0)} total ratings • Average: {adminStats.average_experience_rating || '0.00'}/5 ★
+                  </span>
+                </div>
+                {(loadingFeedback || loadingStats) ? (
+                  <p style={{ color: 'var(--text-secondary)', margin: 0 }}>Loading ratings...</p>
+                ) : !recentRatings || recentRatings.length === 0 ? (
+                  <p style={{ color: 'var(--text-secondary)', margin: 0 }}>No ratings submitted yet. Users will see star ratings after completing quizzes.</p>
+                ) : (
+                  <div className="db-ratings-list">
+                    {recentRatings.map((item, idx) => (
+                      <div className="db-rating-item" key={`${item.actor}-${item.created_at}-${idx}`}>
+                        <div>
+                          <p className="db-rating-actor">{item.actor}</p>
+                          <span className="db-rating-time">{formatRelativeTime(item.created_at)}</span>
+                        </div>
+                        <strong className="db-rating-score">{item.rating}/5 ★</strong>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}

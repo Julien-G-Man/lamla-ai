@@ -74,6 +74,11 @@ export default function AdminUserDetails() {
     { label: 'Chat Messages', value: nfmt(summary.total_chat_messages) },
     { label: 'Materials Uploaded', value: nfmt(summary.total_materials) },
     { label: 'Average Score', value: `${summary.average_score ?? 0}%` },
+    { 
+      label: 'User Rating', 
+      value: summary.user_rating ? `${summary.user_rating}/5 ★` : 'Not rated',
+      highlight: !!summary.user_rating
+    },
     { label: 'Token Burn (Total)', value: nfmt(tokens.total) },
   ];
 
@@ -107,10 +112,10 @@ export default function AdminUserDetails() {
 
             <div className="db-stats-grid db-stats-grid--two">
               {cards.map((c) => (
-                <div className="db-stat-card" key={c.label}>
+                <div className="db-stat-card" key={c.label} style={c.highlight ? { borderColor: '#fbbf24' } : {}}>
                   <div className="db-stat-body">
                     <p>{c.label}</p>
-                    <h3>{loading ? '-' : c.value}</h3>
+                    <h3 style={c.highlight ? { color: '#fbbf24' } : {}}>{loading ? '-' : c.value}</h3>
                   </div>
                 </div>
               ))}

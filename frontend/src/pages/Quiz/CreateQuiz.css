@@ -33,6 +33,49 @@ body {
     color: var(--text-secondary);
 }
 
+.cq-processing-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1400;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.cq-processing-card {
+    min-width: 260px;
+    max-width: 420px;
+    border: 1px solid var(--border-dark);
+    border-radius: var(--radius-lg);
+    background: #181818;
+    color: var(--text-primary);
+    padding: 20px;
+    text-align: center;
+    box-shadow: var(--shadow-lg-dark);
+}
+
+.cq-processing-card p {
+    margin: 10px 0 0;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.cq-processing-spinner {
+    width: 34px;
+    height: 34px;
+    margin: 0 auto;
+    border: 3px solid #374151;
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: cqSpin 0.8s linear infinite;
+}
+
+@keyframes cqSpin {
+    to { transform: rotate(360deg); }
+}
+
 .page-wrapper {
     display: flex;
     justify-content: center;

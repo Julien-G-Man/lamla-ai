@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from core.ai_client import ai_service, APIIntegrationError
 from core.http import get_async_client
 from .schemas import FlashcardRequest, FlashcardExplainRequest
@@ -111,57 +111,6 @@ async def _try_acquire_ai_slot() -> bool:
         return False
 
 
-def _build_fallback_cards(text: str, subject: str, num_cards: int):
-    """Deterministic fallback cards when no LLM provider is available."""
-    safe_subject = (subject or "the topic").strip() or "the topic"
-    normalized = re.sub(r"\s+", " ", (text or "").strip())
-    if not normalized:
-        normalized = "No source text was provided."
-
-    # Split into sentence-like chunks and use as answer material.
-    chunks = [c.strip(" -\t") for c in re.split(r"(?<=[.!?])\s+", normalized) if c.strip()]
-    if not chunks:
-        chunks = [normalized]
-
-    def to_card(source: str):
-        sentence = source.strip().strip(".")
-        if not sentence:
-            sentence = "No source text provided"
-
-        # Pattern: "X is Y" -> "What is X?"
-        match_is = re.match(r"^([A-Za-z0-9][A-Za-z0-9 ()/\-]{1,80})\s+is\s+(.+)$", sentence, flags=re.IGNORECASE)
-        if match_is:
-            term = match_is.group(1).strip()
-            meaning = match_is.group(2).strip()
-            return {
-                "question": f"What is {term}?",
-                "answer": meaning[:320],
-            }
-
-        # Pattern: "Term: definition"
-        if ":" in sentence:
-            left, right = sentence.split(":", 1)
-            left = left.strip()
-            right = right.strip()
-            if left and right and len(left) <= 90:
-                return {
-                    "question": f"Explain {left} in {safe_subject}.",
-                    "answer": right[:320],
-                }
-
-        snippet = sentence[:140]
-        return {
-            "question": f"In {safe_subject}, explain this idea: \"{snippet}\"",
-            "answer": sentence[:320],
-        }
-
-    cards = []
-    for i in range(max(1, min(num_cards, 25))):
-        source = chunks[i % len(chunks)]
-        cards.append(to_card(source))
-    return cards
-
-
 @flashcards_router.post("/generate")
 async def generate_flashcards(data: FlashcardRequest):
     client = await get_async_client()
@@ -203,16 +152,12 @@ Return ONLY valid JSON in this format:
 ]
 """
 
-    fallback_cards = _build_fallback_cards(text, subject, num_cards)
-
     if not await _try_acquire_ai_slot():
-        logger.warning("Flashcards generation overload: fallback served without LLM")
-        return {
-            "cards": fallback_cards,
-            "fallback_used": True,
-            "warning": "Service is under high load. Showing fallback flashcards.",
-            "overloaded": True,
-        }
+        logger.warning("Flashcards generation overload: rejecting request")
+        raise HTTPException(
+            status_code=503,
+            detail="Flashcards service is under high load. Please try again shortly.",
+        )
 
     try:
         result = await ai_service.generate_content(client=client, prompt=prompt, max_tokens=1200)
@@ -224,24 +169,22 @@ Return ONLY valid JSON in this format:
                 "fallback_used": False,
             }
 
-        return {
-            "cards": fallback_cards,
-            "fallback_used": True,
-            "warning": "AI response format was invalid. Showing fallback flashcards.",
-        }
+        raise HTTPException(
+            status_code=502,
+            detail="AI returned an invalid flashcards format.",
+        )
 
     except APIIntegrationError as exc:
-        return {
-            "cards": fallback_cards,
-            "fallback_used": True,
-            "warning": f"AI provider unavailable ({str(exc)}). Showing fallback flashcards.",
-        }
-    except Exception:
-        return {
-            "cards": fallback_cards,
-            "fallback_used": True,
-            "warning": "Unexpected AI error. Showing fallback flashcards.",
-        }
+        logger.warning("Flashcards provider unavailable: %s", exc)
+        raise HTTPException(
+            status_code=503,
+            detail=f"AI provider unavailable: {str(exc)}",
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Unexpected flashcards generation error: %s", exc)
+        raise HTTPException(status_code=500, detail="Unexpected flashcards generation error.")
     finally:
         _ai_semaphore.release()
 
@@ -267,13 +210,11 @@ like a tutor helping a beginner.
 """
 
     if not await _try_acquire_ai_slot():
-        logger.warning("Flashcards explanation overload: fallback served without LLM")
-        return {
-            "explanation": f"Focus on this key idea: {answer}",
-            "fallback_used": True,
-            "warning": "Service is under high load. Showing fallback guidance.",
-            "overloaded": True,
-        }
+        logger.warning("Flashcards explanation overload: rejecting request")
+        raise HTTPException(
+            status_code=503,
+            detail="Flashcards explanation service is under high load. Please try again shortly.",
+        )
 
     try:
         result = await ai_service.generate_content(client=client, prompt=prompt, max_tokens=200)
@@ -284,17 +225,18 @@ like a tutor helping a beginner.
                 "fallback_used": False,
             }
 
-        return {
-            "explanation": f"Review this carefully: {answer}",
-            "fallback_used": True,
-            "warning": "AI explanation unavailable. Showing fallback guidance.",
-        }
+        raise HTTPException(status_code=502, detail="AI returned an empty explanation.")
 
-    except Exception:
-        return {
-            "explanation": f"Focus on this key idea: {answer}",
-            "fallback_used": True,
-            "warning": "AI explanation unavailable. Showing fallback guidance.",
-        }
+    except APIIntegrationError as exc:
+        logger.warning("Flashcards explanation provider unavailable: %s", exc)
+        raise HTTPException(
+            status_code=503,
+            detail=f"AI provider unavailable: {str(exc)}",
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Unexpected flashcards explanation error: %s", exc)
+        raise HTTPException(status_code=500, detail="Unexpected flashcards explanation error.")
     finally:
         _ai_semaphore.release()

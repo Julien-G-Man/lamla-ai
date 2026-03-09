@@ -211,6 +211,49 @@
   }
 }
 
+.db-ratings-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.db-rating-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.db-rating-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: #4b5563;
+}
+
+.db-rating-actor {
+  margin: 0 0 4px 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.db-rating-time {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.db-rating-score {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fbbf24;
+  white-space: nowrap;
+}
+
 @media (max-width: 420px) {
   .db-stats-grid.db-stats-grid--two {
     grid-template-columns: repeat(2, minmax(0, 1fr));

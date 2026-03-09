@@ -6,8 +6,8 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_TIMEOUT = 30
-DEFAULT_PROVIDER_ORDER = ["claude", "nvidia", "azure", "deepseek", "gemini", "huggingface"]
+DEFAULT_TIMEOUT = 10
+DEFAULT_PROVIDER_ORDER = ["claude", "nvidia"]
 
 
 class APIIntegrationError(Exception):
@@ -50,7 +50,7 @@ class AIClient:
     Async AI provider orchestrator.
     Use generate_content(client=async_httpx_client, prompt=...) from FastAPI services.
 
-    Provider priority (default): claude → nvidia → azure → deepseek → gemini → huggingface
+    Provider priority (default): claude → nvidia
     """
     def __init__(self, provider_priority: Optional[List[str]] = None):
         self.providers = provider_priority or DEFAULT_PROVIDER_ORDER

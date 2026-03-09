@@ -20,6 +20,49 @@
     var(--fc-bg);
 }
 
+.fc-processing-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.fc-processing-card {
+  min-width: 260px;
+  max-width: 420px;
+  border: 1px solid var(--fc-border);
+  border-radius: 12px;
+  background: #181818;
+  color: var(--fc-text);
+  padding: 20px;
+  text-align: center;
+  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.35);
+}
+
+.fc-processing-card p {
+  margin: 10px 0 0;
+  color: var(--fc-muted);
+  font-weight: 600;
+}
+
+.fc-processing-spinner {
+  width: 34px;
+  height: 34px;
+  margin: 0 auto;
+  border: 3px solid #374151;
+  border-top-color: var(--fc-primary);
+  border-radius: 50%;
+  animation: fcSpin 0.8s linear infinite;
+}
+
+@keyframes fcSpin {
+  to { transform: rotate(360deg); }
+}
+
 .fc-hero,
 .fc-panel {
   border: 1px solid var(--fc-border);

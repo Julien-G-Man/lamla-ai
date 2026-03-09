@@ -41,6 +41,10 @@ const CreateQuiz = ({ user }) => {
     const [sourceFilename, setSourceFilename] = useState(prefill.sourceTitle || '');
     const [errorMessages, setErrorMessages] = useState([]);
     const [toast, setToast] = useState({ message: '', type: '', visible: false });
+    const isProcessing = isExtracting || isGenerating;
+    const processingMessage = isExtracting
+        ? 'Extracting text from file...'
+        : 'Generating your quiz with AI...';
 
     const fileInputRef = useRef(null);
 
@@ -159,6 +163,14 @@ const CreateQuiz = ({ user }) => {
     return (
         <>
             <Navbar user={user} />
+            {isProcessing && (
+                <div className="cq-processing-overlay" role="status" aria-live="polite">
+                    <div className="cq-processing-card">
+                        <div className="cq-processing-spinner" aria-hidden="true" />
+                        <p>{processingMessage}</p>
+                    </div>
+                </div>
+            )}
             <div className="page-wrapper">
                 <div className="quiz-card-container">
                     <h1 className="main-page-title">Quiz Mode</h1>

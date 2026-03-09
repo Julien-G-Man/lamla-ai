@@ -5,6 +5,7 @@ import Footer from '../../components/Footer';
 import MathRenderer from '../../components/MathRenderer';
 import './QuizResults.css';
 import djangoApi from '../../services/api';
+import { dashboardService } from '../../services/dashboard';
 
 const downloadAsText = (results) => {
     const { score, total, score_percent, details, subject, difficulty } = results;
@@ -86,10 +87,36 @@ const QuizResults = ({ user }) => {
     const [rating, setRating] = useState(0);
     const [hoverRating, setHoverRating] = useState(0);
     const [feedbackSent, setFeedbackSent] = useState(false);
+    const [feedbackMessage, setFeedbackMessage] = useState('');
 
     useEffect(() => {
         if (!results) navigate('/quiz/create');
     }, [results, navigate]);
+
+    useEffect(() => {
+        let mounted = true;
+
+        const loadFeedback = async () => {
+            try {
+                const data = await dashboardService.getQuizFeedbackSummary('quiz_results');
+                if (!mounted) return;
+
+                if (data?.user_rating) {
+                    setRating(Number(data.user_rating));
+                    setFeedbackSent(true);
+                    setFeedbackMessage('Your rating is saved.');
+                }
+            } catch (err) {
+                console.error('Could not load feedback summary:', err);
+            }
+        };
+
+        loadFeedback();
+
+        return () => {
+            mounted = false;
+        };
+    }, []);
 
     if (!results) return null;
 
@@ -121,8 +148,20 @@ const QuizResults = ({ user }) => {
     };
 
     const submitFeedback = async (val) => {
-        setRating(val);
-        setFeedbackSent(true);
+        try {
+            const payload = await dashboardService.submitQuizFeedback({
+                rating: val,
+                source: 'quiz_results',
+            });
+            setRating(Number(payload?.rating || val));
+            setFeedbackSent(true);
+            setFeedbackMessage('Thanks. Your rating was saved.');
+        } catch (err) {
+            console.error('Failed to save feedback:', err);
+            setRating(val);
+            setFeedbackSent(true);
+            setFeedbackMessage('Saved locally. We could not sync right now.');
+        }
     };
 
     return (
@@ -222,7 +261,7 @@ const QuizResults = ({ user }) => {
                             </button>
                         ))}
                            </div>
-                           {feedbackSent && <p className="results-feedback-done">Thanks for your feedback!</p>}
+                           {feedbackSent && <p className="results-feedback-done">{feedbackMessage || 'Thanks for your feedback!'}</p>}
                     </div>
 
                     <div className="results-actions-section">

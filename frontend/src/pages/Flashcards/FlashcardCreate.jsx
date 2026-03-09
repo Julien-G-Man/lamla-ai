@@ -40,48 +40,6 @@ const normalizeCards = (rawCards) => {
   return [];
 };
 
-const buildFallbackCards = (text, subject, count) => {
-  const safeSubject = (subject || "the topic").trim() || "the topic";
-  const normalized = (text || "").replace(/\s+/g, " ").trim();
-  const chunks = normalized.split(/(?<=[.!?])\s+/).map((c) => c.trim()).filter(Boolean);
-  const source = chunks.length ? chunks : [normalized || "No source text provided."];
-  const max = Math.max(1, Math.min(Number(count) || 10, 25));
-  const toCard = (line) => {
-    const sentence = (line || "").trim().replace(/\.$/, "");
-    if (!sentence) {
-      return {
-        question: `Explain one core idea in ${safeSubject}.`,
-        answer: "No source text provided.",
-      };
-    }
-
-    const isPattern = sentence.match(/^([A-Za-z0-9][A-Za-z0-9 ()/-]{1,80})\s+is\s+(.+)$/i);
-    if (isPattern) {
-      return {
-        question: `What is ${isPattern[1].trim()}?`,
-        answer: isPattern[2].trim().slice(0, 320),
-      };
-    }
-
-    if (sentence.includes(":")) {
-      const [left, right] = sentence.split(":");
-      if (left && right) {
-        return {
-          question: `Explain ${left.trim()} in ${safeSubject}.`,
-          answer: right.trim().slice(0, 320),
-        };
-      }
-    }
-
-    return {
-      question: `In ${safeSubject}, explain this idea: "${sentence.slice(0, 120)}"`,
-      answer: sentence.slice(0, 320),
-    };
-  };
-
-  return Array.from({ length: max }, (_, idx) => toCard(source[idx % source.length]));
-};
-
 export default function FlashcardCreate() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -112,6 +70,12 @@ export default function FlashcardCreate() {
     () => (subject === "Other" ? customSubject.trim() : subject.trim()),
     [subject, customSubject]
   );
+  const isProcessing = isExtracting || isGenerating || isSaving;
+  const processingMessage = isExtracting
+    ? "Extracting text from your file..."
+    : isGenerating
+      ? "Generating flashcards with AI..."
+      : "Saving flashcard deck...";
 
   const extractText = async (file) => {
     if (!file) return;
@@ -177,25 +141,18 @@ export default function FlashcardCreate() {
       });
 
       const generated = normalizeCards(res.data?.cards);
-      const safeCards = generated.length ? generated : buildFallbackCards(text, finalSubject, boundedNumCards);
-      setCards(safeCards);
-
-      if (res.data?.fallback_used) {
-        setInfo(res.data?.warning || "Fallback flashcards generated.");
+      if (!generated.length) {
+        setCards([]);
+        setError("AI returned an invalid flashcards response. Please try again.");
       } else {
-        setInfo(`Generated ${safeCards.length} flashcards.`);
+        setCards(generated);
+        setInfo(`Generated ${generated.length} flashcards.`);
       }
     } catch (err) {
       console.error("Flashcard generation failed", err);
       const message = getApiErrorMessage(err, "Flashcard generation failed.");
-      const status = err?.response?.status;
-
-      if (!status || status >= 500) {
-        setCards(buildFallbackCards(text, finalSubject, boundedNumCards));
-        setInfo("AI service unavailable. Fallback flashcards generated.");
-      } else {
-        setError(message);
-      }
+      setCards([]);
+      setError(message);
     } finally {
       setIsGenerating(false);
     }
@@ -224,6 +181,14 @@ export default function FlashcardCreate() {
   return (
     <>
       <Navbar />
+      {isProcessing && (
+        <div className="fc-processing-overlay" role="status" aria-live="polite">
+          <div className="fc-processing-card">
+            <div className="fc-processing-spinner" aria-hidden="true" />
+            <p>{processingMessage}</p>
+          </div>
+        </div>
+      )}
       <main className="fc-page">
         <section className="fc-create-layout">
           <article className="fc-panel fc-create-form">

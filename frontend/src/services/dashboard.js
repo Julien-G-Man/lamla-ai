@@ -7,6 +7,16 @@ export const dashboardService = {
     return res.data;
   },
 
+  getQuizFeedbackSummary: async (source = 'quiz_results') => {
+    const res = await djangoApi.get(`/dashboard/quiz-feedback/?source=${encodeURIComponent(source)}`);
+    return res.data;
+  },
+
+  submitQuizFeedback: async ({ rating, source = 'quiz_results' }) => {
+    const res = await djangoApi.post('/dashboard/quiz-feedback/', { rating, source });
+    return res.data;
+  },
+
   // History
   getQuizHistory: async () => {
     const res = await djangoApi.get('/quiz/history/');
@@ -26,6 +36,11 @@ export const dashboardService = {
   // Admin
   getAdminStats: async () => {
     const res = await djangoApi.get('/dashboard/admin/stats/');
+    return res.data;
+  },
+
+  getAdminQuizFeedback: async (limit = 100) => {
+    const res = await djangoApi.get(`/dashboard/admin/quiz-feedback/?limit=${limit}`);
     return res.data;
   },
   

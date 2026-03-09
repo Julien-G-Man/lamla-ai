@@ -13,7 +13,8 @@ from apps.quiz.models import QuizSession
 from apps.chatbot.models import ChatSession, ChatMessage
 from apps.accounts.serializers import user_to_dict
 from apps.accounts.services import EmailDeliveryError
-from .serializers import ContactFormSerializer, NewsletterSerializer
+from .models import QuizExperienceRating
+from .serializers import ContactFormSerializer, NewsletterSerializer, QuizFeedbackSerializer
 from .services import send_contact_emails, send_newsletter_emails
 from .helpers import _calculate_streak, _tokens_from_chars, _safe_char_sum, _collect_admin_activity
 
@@ -46,12 +47,19 @@ class DashboardStatsView(APIView):
         except Exception:
             pass
 
+        feedback_stats = QuizExperienceRating.objects.aggregate(
+            total=dm.Count('id'),
+            average=dm.Avg('rating'),
+        )
+
         return Response({
             'total_quizzes': quiz_stats['total'] or 0,
             'average_score': round(float(quiz_stats['avg'] or 0), 1),
             'total_flashcard_sets': total_flashcard_sets,
             'total_chats': ChatSession.objects.filter(user=user).count(),
             'study_streak': _calculate_streak(user),
+            'total_ratings': int(feedback_stats.get('total') or 0),
+            'average_experience_rating': round(float(feedback_stats.get('average') or 0), 2),
         })
 
 
@@ -80,6 +88,22 @@ class AdminDashboardStatsView(APIView):
         total_chat_sessions = ChatSession.objects.exclude(user__isnull=True).count()
         total_chat_messages = ChatMessage.objects.count()
         total_materials = Material.objects.count()
+
+        feedback_stats = QuizExperienceRating.objects.aggregate(
+            total=dm.Count('id'),
+            average=dm.Avg('rating'),
+        )
+
+        recent_ratings = [
+            {
+                'rating': row.rating,
+                'source': row.source,
+                'created_at': row.created_at.isoformat(),
+                'actor': row.user.email if row.user else 'Anonymous',
+                'is_authenticated': bool(row.user_id),
+            }
+            for row in QuizExperienceRating.objects.select_related('user').order_by('-created_at')[:20]
+        ]
 
         # 24h activity
         quizzes_24h = QuizSession.objects.filter(created_at__gte=day_ago).count()
@@ -133,6 +157,9 @@ class AdminDashboardStatsView(APIView):
             'total_chat_sessions': total_chat_sessions,
             'total_chat_messages': total_chat_messages,
             'average_score': round(float(quiz_stats['avg'] or 0), 1),
+            'total_ratings': int(feedback_stats.get('total') or 0),
+            'average_experience_rating': round(float(feedback_stats.get('average') or 0), 2),
+            'recent_ratings': recent_ratings,
             'avg_quizzes_per_user': avg_quizzes_per_user,
             'avg_chats_per_user': avg_chats_per_user,
             'activity_24h': {
@@ -391,6 +418,10 @@ class AdminUserDeleteView(APIView):
             total_questions=Coalesce(dm.Sum('total_questions'), Value(0)),
         )
 
+        # Get user's quiz experience rating
+        user_rating = QuizExperienceRating.objects.filter(user=target).order_by('-updated_at').first()
+        user_rating_value = user_rating.rating if user_rating else None
+
         # Recent per-user activity (quizzes + flashcards + chat)
         recent_activity = []
         for q in quizzes_qs.order_by('-created_at')[:10]:
@@ -431,6 +462,7 @@ class AdminUserDeleteView(APIView):
                 'total_flashcards': flashcards_count,
                 'total_chat_sessions': chat_sessions_count,
                 'total_chat_messages': chat_messages_count,
+                'user_rating': user_rating_value,
             },
             'estimated_tokens': {
                 'quiz': tokens_quiz,
@@ -499,6 +531,139 @@ class NewsletterSubscribeView(APIView):
             )
 
         return Response({"detail": "Subscription successful."})
+
+
+class QuizFeedbackView(APIView):
+    """GET/POST /api/dashboard/quiz-feedback/"""
+    permission_classes = [AllowAny]
+
+    def _resolve_source(self, value: str) -> str:
+        allowed = {"quiz_results"}
+        normalized = (value or "quiz_results").strip().lower()
+        return normalized if normalized in allowed else "quiz_results"
+
+    def _resolve_session_key(self, request) -> str:
+        if not request.session.session_key:
+            request.session.save()
+        return request.session.session_key or ""
+
+    def get(self, request):
+        source = self._resolve_source(request.query_params.get("source"))
+
+        aggregate = QuizExperienceRating.objects.filter(source=source).aggregate(
+            total=dm.Count('id'),
+            average=dm.Avg('rating'),
+        )
+
+        current = None
+        if request.user and request.user.is_authenticated:
+            current = QuizExperienceRating.objects.filter(user=request.user, source=source).order_by('-updated_at').first()
+        else:
+            session_key = self._resolve_session_key(request)
+            current = QuizExperienceRating.objects.filter(user__isnull=True, session_key=session_key, source=source).order_by('-updated_at').first()
+
+        return Response({
+            'source': source,
+            'total_ratings': int(aggregate.get('total') or 0),
+            'average_rating': round(float(aggregate.get('average') or 0), 2),
+            'user_rating': int(current.rating) if current else None,
+        })
+
+    def post(self, request):
+        serializer = QuizFeedbackSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        source = self._resolve_source(serializer.validated_data.get('source'))
+        rating_value = serializer.validated_data['rating']
+        ip = request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip() or request.META.get('REMOTE_ADDR')
+        ua = (request.META.get('HTTP_USER_AGENT') or '')[:255]
+
+        if request.user and request.user.is_authenticated:
+            rating_obj, _ = QuizExperienceRating.objects.update_or_create(
+                user=request.user,
+                source=source,
+                defaults={
+                    'rating': rating_value,
+                    'session_key': self._resolve_session_key(request),
+                    'ip_address': ip,
+                    'user_agent': ua,
+                },
+            )
+        else:
+            session_key = self._resolve_session_key(request)
+            rating_obj = QuizExperienceRating.objects.filter(
+                user__isnull=True,
+                session_key=session_key,
+                source=source,
+            ).order_by('-updated_at').first()
+
+            if rating_obj:
+                rating_obj.rating = rating_value
+                rating_obj.ip_address = ip
+                rating_obj.user_agent = ua
+                rating_obj.save(update_fields=['rating', 'ip_address', 'user_agent', 'updated_at'])
+            else:
+                rating_obj = QuizExperienceRating.objects.create(
+                    user=None,
+                    session_key=session_key,
+                    source=source,
+                    rating=rating_value,
+                    ip_address=ip,
+                    user_agent=ua,
+                )
+
+        aggregate = QuizExperienceRating.objects.filter(source=source).aggregate(
+            total=dm.Count('id'),
+            average=dm.Avg('rating'),
+        )
+
+        return Response({
+            'detail': 'Feedback saved.',
+            'rating': int(rating_obj.rating),
+            'source': source,
+            'total_ratings': int(aggregate.get('total') or 0),
+            'average_rating': round(float(aggregate.get('average') or 0), 2),
+        })
+
+
+class AdminQuizFeedbackListView(APIView):
+    """GET /api/dashboard/admin/quiz-feedback/"""
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request):
+        try:
+            limit = int(request.query_params.get('limit', 100))
+        except (TypeError, ValueError):
+            limit = 100
+        limit = max(1, min(limit, 200))
+
+        source = (request.query_params.get('source') or 'quiz_results').strip().lower()
+
+        queryset = QuizExperienceRating.objects.select_related('user').order_by('-created_at')
+        if source:
+            queryset = queryset.filter(source=source)
+
+        rows = list(queryset[:limit])
+
+        payload = [
+            {
+                'id': row.id,
+                'rating': row.rating,
+                'source': row.source,
+                'created_at': row.created_at.isoformat(),
+                'actor': row.user.email if row.user else 'Anonymous',
+                'is_authenticated': bool(row.user_id),
+            }
+            for row in rows
+        ]
+
+        stats = queryset.aggregate(total=dm.Count('id'), average=dm.Avg('rating'))
+
+        return Response({
+            'ratings': payload,
+            'total': int(stats.get('total') or 0),
+            'average_rating': round(float(stats.get('average') or 0), 2),
+        })
 
 
 class IsAdminUser(BasePermission):
