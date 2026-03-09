@@ -1,0 +1,323 @@
+================================================================================
+                        LAMLA AI - FRONTEND STRUCTURE
+================================================================================
+Generated: 2026-03-09
+Framework: React 19.2.3 (Create React App)
+Deployment: Vercel
+================================================================================
+
+--------------------------------------------------------------------------------
+1. ROOT FILES
+--------------------------------------------------------------------------------
+
+frontend/
+├── package.json               # Dependencies & scripts
+├── package-lock.json          # Lockfile
+├── .env                       # Shared env vars (Django & FastAPI URLs)
+├── .env.development           # Development env overrides
+├── .env.production            # Production env overrides
+├── .gitignore
+├── vercel.json                # Vercel deployment config (SPA rewrites)
+├── public/
+│   ├── index.html             # Main HTML entry with SEO meta tags
+│   ├── favicon.ico
+│   ├── manifest.json          # PWA manifest
+│   ├── robots.txt
+│   ├── sitemap.xml
+│   ├── googlef82bec8c5ad249a7.html  # Google Search Console verification
+│   ├── Quiz_Results_Random_Stuff.pdf
+│   └── assets/                # Static images
+│       ├── lamla_logo.png
+│       ├── og-image.png            (1200x630, Open Graph)
+│       ├── og-image-square.png     (600x600)
+│       ├── ai-tutor.jpg
+│       ├── ai_teaching.jpg
+│       ├── developer.jpg
+│       ├── developer.webp
+│       ├── discussion.jpg
+│       ├── flashcards.jpeg
+│       ├── graduation-cap.jpg
+│       ├── highfive-with-teacher.jpg
+│       ├── improve-performance.jpg
+│       ├── incognito.png
+│       ├── not-found.jpg
+│       ├── not-found.webp
+│       ├── not-found2.jpg
+│       ├── not-found2.webp
+│       ├── profile_default.png
+│       ├── profile_default2.png
+│       ├── quizzes.jpg
+│       ├── steam.jpg
+│       ├── student.jpeg
+│       ├── student_desk.webp
+│       └── uni_exams.jpg
+└── src/                       # Application source code (detailed below)
+
+--------------------------------------------------------------------------------
+2. SOURCE CODE STRUCTURE (src/)
+--------------------------------------------------------------------------------
+
+src/
+├── index.js                   # React 19 entry point (ReactDOM.createRoot)
+├── index.css                  # Global styles
+├── App.jsx                    # Root component — routing & context providers
+├── App.css                    # App-level styles
+├── App.test.js
+├── reportWebVitals.js
+├── setupTests.js
+├── service-worker.js          # PWA service worker
+├── serviceWorkerRegistration.js
+│
+├── context/                   # Global state (React Context API)
+│   ├── AuthContext.jsx        # Auth state, token storage, user management
+│   └── ThemeContext.jsx       # Dark/light theme toggle + localStorage persist
+│
+├── services/                  # API abstraction layer
+│   ├── api.js                 # Axios base config, interceptors, warmup logic
+│   ├── auth.js                # Auth API methods
+│   ├── dashboard.js           # Dashboard & admin API methods
+│   └── materials.js           # Materials upload/download/extract methods
+│
+├── components/                # Reusable UI components
+│   ├── Navbar.jsx             # Top navigation bar (auth-aware)
+│   ├── Footer.jsx             # Footer
+│   ├── MathRenderer.jsx       # LaTeX math rendering via KaTeX
+│   ├── GoogleSignInButton.jsx # Google OAuth button
+│   ├── GoogleSignInButton.css
+│   └── sidebar/
+│       ├── Sidebar.jsx        # Navigation sidebar
+│       └── Sidebar.css
+│
+└── pages/                     # Page-level components (one per route)
+    ├── Home/
+    │   ├── Home.jsx           # Landing page
+    │   └── Home.css
+    │
+    ├── Auth/
+    │   ├── VerifyEmail.jsx    # Email verification handler
+    │   └── VerifyEmail.css
+    │
+    ├── Login/
+    │   ├── Login.jsx          # Login form + Google sign-in
+    │   ├── Login.css
+    │   └── GoogleAuth.css
+    │
+    ├── Signup/
+    │   ├── Signup.jsx         # Registration form + Google sign-in
+    │   └── Signup.css
+    │
+    ├── Dashboards/
+    │   ├── Dashboard.jsx          # User dashboard (stats, history)
+    │   ├── Dashboard.css
+    │   ├── AdminDashboard.jsx     # Admin overview
+    │   ├── AdminDashboard.css
+    │   ├── AdminUserDetails.jsx   # Admin: per-user detail view
+    │   ├── AdminUserDetails.css
+    │   ├── AdminActivity.jsx      # Admin: activity log
+    │   ├── AdminRatings.jsx       # Admin: ratings/feedback view
+    │   └── dashboard-shared.css   # Shared dashboard styles
+    │
+    ├── Quiz/
+    │   ├── CreateQuiz.jsx     # Quiz creation (subject, difficulty, source)
+    │   ├── CreateQuiz.css
+    │   ├── Quiz.jsx           # Quiz player (timer, flagging, progress)
+    │   ├── Quiz.css
+    │   ├── QuizResults.jsx    # Results summary with feedback
+    │   └── QuizResults.css
+    │
+    ├── Flashcards/
+    │   ├── FlashcardDecks.jsx # List all flashcard decks
+    │   ├── FlashcardCreate.jsx # Create a new deck
+    │   ├── FlashcardDeck.jsx  # View/manage a specific deck
+    │   ├── FlashcardStudy.jsx # Study mode (flip cards)
+    │   └── Flashcards.css
+    │
+    ├── Chatbot/
+    │   ├── Chatbot.jsx        # AI tutor chat (markdown + KaTeX rendering)
+    │   └── Chatbot.css
+    │
+    ├── Materials/
+    │   ├── Materials.jsx      # Materials library (search, filter, download)
+    │   ├── MaterialUpload.jsx # Upload materials form
+    │   └── Materials.css
+    │
+    ├── UserProfile/
+    │   ├── Profile.jsx        # Profile page (edit info, avatar, password)
+    │   └── Profile.css
+    │
+    ├── About/
+    │   ├── About.jsx
+    │   └── About.css
+    │
+    └── NotFound/
+        └── NotFound.jsx       # 404 page
+
+--------------------------------------------------------------------------------
+3. ROUTING (App.jsx)
+--------------------------------------------------------------------------------
+
+Route                          Component              Access
+-------------------------------+-----------------------+------------------
+/                              Home                   Public
+/auth/login                    Login                  Public
+/auth/signup                   Signup                 Public
+/auth/verify-email             VerifyEmail            Public
+/dashboard                     Dashboard              Authenticated
+/admin-dashboard               AdminDashboard         Admin only
+/admin-dashboard/user/:id      AdminUserDetails       Admin only
+/admin-dashboard/activity      AdminActivity          Admin only
+/admin-dashboard/ratings       AdminRatings           Admin only
+/profile                       Profile                Authenticated
+/quiz/create                   CreateQuiz             Authenticated
+/quiz/play                     Quiz                   Authenticated
+/quiz/results                  QuizResults            Authenticated
+/flashcards                    FlashcardDecks         Authenticated
+/flashcards/create             FlashcardCreate        Authenticated
+/flashcards/deck/:id           FlashcardDeck          Authenticated
+/flashcards/study/:id          FlashcardStudy         Authenticated
+/materials                     Materials              Authenticated
+/materials/upload              MaterialUpload         Authenticated
+/ai-tutor                      Chatbot                Authenticated
+*                              NotFound               Public (catch-all)
+
+--------------------------------------------------------------------------------
+4. STATE MANAGEMENT
+--------------------------------------------------------------------------------
+
+AuthContext.jsx
+  State  : user, isLoading, isAuthenticated, isEmailVerified
+  Methods: login(), signup(), googleAuth(), logout(),
+           markEmailVerified(), resendVerificationEmail(),
+           updateProfile(), uploadProfileImage(),
+           changePassword(), getUserRole()
+  Storage: localStorage (token + user object)
+
+ThemeContext.jsx
+  State  : theme ("dark" | "light")
+  Methods: toggleTheme()
+  Storage: localStorage; applies data-theme attribute to <html>
+
+--------------------------------------------------------------------------------
+5. API SERVICES
+--------------------------------------------------------------------------------
+
+api.js
+  - Axios instance for Django API
+  - Base URL  : REACT_APP_DJANGO_API_URL (https://lamla-api.onrender.com/api)
+  - FastAPI   : REACT_APP_FASTAPI_URL    (https://lamla-fastapi.onrender.com)
+  - Interceptor: injects auth token on every request
+  - Warmup   : pings Django & FastAPI every 10 minutes to prevent cold starts
+
+auth.js
+  authService.signup(email, password, username)
+  authService.login(identifier, password)
+  authService.googleAuth(googleToken)
+  authService.logout()
+  authService.verifyEmail(uid, token)
+  authService.resendVerificationEmail()
+  authService.updateProfile(username, email)
+  authService.uploadProfileImage(file)
+  authService.changePassword(old_password, new_password)
+  authService.getCurrentUser()
+  authService.isAuthenticated()
+  authService.getUserRole()
+
+dashboard.js
+  dashboardService.getStats()
+  dashboardService.getQuizHistory()
+  dashboardService.getFlashcardHistory()
+  dashboardService.getChatHistory()
+  dashboardService.getAdminStats()
+  dashboardService.getAdminQuizFeedback(limit)
+  dashboardService.getAdminUsageTrends(days)
+  dashboardService.getAdminActivity({ period, limit, offset, customDays })
+  dashboardService.getAdminUsers()
+  dashboardService.getAdminUserDetails(userId)
+  dashboardService.removeUser(userId)
+  dashboardService.getSystemSettings()
+  dashboardService.updateSystemSettings(settingsData)
+  dashboardService.getQuizFeedbackSummary(source)
+  dashboardService.submitQuizFeedback({ rating, source })
+
+materials.js
+  materialsService.getAll({ subject, q, page })
+  materialsService.getMine()
+  materialsService.upload({ title, description, subject, file }, onProgress)
+  materialsService.download(id)
+  materialsService.extractForQuiz(id)
+  materialsService.delete(id)
+
+--------------------------------------------------------------------------------
+6. TECHNOLOGY STACK
+--------------------------------------------------------------------------------
+
+Core
+  React                19.2.3
+  React Router DOM     6.30.2
+  Axios                1.13.2
+
+Auth
+  React OAuth Google   0.12.2        (Google OAuth 2.0)
+
+Rendering
+  React Markdown       10.1.0        (Markdown rendering)
+  KaTeX                0.16.38       (LaTeX math engine)
+  React KaTeX          3.1.0         (React wrapper for KaTeX)
+  remark-gfm                         (GitHub Flavored Markdown)
+  remark-math                        (Math in Markdown)
+  rehype-katex         7.0.1         (KaTeX in rehype pipeline)
+
+Icons
+  FontAwesome          7.1.0
+
+Build & Tooling
+  React Scripts        5.0.1         (CRA build tool)
+  Web Vitals           5.1.0         (Performance monitoring)
+  Service Worker                     (PWA support)
+
+Styling
+  Plain CSS (component-scoped .css files per page/component)
+
+Deployment
+  Vercel (vercel.json configures SPA fallback rewrites)
+
+--------------------------------------------------------------------------------
+7. ENVIRONMENT VARIABLES
+--------------------------------------------------------------------------------
+
+Variable                          Description
+----------------------------------+---------------------------------------------
+REACT_APP_DJANGO_API_URL          Django REST API base URL
+REACT_APP_FASTAPI_URL             FastAPI (AI services) base URL
+
+.env values (shared):
+  REACT_APP_DJANGO_API_URL=https://lamla-api.onrender.com/api
+  REACT_APP_FASTAPI_URL=https://lamla-fastapi.onrender.com
+
+--------------------------------------------------------------------------------
+8. KEY FEATURES
+--------------------------------------------------------------------------------
+
+1. Authentication       Token-based login/signup + Google OAuth + email verify
+2. Quiz System          AI-generated MCQ & short-answer, timer, flagging, results
+3. Flashcards           Create decks, study mode (flip cards), manage decks
+4. AI Chatbot           Markdown + KaTeX chat interface with AI tutor (FastAPI)
+5. Materials Library    Upload PDFs, download, extract text for quiz generation
+6. User Dashboard       Personal stats, quiz/flashcard/chat history
+7. Admin Dashboard      User management, activity logs, ratings, system settings
+8. PWA Support          Service worker, offline capability, installable app
+9. Theme Support        Dark/light mode toggle, persisted in localStorage
+10. SEO                 Meta tags, Open Graph, JSON-LD structured data, sitemap
+
+--------------------------------------------------------------------------------
+9. COUNTS SUMMARY
+--------------------------------------------------------------------------------
+
+Pages (route-level components) : 20
+Reusable components            : 4
+Context providers              : 2
+API service modules            : 4
+CSS stylesheets                : 15+
+Public assets (images/icons)   : 25+
+Defined routes                 : 20
+================================================================================
