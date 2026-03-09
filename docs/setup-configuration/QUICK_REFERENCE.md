@@ -20,7 +20,16 @@ FastAPI (`backend/fastapi_service/.env` or process env):
 
 - `FASTAPI_SECRET`
 - `FASTAPI_ALLOWED_ORIGINS`
-- provider keys (`AZURE_*`, `DEEPSEEK_*`, etc)
+- `AI_PROVIDER_ORDER` — comma-separated list of providers, e.g. `claude,nvidia_deepseek` (default: `nvidia_deepseek,nvidia_openai,claude`)
+- Claude: `CLAUDE_API_KEY` (**required to use Claude**), `CLAUDE_MODEL` (default: `claude-opus-4-6`)
+- NVIDIA DeepSeek: `NVIDIA_DEEPSEEK_API_KEY`, `NVIDIA_DEEPSEEK_MODEL`, `NVIDIA_DEEPSEEK_THINKING`
+- NVIDIA OpenAI: `NVIDIA_OPENAI_API_KEY`, `NVIDIA_OPENAI_MODEL`
+- Azure OpenAI: `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_DEPLOYMENT`, `AZURE_OPENAI_API_VERSION`
+- DeepSeek: `DEEPSEEK_API_KEY`, `DEEPSEEK_API_URL`
+- Gemini: `GEMINI_API_KEY`, `GEMINI_API_URL`
+- HuggingFace: `HUGGING_FACE_API_TOKEN`, `HUGGING_FACE_MODEL`
+
+See `docs/architecture-design/AI_PROVIDERS.md` for full provider docs.
 
 Frontend (`frontend/.env`):
 

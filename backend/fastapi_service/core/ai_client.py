@@ -3,6 +3,7 @@ import json
 import logging
 from typing import List, Optional, Union
 import httpx
+import anthropic
 
 logger = logging.getLogger(__name__)
 
@@ -69,9 +70,11 @@ class AIClient:
 
         # --- Claude (Anthropic) ---
         self.claude_key = os.getenv("CLAUDE_API_KEY")
-        self.claude_model = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-20250514")
-        self.claude_url = os.getenv("CLAUDE_URL", "https://api.anthropic.com/v1/messages")
-        self.claude_api_version = os.getenv("CLAUDE_API_VERSION", "2023-06-01")
+        self.claude_model = os.getenv("CLAUDE_MODEL", "claude-opus-4-6")
+        self._anthropic_client: Optional[anthropic.AsyncAnthropic] = (
+            anthropic.AsyncAnthropic(api_key=self.claude_key)
+            if self.claude_key else None
+        )
 
         # --- NVIDIA OpenAI-compatible ---
         self.nvidia_openai_key = os.getenv("NVIDIA_OPENAI_API_KEY")
@@ -191,41 +194,37 @@ class AIClient:
     #  Provider implementations                                            #
     # ------------------------------------------------------------------ #
 
-    async def _call_claude(self, client: httpx.AsyncClient, prompt: str, max_tokens: int, timeout: int = DEFAULT_TIMEOUT) -> dict:
+    async def _call_claude(self, client: httpx.AsyncClient, prompt: str, max_tokens: int, timeout: int = DEFAULT_TIMEOUT) -> str:
         """
-        Call Anthropic Claude via the /v1/messages endpoint.
+        Call Anthropic Claude using the official anthropic SDK.
         Docs: https://docs.anthropic.com/en/api/messages
         """
-        if not self.claude_key:
+        if self._anthropic_client is None:
             raise APIIntegrationError("Claude API key not configured (CLAUDE_API_KEY)")
 
-        headers = {
-            "x-api-key": self.claude_key,
-            "anthropic-version": self.claude_api_version,
-            "content-type": "application/json",
-        }
-        payload = {
-            "model": self.claude_model,
-            "max_tokens": max_tokens,
-            "messages": [
-                {"role": "user", "content": prompt}
-            ],
-        }
+        try:
+            message = await self._anthropic_client.messages.create(
+                model=self.claude_model,
+                max_tokens=max_tokens,
+                system="You are a helpful educational assistant. Provide accurate, structured responses.",
+                messages=[{"role": "user", "content": prompt}],
+                timeout=timeout,
+            )
+        except anthropic.AuthenticationError as e:
+            raise APIIntegrationError(f"Claude authentication failed: {e}") from e
+        except anthropic.RateLimitError as e:
+            raise APIIntegrationError(f"Claude rate limit exceeded: {e}") from e
+        except anthropic.APIStatusError as e:
+            raise APIIntegrationError(f"Claude API error ({e.status_code}): {e.message}") from e
 
-        resp = await client.post(self.claude_url, headers=headers, json=payload, timeout=timeout)
-        resp.raise_for_status()
-
-        data = resp.json()
-        # Anthropic response shape: {"content": [{"type": "text", "text": "..."}], ...}
-        content_blocks = data.get("content", [])
         text = " ".join(
-            block.get("text", "")
-            for block in content_blocks
-            if block.get("type") == "text"
+            block.text
+            for block in message.content
+            if block.type == "text"
         ).strip()
 
         if not text:
-            raise APIIntegrationError(f"Claude returned empty content. Full response: {data}")
+            raise APIIntegrationError(f"Claude returned empty content. Stop reason: {message.stop_reason}")
 
         logger.debug("Claude response snippet: %s...", text[:120])
         return text
