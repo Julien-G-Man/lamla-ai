@@ -160,7 +160,7 @@ Return ONLY valid JSON in this format:
         )
 
     try:
-        result = await ai_service.generate_content(client=client, prompt=prompt, max_tokens=1200)
+        result = await ai_service.generate_content(client=client, prompt=prompt, max_tokens=1200, timeout=30)
 
         cards = _normalize_cards(result)
         if cards:
@@ -217,7 +217,7 @@ like a tutor helping a beginner.
         )
 
     try:
-        result = await ai_service.generate_content(client=client, prompt=prompt, max_tokens=200)
+        result = await ai_service.generate_content(client=client, prompt=prompt, max_tokens=200, timeout=30)
 
         if isinstance(result, str) and result.strip():
             return {

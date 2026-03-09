@@ -7,7 +7,7 @@ import httpx
 logger = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT = 10
-DEFAULT_PROVIDER_ORDER = ["claude", "nvidia"]
+DEFAULT_PROVIDER_ORDER = ["nvidia_deepseek", "nvidia_openai", "claude"]
 
 
 class APIIntegrationError(Exception):
@@ -50,7 +50,7 @@ class AIClient:
     Async AI provider orchestrator.
     Use generate_content(client=async_httpx_client, prompt=...) from FastAPI services.
 
-    Provider priority (default): claude → nvidia
+    Provider priority (default): nvidia_deepseek → nvidia_openai → claude
     """
     def __init__(self, provider_priority: Optional[List[str]] = None):
         self.providers = provider_priority or DEFAULT_PROVIDER_ORDER
@@ -58,6 +58,15 @@ class AIClient:
         logger.info("AIClient initialized with providers: %s", self.providers)
 
     def _refresh_keys(self):
+        # --- NVIDIA DeepSeek (OpenAI-compatible chat completions) ---
+        self.nvidia_deepseek_key = os.getenv("NVIDIA_DEEPSEEK_API_KEY")
+        self.nvidia_deepseek_url = os.getenv(
+            "NVIDIA_DEEPSEEK_API_URL",
+            "https://integrate.api.nvidia.com/v1/chat/completions",
+        )
+        self.nvidia_deepseek_model = os.getenv("NVIDIA_DEEPSEEK_MODEL", "deepseek-ai/deepseek-v3.2")
+        self.nvidia_deepseek_thinking = os.getenv("NVIDIA_DEEPSEEK_THINKING", "true").lower() == "true"
+
         # --- Claude (Anthropic) ---
         self.claude_key = os.getenv("CLAUDE_API_KEY")
         self.claude_model = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-20250514")
@@ -65,9 +74,12 @@ class AIClient:
         self.claude_api_version = os.getenv("CLAUDE_API_VERSION", "2023-06-01")
 
         # --- NVIDIA OpenAI-compatible ---
-        self.nvidia_key = os.getenv("NVIDIA_OPENAI_API_KEY")
-        self.nvidia_url = os.getenv("NVIDIA_API_URL", "https://integrate.api.nvidia.com/v1/chat/completions")
-        self.nvidia_model = os.getenv("NVIDIA_MODEL", "openai/gpt-oss-20b")
+        self.nvidia_openai_key = os.getenv("NVIDIA_OPENAI_API_KEY")
+        self.nvidia_openai_url = os.getenv(
+            "NVIDIA_OPENAI_API_URL",
+            "https://integrate.api.nvidia.com/v1/chat/completions",
+        )
+        self.nvidia_openai_model = os.getenv("NVIDIA_OPENAI_MODEL", "openai/gpt-oss-20b")
 
         # --- Azure OpenAI ---
         self.azure_key = os.environ.get("AZURE_OPENAI_API_KEY")
@@ -93,7 +105,8 @@ class AIClient:
         prompt: str,
         max_tokens: int = 1024,
         providers: Optional[List[str]] = None,
-        raise_on_error: bool = True
+        raise_on_error: bool = True,
+        timeout: int = DEFAULT_TIMEOUT
     ) -> Union[dict, str]:
         provider_list = providers or self.providers
         errors = []
@@ -101,27 +114,30 @@ class AIClient:
         for provider in provider_list:
             provider = provider.lower()
             try:
-                if provider == "claude" and self.claude_key:
-                    raw = await self._call_claude(client, prompt, max_tokens)
+                if provider in ("nvidia_deepseek", "deepseek_nvidia") and self.nvidia_deepseek_key:
+                    raw = await self._call_nvidia_deepseek(client, prompt, max_tokens, timeout)
 
-                elif provider == "nvidia" and self.nvidia_key:
-                    raw = await self._call_nvidia(client, prompt, max_tokens)
+                elif provider == "claude" and self.claude_key:
+                    raw = await self._call_claude(client, prompt, max_tokens, timeout)
+
+                elif provider == "nvidia_openai" and self.nvidia_openai_key:
+                    raw = await self._call_nvidia_openai(client, prompt, max_tokens, timeout)
 
                 elif provider == "azure" and self.azure_key and (self.azure_endpoint or self.azure_deployment):
-                    raw = await self._call_azure_openai(client, prompt, max_tokens)
+                    raw = await self._call_azure_openai(client, prompt, max_tokens, timeout)
                     if isinstance(raw, str) and "[Safety Block]" in raw:
                         logger.warning("Azure flagged content as unsafe. Trying next provider.")
                         errors.append((provider, "Content flagged by safety filter"))
                         continue
 
                 elif provider == "deepseek" and self.deepseek_key:
-                    raw = await self._call_deepseek(client, prompt, max_tokens)
+                    raw = await self._call_deepseek(client, prompt, max_tokens, timeout)
 
                 elif provider == "gemini" and self.gemini_key:
-                    raw = await self._call_gemini(client, prompt, max_tokens)
+                    raw = await self._call_gemini(client, prompt, max_tokens, timeout)
 
                 elif provider in ("huggingface", "hf") and self.hf_token:
-                    raw = await self._call_huggingface(client, prompt, max_tokens)
+                    raw = await self._call_huggingface(client, prompt, max_tokens, timeout)
 
                 else:
                     errors.append((provider, "Provider not configured or missing API key"))
@@ -145,8 +161,8 @@ class AIClient:
                 # Try full JSON parse first
                 try:
                     parsed = json.loads(text)
-                    # Extract content from OpenAI-style choices wrapper (Azure, NVIDIA, DeepSeek)
-                    if provider in ("azure", "nvidia", "deepseek") and isinstance(parsed, dict):
+                    # Extract content from OpenAI-style choices wrapper (Azure, NVIDIA OpenAI, DeepSeek)
+                    if provider in ("azure", "nvidia_openai", "deepseek", "nvidia_deepseek") and isinstance(parsed, dict):
                         if "choices" in parsed:
                             content = parsed["choices"][0]["message"].get("content", "")
                             if content and content.strip():
@@ -175,7 +191,7 @@ class AIClient:
     #  Provider implementations                                            #
     # ------------------------------------------------------------------ #
 
-    async def _call_claude(self, client: httpx.AsyncClient, prompt: str, max_tokens: int) -> str:
+    async def _call_claude(self, client: httpx.AsyncClient, prompt: str, max_tokens: int, timeout: int = DEFAULT_TIMEOUT) -> dict:
         """
         Call Anthropic Claude via the /v1/messages endpoint.
         Docs: https://docs.anthropic.com/en/api/messages
@@ -196,7 +212,7 @@ class AIClient:
             ],
         }
 
-        resp = await client.post(self.claude_url, headers=headers, json=payload, timeout=DEFAULT_TIMEOUT)
+        resp = await client.post(self.claude_url, headers=headers, json=payload, timeout=timeout)
         resp.raise_for_status()
 
         data = resp.json()
@@ -214,20 +230,60 @@ class AIClient:
         logger.debug("Claude response snippet: %s...", text[:120])
         return text
 
-    async def _call_nvidia(self, client: httpx.AsyncClient, prompt: str, max_tokens: int) -> str:
+    async def _call_nvidia_deepseek(self, client: httpx.AsyncClient, prompt: str, max_tokens: int, timeout: int = DEFAULT_TIMEOUT) -> str:
+        """
+        Call NVIDIA-hosted DeepSeek using OpenAI-compatible chat completions.
+        """
+        if not self.nvidia_deepseek_key:
+            raise APIIntegrationError("NVIDIA DeepSeek API key not configured (NVIDIA_DEEPSEEK_API_KEY)")
+
+        headers = {
+            "Authorization": f"Bearer {self.nvidia_deepseek_key}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": self.nvidia_deepseek_model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are a helpful educational assistant. Provide accurate, structured responses.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            "temperature": 1,
+            "top_p": 0.95,
+            "max_tokens": max_tokens,
+            "stream": False,
+        }
+
+        if self.nvidia_deepseek_thinking:
+            payload["chat_template_kwargs"] = {"thinking": True}
+
+        resp = await client.post(self.nvidia_deepseek_url, headers=headers, json=payload, timeout=timeout)
+        resp.raise_for_status()
+
+        data = resp.json()
+        content = data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+        if not content:
+            raise APIIntegrationError(f"NVIDIA DeepSeek returned empty content. Full response: {data}")
+
+        logger.debug("NVIDIA DeepSeek response snippet: %s...", content[:120])
+        return content
+
+    async def _call_nvidia_openai(self, client: httpx.AsyncClient, prompt: str, max_tokens: int, timeout: int = DEFAULT_TIMEOUT) -> str:
         """
         Call NVIDIA-hosted models via their OpenAI-compatible chat completions endpoint.
         Docs: https://build.nvidia.com/explore/discover
         """
-        if not self.nvidia_key:
+        if not self.nvidia_openai_key:
             raise APIIntegrationError("NVIDIA API key not configured (NVIDIA_OPENAI_API_KEY)")
 
         headers = {
-            "Authorization": f"Bearer {self.nvidia_key}",
+            "Authorization": f"Bearer {self.nvidia_openai_key}",
             "Content-Type": "application/json",
         }
         payload = {
-            "model": self.nvidia_model,
+            "model": self.nvidia_openai_model,
             "messages": [
                 {
                     "role": "system",
@@ -241,7 +297,7 @@ class AIClient:
             "stream": False,
         }
 
-        resp = await client.post(self.nvidia_url, headers=headers, json=payload, timeout=DEFAULT_TIMEOUT)
+        resp = await client.post(self.nvidia_openai_url, headers=headers, json=payload, timeout=timeout)
         resp.raise_for_status()
 
         data = resp.json()
@@ -253,7 +309,7 @@ class AIClient:
         logger.debug("NVIDIA response snippet: %s...", content[:120])
         return content
 
-    async def _call_deepseek(self, client: httpx.AsyncClient, prompt: str, max_tokens: int) -> str:
+    async def _call_deepseek(self, client: httpx.AsyncClient, prompt: str, max_tokens: int, timeout: int = DEFAULT_TIMEOUT) -> str:
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.deepseek_key}",
@@ -263,11 +319,11 @@ class AIClient:
             "messages": [{"role": "user", "content": prompt}],
             "max_tokens": max_tokens,
         }
-        resp = await client.post(self.deepseek_url, headers=headers, json=payload, timeout=DEFAULT_TIMEOUT)
+        resp = await client.post(self.deepseek_url, headers=headers, json=payload, timeout=timeout)
         resp.raise_for_status()
         return resp.text
 
-    async def _call_azure_openai(self, client: httpx.AsyncClient, prompt: str, max_tokens: int) -> Union[dict, str]:
+    async def _call_azure_openai(self, client: httpx.AsyncClient, prompt: str, max_tokens: int, timeout: int = DEFAULT_TIMEOUT) -> Union[dict, str]:
         if not self.azure_endpoint or not self.azure_key:
             raise APIIntegrationError("Azure OpenAI not configured")
 
@@ -289,7 +345,7 @@ class AIClient:
             "temperature": 0.7,
         }
 
-        resp = await client.post(url, headers=headers, json=payload, timeout=DEFAULT_TIMEOUT)
+        resp = await client.post(url, headers=headers, json=payload, timeout=timeout)
 
         if resp.status_code == 400:
             try:
@@ -309,23 +365,23 @@ class AIClient:
         except json.JSONDecodeError as e:
             raise APIIntegrationError(f"Azure returned invalid JSON: {e}")
 
-    async def _call_gemini(self, client: httpx.AsyncClient, prompt: str, max_tokens: int) -> str:
+    async def _call_gemini(self, client: httpx.AsyncClient, prompt: str, max_tokens: int, timeout: int = DEFAULT_TIMEOUT) -> str:
         if not self.gemini_key or not self.gemini_url:
             raise APIIntegrationError("Gemini not configured")
         headers = {"Authorization": f"Bearer {self.gemini_key}", "Content-Type": "application/json"}
         payload = {"prompt": prompt, "max_output_tokens": max_tokens}
-        resp = await client.post(self.gemini_url, headers=headers, json=payload, timeout=DEFAULT_TIMEOUT)
+        resp = await client.post(self.gemini_url, headers=headers, json=payload, timeout=timeout)
         resp.raise_for_status()
         return resp.text
 
-    async def _call_huggingface(self, client: httpx.AsyncClient, prompt: str, max_tokens: int) -> str:
+    async def _call_huggingface(self, client: httpx.AsyncClient, prompt: str, max_tokens: int, timeout: int = DEFAULT_TIMEOUT) -> str:
         if not self.hf_token:
             raise APIIntegrationError("HuggingFace token not configured")
         model = os.environ.get("HUGGING_FACE_MODEL", "gpt2")
         url = self.hf_url_template.format(model=model)
         headers = {"Authorization": f"Bearer {self.hf_token}"}
         payload = {"inputs": prompt, "parameters": {"max_new_tokens": max_tokens}}
-        resp = await client.post(url, headers=headers, json=payload, timeout=DEFAULT_TIMEOUT)
+        resp = await client.post(url, headers=headers, json=payload, timeout=timeout)
         resp.raise_for_status()
         try:
             return resp.json()

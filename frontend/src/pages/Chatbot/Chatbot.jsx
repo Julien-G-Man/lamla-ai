@@ -1,6 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Navbar from '../../components/Navbar';
-import MathRenderer from '../../components/MathRenderer';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 import './Chatbot.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
@@ -278,7 +282,22 @@ const Chatbot = ({ user }) => {
                     <span></span><span></span><span></span>
                 </div>
             ) : (
-                <p style={{ whiteSpace: 'pre-wrap' }}><MathRenderer text={message.text} /></p>
+                <div className="message-content">
+                    <ReactMarkdown
+                        remarkPlugins={[remarkGfm, remarkMath]}
+                        rehypePlugins={[rehypeKatex]}
+                        components={{
+                            p: ({node, ...props}) => <p style={{ margin: '0.5em 0', whiteSpace: 'pre-wrap' }} {...props} />,
+                            table: ({node, ...props}) => <table className="chatbot-table" {...props} />,
+                            thead: ({node, ...props}) => <thead className="chatbot-thead" {...props} />,
+                            tbody: ({node, ...props}) => <tbody className="chatbot-tbody" {...props} />,
+                            th: ({node, ...props}) => <th className="chatbot-th" {...props} />,
+                            td: ({node, ...props}) => <td className="chatbot-td" {...props} />,
+                        }}
+                    >
+                        {message.text}
+                    </ReactMarkdown>
+                </div>
             )}
         </div>
     );

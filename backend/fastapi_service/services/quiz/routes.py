@@ -165,7 +165,7 @@ async def quiz_endpoint(payload: QuizRequest):
         data = None
         async with httpx.AsyncClient(timeout=45) as client:
             # Increase max_tokens for quiz generation (need more tokens for multiple questions)
-            raw = await ai_service.generate_content(client, prompt, max_tokens=2048)
+            raw = await ai_service.generate_content(client, prompt, max_tokens=2048, timeout=30)
 
             logger.debug("Quiz provider returned type: %s", type(raw).__name__)
 
@@ -182,6 +182,7 @@ async def quiz_endpoint(payload: QuizRequest):
                                 client,
                                 _build_repair_prompt(content_str[:6000]),
                                 max_tokens=2048,
+                                timeout=30
                             )
                             repair_text = (
                                 repair_raw.get("choices", [{}])[0].get("message", {}).get("content", "")

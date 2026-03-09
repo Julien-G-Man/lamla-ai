@@ -52,21 +52,11 @@ class ChatbotService:
         return "", [], mode_used
 
     def clean_markdown(self, text: str) -> str:
-        """Remove markdown symbols and fix indentation for lists."""
-        text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
-        text = re.sub(r'__(.*?)__', r'\1', text)
-        text = re.sub(r'^#+\s*', '', text, flags=re.MULTILINE)
-        text = re.sub(r'`([^`]*)`', r'\1', text)
-        text = text.replace('*', '').replace('_', '')
-        text = re.sub(r'^(\d+)\.\s*', r'    \1. ', text, flags=re.MULTILINE)
-        text = re.sub(r'^[-•]\s*', '    • ', text, flags=re.MULTILINE)
-        text = re.sub(r'^(\s+)(\d+\.\s+)',
-                      lambda m: '    ' * (len(m.group(1)) // 4 + 1) + m.group(2),
-                      text, flags=re.MULTILINE)
-        text = re.sub(r'^(\s+)[•-]\s+',
-                      lambda m: '    ' * (len(m.group(1)) // 4 + 1) + '• ',
-                      text, flags=re.MULTILINE)
-        text = re.sub(r'^\s+', '', text, flags=re.MULTILINE)
+        """Preserve markdown tables and LaTeX for frontend renderer."""
+        # Keep markdown mostly intact - frontend will render it properly
+        # Only clean excessive whitespace
+        if not text:
+            return text
         text = re.sub(r'\n{3,}', '\n\n', text)
         return text.strip()
 
@@ -152,8 +142,9 @@ IMPORTANT RESPONSE GUIDELINES:
 7. Be helpful, concise, and well-organized
 8. When providing step-by-step instructions, use numbered lists with proper indentation
 9. When listing features or options, use bullet points with proper indentation
-10. Please ensure the response is in plain text format without markdown symbols like bolding or headers.
-11. Maintain a clean, readable text structure.
+9. You can use markdown tables for structured data (use pipes | and dashes for table formatting)
+10. Use LaTeX for mathematical expressions ($ for inline math, $$ for block equations)
+11. Maintain a clean, readable structure with proper markdown formatting
 12. Immediately identify the user's language and respond in the same language
 13. If platform details are missing from retrieved context, state that clearly instead of inventing details
 
