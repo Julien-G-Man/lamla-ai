@@ -1,54 +1,52 @@
-// ─── Lamla AI — Auth Emails GAS Script ───────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// Code.gs — Auth Emails
 //
-// Deploy as a Web App:
-//   Extensions → Apps Script → Deploy → New deployment → Web app
-//   Execute as: Me | Who has access: Anyone
+// Handles POST requests from the Lamla AI Django backend to send auth emails.
+// All config lives in Config.gs — do not hard-code values here.
+//
+// DEPLOY:
+//   Extensions → Apps Script → Deploy → New deployment
+//   Type: Web app | Execute as: Me | Who has access: Anyone
 //
 // After deploying:
-//   1. Copy the Web App URL → set as backend env var: GAS_AUTH_EMAIL_URL=<url>
-//   2. Generate a random secret string → set as:
-//        Backend env var:    GAS_AUTH_EMAIL_SECRET=<secret>
-//        GAS Script Property: GAS_SECRET=<same secret>
-//      To set GAS Script Property:
-//        Project Settings (⚙) → Script Properties → Add: GAS_SECRET = <secret>
+//   1. Copy the Web App URL → set on Render: GAS_AUTH_EMAIL_URL=<url>
+//   2. Generate a random secret → set on Render: GAS_AUTH_EMAIL_SECRET=<secret>
+//      Set the same value in Script Properties as GAS_SECRET (see Config.gs)
 //
-// Request format (POST JSON):
+// Expected POST body (JSON):
 //   {
-//     "secret":      "<GAS_AUTH_EMAIL_SECRET>",   // required
+//     "secret":      "<GAS_AUTH_EMAIL_SECRET>",   // required if GAS_SECRET is set
 //     "type":        "verification" | "password_reset",
 //     "to_email":    "user@example.com",
-//     "user_name":   "Alice",                      // optional, falls back to email
+//     "user_name":   "Alice",                     // optional, falls back to email
 //     "action_link": "https://..."
 //   }
-// ─────────────────────────────────────────────────────────────────────────────
-
-// ── Config ────────────────────────────────────────────────────────────────────
-var SITE_NAME = "Lamla AI";
-var SITE_URL  = "https://lamla-ai.vercel.app";
-var LOGO_URL  = "https://staticassets.netlify.app/public/logos/lamla_logo.png";
-// ─────────────────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
 
 
-// ── Entry point ───────────────────────────────────────────────────────────────
+// ── Entry points ──────────────────────────────────────────────────────────────
 
 function doPost(e) {
   try {
     var data    = JSON.parse(e.postData.contents);
-    var secret  = PropertiesService.getScriptProperties().getProperty("GAS_SECRET");
+    var secret  = cfg_secret();
 
-    // Verify shared secret if one is configured
+    // Verify shared secret if one is configured in Script Properties
     if (secret && data.secret !== secret) {
+      cfg_log("Unauthorized request blocked");
       return jsonResponse({ success: false, error: "Unauthorized" });
     }
 
     var type       = data.type        || "";
-    var toEmail    = data.to_email    || "";
-    var userName   = data.user_name   || toEmail;
+    var toEmail    = (data.to_email   || "").trim();
+    var userName   = (data.user_name  || toEmail).trim();
     var actionLink = data.action_link || "";
 
     if (!type || !toEmail || !actionLink) {
       return jsonResponse({ success: false, error: "Missing required fields" });
     }
+
+    cfg_log("Auth email request: type=" + type + " to=" + toEmail);
 
     if (type === "verification") {
       sendVerificationEmail(toEmail, userName, actionLink);
@@ -61,49 +59,54 @@ function doPost(e) {
     return jsonResponse({ success: true });
 
   } catch (err) {
+    cfg_log("ERROR: " + err.message);
     return jsonResponse({ success: false, error: err.message });
   }
 }
 
+// Health-check / CORS preflight
 function doGet(e) {
-  return jsonResponse({ status: "ok" });
+  return jsonResponse({ status: "ok", env: ENV, testMode: TEST_MODE });
 }
 
 
 // ── Email senders ─────────────────────────────────────────────────────────────
 
 function sendVerificationEmail(toEmail, userName, verifyLink) {
+  var to      = cfg_recipientEmail(toEmail);
   var subject = SITE_NAME + " - Please Confirm Your Email Address";
-  var html    = buildVerificationHtml(userName, verifyLink);
+  var html    = buildVerificationHtml(userName, verifyLink, toEmail);
   var text    = buildVerificationText(userName, verifyLink);
-  GmailApp.sendEmail(toEmail, subject, text, { htmlBody: html });
+  GmailApp.sendEmail(to, subject, text, { htmlBody: html });
+  cfg_log("Verification email sent to " + to);
 }
 
 function sendPasswordResetEmail(toEmail, userName, resetLink) {
+  var to      = cfg_recipientEmail(toEmail);
   var subject = SITE_NAME + " - Reset Your Password";
-  var html    = buildPasswordResetHtml(userName, resetLink);
+  var html    = buildPasswordResetHtml(userName, resetLink, toEmail);
   var text    = buildPasswordResetText(userName, resetLink);
-  GmailApp.sendEmail(toEmail, subject, text, { htmlBody: html });
+  GmailApp.sendEmail(to, subject, text, { htmlBody: html });
+  cfg_log("Password reset email sent to " + to);
 }
 
 
 // ── HTML builders ─────────────────────────────────────────────────────────────
 
-function buildVerificationHtml(userName, verifyLink) {
+function buildVerificationHtml(userName, verifyLink, realEmail) {
   return [
     '<!DOCTYPE html>',
     '<html><head><meta charset="UTF-8"><title>Verify Your Email - ' + SITE_NAME + '</title></head>',
     '<body style="margin:0;padding:0;background:#f6f6f6;font-family:Arial,Helvetica,sans-serif;color:#000;">',
     '  <div style="max-width:600px;margin:0 auto;background:#ffffff;padding:28px;">',
 
-    '    <!-- Logo -->',
     '    <div style="text-align:center;margin-bottom:18px;">',
     '      <img src="' + LOGO_URL + '" alt="' + SITE_NAME + '" style="max-width:160px;">',
     '    </div>',
-
     '    <div style="height:4px;background:#FFD400;margin:24px 0;"></div>',
 
-    '    <!-- Body -->',
+    TEST_MODE ? '    <p style="background:#fff3cd;padding:8px;font-size:13px;">⚠️ TEST MODE — real recipient was: ' + escHtml(realEmail) + '</p>' : '',
+
     '    <h1 style="font-size:22px;margin-bottom:14px;">Verify your email</h1>',
     '    <p style="font-size:15px;line-height:1.6;margin-bottom:16px;">Hello ' + escHtml(userName) + ',</p>',
     '    <p style="font-size:15px;line-height:1.6;margin-bottom:16px;">',
@@ -124,9 +127,7 @@ function buildVerificationHtml(userName, verifyLink) {
     '    <p style="font-size:15px;line-height:1.6;margin-bottom:16px;">',
     '      If the button above does not work, copy and paste the link below into your browser:',
     '    </p>',
-    '    <div style="font-size:13px;background:#f2f2f2;padding:12px;word-break:break-all;">',
-    '      ' + verifyLink,
-    '    </div>',
+    '    <div style="font-size:13px;background:#f2f2f2;padding:12px;word-break:break-all;">' + verifyLink + '</div>',
 
     '    <p style="font-size:15px;line-height:1.6;margin-top:16px;">',
     '      If you did not create an account on ' + SITE_NAME + ', you can safely ignore this email.',
@@ -135,14 +136,12 @@ function buildVerificationHtml(userName, verifyLink) {
 
     '    <div style="height:4px;background:#FFD400;margin:24px 0;"></div>',
 
-    '    <!-- CTA -->',
     '    <div style="text-align:center;margin:16px 0;">',
     '      <a href="' + SITE_URL + '" style="background:#FFD400;color:#000;padding:10px 16px;text-decoration:none;font-size:14px;font-weight:bold;border-radius:4px;">',
     '        Visit Lamla AI',
     '      </a>',
     '    </div>',
 
-    '    <!-- Socials -->',
     socialLinksHtml(),
 
     '    <p style="font-size:12px;color:#555;text-align:center;margin-top:8px;">',
@@ -155,21 +154,20 @@ function buildVerificationHtml(userName, verifyLink) {
 }
 
 
-function buildPasswordResetHtml(userName, resetLink) {
+function buildPasswordResetHtml(userName, resetLink, realEmail) {
   return [
     '<!DOCTYPE html>',
     '<html><head><meta charset="UTF-8"><title>Reset Your Password - ' + SITE_NAME + '</title></head>',
     '<body style="margin:0;padding:0;background:#f6f6f6;font-family:Arial,Helvetica,sans-serif;color:#000;">',
     '  <div style="max-width:600px;margin:0 auto;background:#ffffff;padding:28px;">',
 
-    '    <!-- Logo -->',
     '    <div style="text-align:center;margin-bottom:18px;">',
     '      <img src="' + LOGO_URL + '" alt="' + SITE_NAME + '" style="max-width:160px;">',
     '    </div>',
-
     '    <div style="height:4px;background:#FFD400;margin:24px 0;"></div>',
 
-    '    <!-- Body -->',
+    TEST_MODE ? '    <p style="background:#fff3cd;padding:8px;font-size:13px;">⚠️ TEST MODE — real recipient was: ' + escHtml(realEmail) + '</p>' : '',
+
     '    <h1 style="font-size:22px;margin-bottom:14px;">Reset your password</h1>',
     '    <p style="font-size:15px;line-height:1.6;margin-bottom:16px;">Hello ' + escHtml(userName) + ',</p>',
     '    <p style="font-size:15px;line-height:1.6;margin-bottom:16px;">',
@@ -190,22 +188,18 @@ function buildPasswordResetHtml(userName, resetLink) {
     '    <p style="font-size:15px;line-height:1.6;margin-bottom:16px;">',
     '      If the button above does not work, copy and paste the link below into your browser:',
     '    </p>',
-    '    <div style="font-size:13px;background:#f2f2f2;padding:12px;word-break:break-all;">',
-    '      ' + resetLink,
-    '    </div>',
+    '    <div style="font-size:13px;background:#f2f2f2;padding:12px;word-break:break-all;">' + resetLink + '</div>',
 
     '    <p style="font-size:15px;line-height:1.6;margin-top:16px;">&#8212; The ' + SITE_NAME + ' Team</p>',
 
     '    <div style="height:4px;background:#FFD400;margin:24px 0;"></div>',
 
-    '    <!-- CTA -->',
     '    <div style="text-align:center;margin:16px 0;">',
     '      <a href="' + SITE_URL + '" style="background:#FFD400;color:#000;padding:10px 16px;text-decoration:none;font-size:14px;font-weight:bold;border-radius:4px;">',
     '        Visit Lamla AI',
     '      </a>',
     '    </div>',
 
-    '    <!-- Socials -->',
     socialLinksHtml(),
 
     '    <p style="font-size:12px;color:#555;text-align:center;margin-top:8px;">',
@@ -257,10 +251,10 @@ function buildPasswordResetText(userName, resetLink) {
 function socialLinksHtml() {
   var base  = "https://staticassets.netlify.app/public/icons/social/";
   var links = [
-    ["https://www.instagram.com/lamla.io",                        base + "instagram.png"],
-    ["https://www.linkedin.com/company/lamla-ai",                 base + "linkedin.png"],
-    ["https://www.facebook.com/people/LamlaAI/61578006032583/",   base + "facebook.png"],
-    ["https://x.com/lamla.ai",                                    base + "twitter.png"],
+    ["https://www.instagram.com/lamla.io",                       base + "instagram.png"],
+    ["https://www.linkedin.com/company/lamla-ai",                base + "linkedin.png"],
+    ["https://www.facebook.com/people/LamlaAI/61578006032583/",  base + "facebook.png"],
+    ["https://x.com/lamla.ai",                                   base + "twitter.png"],
   ];
   var items = links.map(function(l) {
     return '<a href="' + l[0] + '" style="margin:0 6px;display:inline-block;"><img src="' + l[1] + '" width="20" height="20"></a>';
@@ -270,10 +264,10 @@ function socialLinksHtml() {
 
 function escHtml(str) {
   return String(str)
-    .replace(/&/g,  "&amp;")
-    .replace(/</g,  "&lt;")
-    .replace(/>/g,  "&gt;")
-    .replace(/"/g,  "&quot;");
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 function jsonResponse(data) {
