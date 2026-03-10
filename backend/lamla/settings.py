@@ -247,6 +247,12 @@ EMAIL_BACKEND_PRIORITY = os.getenv("EMAIL_BACKEND_PRIORITY")
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 BREVO_API_KEY = os.getenv("BREVO_API_KEY")
 
+# Google Apps Script email backend (gas/auth_emails.gs)
+# Set GAS_AUTH_EMAIL_URL to the deployed Web App URL
+# Set GAS_AUTH_EMAIL_SECRET to match GAS_SECRET in GAS Script Properties
+GAS_AUTH_EMAIL_URL    = os.getenv("GAS_AUTH_EMAIL_URL")
+GAS_AUTH_EMAIL_SECRET = os.getenv("GAS_AUTH_EMAIL_SECRET")
+
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
 
 AUTH_EMAIL_HOST_USER = os.getenv("AUTH_EMAIL_HOST_USER")

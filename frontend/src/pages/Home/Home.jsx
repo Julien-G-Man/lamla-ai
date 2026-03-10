@@ -51,9 +51,23 @@ const Home = ({ user }) => {
       message: formData.get("message"),
     };
 
+    const gasUrl = process.env.REACT_APP_GAS_CONTACT_URL;
+
     try {
       setIsSendingContact(true);
-      await djangoApi.post("/dashboard/contact/", payload);
+
+      if (gasUrl) {
+        const res = await fetch(gasUrl, {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || "GAS error");
+      } else {
+        // Fallback to Django backend if GAS URL is not configured
+        await djangoApi.post("/dashboard/contact/", payload);
+      }
+
       setContactStatus("Thanks for reaching out. We will get back to you soon.");
       form.reset();
     } catch (err) {
