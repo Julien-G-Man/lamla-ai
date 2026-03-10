@@ -1,0 +1,270 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* Light mode — clean white with blue accents */
+:root {
+  --background: oklch(0.98 0.003 255);
+  --foreground: oklch(0.13 0.02 255);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.13 0.02 255);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.13 0.02 255);
+  --primary: oklch(0.52 0.22 255);
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.94 0.01 255);
+  --secondary-foreground: oklch(0.25 0.03 255);
+  --muted: oklch(0.94 0.01 255);
+  --muted-foreground: oklch(0.52 0.02 255);
+  --accent: oklch(0.76 0.16 195);
+  --accent-foreground: oklch(0.13 0.02 255);
+  --destructive: oklch(0.58 0.22 27);
+  --border: oklch(0.88 0.01 255);
+  --input: oklch(0.88 0.01 255);
+  --ring: oklch(0.62 0.22 245);
+  --surface: oklch(0.96 0.005 255);
+  --surface-hover: oklch(0.92 0.01 255);
+  --chart-1: oklch(0.809 0.105 251.813);
+  --chart-2: oklch(0.623 0.214 259.815);
+  --chart-3: oklch(0.546 0.245 262.881);
+  --chart-4: oklch(0.488 0.243 264.376);
+  --chart-5: oklch(0.424 0.199 265.638);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.96 0.005 255);
+  --sidebar-foreground: oklch(0.13 0.02 255);
+  --sidebar-primary: oklch(0.52 0.22 255);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent: oklch(0.92 0.01 255);
+  --sidebar-accent-foreground: oklch(0.25 0.03 255);
+  --sidebar-border: oklch(0.88 0.01 255);
+  --sidebar-ring: oklch(0.62 0.22 245);
+}
+
+/* Dark mode — deep blue-black with electric blue/cyan accents */
+.dark {
+  --background: oklch(0.09 0.015 255);
+  --foreground: oklch(0.96 0.005 255);
+  --card: oklch(0.13 0.018 255);
+  --card-foreground: oklch(0.96 0.005 255);
+  --popover: oklch(0.13 0.018 255);
+  --popover-foreground: oklch(0.96 0.005 255);
+  --primary: oklch(0.62 0.22 245);
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.18 0.02 255);
+  --secondary-foreground: oklch(0.96 0.005 255);
+  --muted: oklch(0.18 0.02 255);
+  --muted-foreground: oklch(0.56 0.015 255);
+  --accent: oklch(0.78 0.16 195);
+  --accent-foreground: oklch(0.09 0.015 255);
+  --destructive: oklch(0.65 0.22 25);
+  --border: oklch(0.24 0.025 255);
+  --input: oklch(0.22 0.022 255);
+  --ring: oklch(0.62 0.22 245);
+  --surface: oklch(0.13 0.018 255);
+  --surface-hover: oklch(0.17 0.02 255);
+  --chart-1: oklch(0.809 0.105 251.813);
+  --chart-2: oklch(0.623 0.214 259.815);
+  --chart-3: oklch(0.546 0.245 262.881);
+  --chart-4: oklch(0.488 0.243 264.376);
+  --chart-5: oklch(0.424 0.199 265.638);
+  --sidebar: oklch(0.11 0.016 255);
+  --sidebar-foreground: oklch(0.96 0.005 255);
+  --sidebar-primary: oklch(0.62 0.22 245);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent: oklch(0.17 0.02 255);
+  --sidebar-accent-foreground: oklch(0.96 0.005 255);
+  --sidebar-border: oklch(0.24 0.025 255);
+  --sidebar-ring: oklch(0.62 0.22 245);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/* ── Gradient utilities ─────────────────────────────────── */
+@layer utilities {
+  .gradient-text {
+    background: linear-gradient(135deg, #3b82f6, #06b6d4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .gradient-text-strong {
+    background: linear-gradient(135deg, #60a5fa, #22d3ee);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .gradient-bg {
+    background: linear-gradient(135deg, #2563eb, #06b6d4);
+  }
+
+  .gradient-bg-hover:hover {
+    background: linear-gradient(135deg, #1d4ed8, #0891b2);
+  }
+
+  .gradient-border {
+    border: 1px solid transparent;
+    background-clip: padding-box;
+    background-image: linear-gradient(var(--background), var(--background)),
+      linear-gradient(135deg, #2563eb, #06b6d4);
+    background-origin: border-box;
+  }
+
+  /* Glass card — adapts to light/dark theme via CSS variables */
+  .glass {
+    background: color-mix(in oklch, var(--surface) 80%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid color-mix(in oklch, var(--border) 60%, transparent);
+  }
+
+  /* Glow effects */
+  .glow-blue {
+    box-shadow: 0 0 20px oklch(0.62 0.22 245 / 0.35),
+      0 0 40px oklch(0.62 0.22 245 / 0.15);
+  }
+
+  .glow-cyan {
+    box-shadow: 0 0 20px oklch(0.78 0.16 195 / 0.35),
+      0 0 40px oklch(0.78 0.16 195 / 0.15);
+  }
+
+  .glow-blue-sm {
+    box-shadow: 0 0 10px oklch(0.62 0.22 245 / 0.4);
+  }
+
+  /* Grid background pattern — adapts to theme */
+  .bg-grid {
+    background-image: linear-gradient(
+        color-mix(in oklch, var(--border) 40%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(to right, color-mix(in oklch, var(--border) 40%, transparent) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* ── Floating icon animations ───────────────────────────── */
+
+  /* Ball-like bounce: moves in multiple directions */
+  @keyframes float-bounce {
+    0%   { transform: translate(0px,   0px)   rotate(0deg);  }
+    20%  { transform: translate(22px, -32px)  rotate(6deg);  }
+    40%  { transform: translate(-18px, -22px) rotate(-4deg); }
+    60%  { transform: translate(28px,  12px)  rotate(5deg);  }
+    80%  { transform: translate(-10px,  20px) rotate(-3deg); }
+    100% { transform: translate(0px,   0px)   rotate(0deg);  }
+  }
+
+  /* Point-to-point arc, like a tossed ball */
+  @keyframes float-ball-path {
+    0%   { transform: translate(0px,    0px)  rotate(0deg);  }
+    18%  { transform: translate(16px,  -30px) rotate(6deg);  }
+    36%  { transform: translate(38px,   -8px) rotate(12deg); }
+    54%  { transform: translate(60px,  -36px) rotate(20deg); }
+    72%  { transform: translate(82px,  -12px) rotate(28deg); }
+    100% { transform: translate(104px, -34px) rotate(36deg); }
+  }
+
+  /* Wide orbital drift */
+  @keyframes float-orbit {
+    0%   { transform: translate(0px,   0px)   rotate(0deg);   }
+    25%  { transform: translate(30px, -20px)  rotate(90deg);  }
+    50%  { transform: translate(0px,  -38px)  rotate(180deg); }
+    75%  { transform: translate(-30px,-20px)  rotate(270deg); }
+    100% { transform: translate(0px,   0px)   rotate(360deg); }
+  }
+
+  /* Slow organic drift (multiple directions) */
+  @keyframes float-drift {
+    0%   { transform: translate(0px,   0px);  }
+    20%  { transform: translate(-28px,-18px); }
+    40%  { transform: translate(18px, -34px); }
+    60%  { transform: translate(26px,  10px); }
+    80%  { transform: translate(-12px, 22px); }
+    100% { transform: translate(0px,   0px);  }
+  }
+
+  /* Pendulum swing */
+  @keyframes float-swing {
+    0%   { transform: translate(0px,    0px)  rotate(0deg);  }
+    25%  { transform: translate(38px,  -20px) rotate(10deg); }
+    50%  { transform: translate(0px,   -30px) rotate(0deg);  }
+    75%  { transform: translate(-38px, -20px) rotate(-10deg);}
+    100% { transform: translate(0px,    0px)  rotate(0deg);  }
+  }
+
+  /* Simple vertical (kept for subtle items) */
+  @keyframes float-up-down {
+    0%, 100% { transform: translateY(0px)   rotate(0deg);  }
+    33%      { transform: translateY(-18px) rotate(2deg);  }
+    66%      { transform: translateY(8px)   rotate(-1deg); }
+  }
+
+  /* Animated gradient border on cards */
+  .card-hover {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px oklch(0.62 0.22 245 / 0.2);
+  }
+}
