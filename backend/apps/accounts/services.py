@@ -35,23 +35,24 @@ def _get_backend_priority() -> list[str]:
     Determine backend priority order from EMAIL_BACKEND_PRIORITY env var.
 
     Set EMAIL_BACKEND_PRIORITY in your .env as a comma-separated list.
-    Available backends: resend, brevo, smtp, console
+    Available backends: gas, resend, brevo, smtp, console
 
     Examples:
+        EMAIL_BACKEND_PRIORITY=gas,brevo              # GAS first (recommended on Render free)
         EMAIL_BACKEND_PRIORITY=brevo,resend,smtp      # Brevo first
         EMAIL_BACKEND_PRIORITY=resend,brevo,smtp      # Resend first (default when domain ready)
         EMAIL_BACKEND_PRIORITY=smtp                   # SMTP only (local dev)
         EMAIL_BACKEND_PRIORITY=console                # Print to console (testing)
 
-    If unset, defaults to: brevo → resend → smtp
-    (Brevo first because it works on Render's free tier via HTTP API)
+    If unset, defaults to: gas → brevo → resend → smtp
+    (GAS first because it works on Render's free tier via HTTP API and needs no extra paid service)
     """
     raw = getattr(settings, "EMAIL_BACKEND_PRIORITY", None)
 
     if not raw:
-        return ["brevo", "resend", "smtp"]
+        return ["gas", "brevo", "resend", "smtp"]
 
-    valid = {"resend", "brevo", "smtp", "console"}
+    valid = {"gas", "resend", "brevo", "smtp", "console"}
     priority = []
 
     for item in str(raw).split(","):
@@ -62,8 +63,8 @@ def _get_backend_priority() -> list[str]:
             logger.warning("Unknown email backend '%s' in EMAIL_BACKEND_PRIORITY — skipping.", cleaned)
 
     if not priority:
-        logger.warning("EMAIL_BACKEND_PRIORITY had no valid entries. Falling back to: brevo, resend, smtp.")
-        return ["brevo", "resend", "smtp"]
+        logger.warning("EMAIL_BACKEND_PRIORITY had no valid entries. Falling back to: gas, brevo, resend, smtp.")
+        return ["gas", "brevo", "resend", "smtp"]
 
     return priority
 
@@ -169,9 +170,84 @@ def _send_via_console(subject: str, to_email: str, html_body: str, text_body: st
     logger.info(text_body)
 
 
+def _send_via_gas(subject: str, to_email: str, html_body: str, text_body: str) -> None:
+    """
+    Send via Google Apps Script Web App.
+    Works on Render's free tier (plain HTTPS request, no SMTP).
+    Uses GmailApp inside GAS — no extra paid service needed.
+
+    Required env vars:
+        GAS_AUTH_EMAIL_URL     — deployed Web App URL from gas/auth_emails.gs
+        GAS_AUTH_EMAIL_SECRET  — shared secret set in GAS Script Properties as GAS_SECRET
+
+    The email type is inferred from the subject line.
+    Alternatively, callers can use send_verification_email / send_password_reset_email
+    which call GAS with the explicit `type` field via _send_gas_typed().
+    """
+    gas_url = getattr(settings, "GAS_AUTH_EMAIL_URL", None)
+    if not gas_url:
+        raise EmailDeliveryError("GAS_AUTH_EMAIL_URL is not configured")
+
+    secret = getattr(settings, "GAS_AUTH_EMAIL_SECRET", None)
+
+    payload: dict = {
+        "type":        "__raw__",   # handled by _send_gas_typed for typed sends
+        "to_email":    to_email,
+        "action_link": "",
+        "subject":     subject,
+        "html_body":   html_body,
+    }
+    if secret:
+        payload["secret"] = secret
+
+    try:
+        resp = requests.post(gas_url, json=payload, timeout=15)
+        data = resp.json() if resp.text else {}
+        if not data.get("success"):
+            raise EmailDeliveryError(f"GAS returned error: {data.get('error', resp.text)}")
+        logger.info("Email sent via GAS to %s", to_email)
+    except EmailDeliveryError:
+        raise
+    except Exception as exc:
+        raise EmailDeliveryError(f"GAS request failed: {exc}") from exc
+
+
+def _send_gas_typed(*, email_type: str, to_email: str, user_name: str, action_link: str) -> None:
+    """
+    Send a typed auth email (verification or password_reset) through GAS.
+    Called directly by send_verification_email and send_password_reset_email.
+    """
+    gas_url = getattr(settings, "GAS_AUTH_EMAIL_URL", None)
+    if not gas_url:
+        raise EmailDeliveryError("GAS_AUTH_EMAIL_URL is not configured")
+
+    secret = getattr(settings, "GAS_AUTH_EMAIL_SECRET", None)
+
+    payload: dict = {
+        "type":        email_type,
+        "to_email":    to_email,
+        "user_name":   user_name,
+        "action_link": action_link,
+    }
+    if secret:
+        payload["secret"] = secret
+
+    try:
+        resp = requests.post(gas_url, json=payload, timeout=15)
+        data = resp.json() if resp.text else {}
+        if not data.get("success"):
+            raise EmailDeliveryError(f"GAS returned error: {data.get('error', resp.text)}")
+        logger.info("Auth email (%s) sent via GAS to %s", email_type, to_email)
+    except EmailDeliveryError:
+        raise
+    except Exception as exc:
+        raise EmailDeliveryError(f"GAS request failed: {exc}") from exc
+
+
 # ─── Router ───────────────────────────────────────────────────────────────────
 
 _BACKEND_MAP = {
+    "gas":     _send_via_gas,
     "brevo":   _send_via_brevo,
     "resend":  _send_via_resend,
     "smtp":    _send_via_django_mail,
@@ -222,15 +298,31 @@ def send_verification_email(user) -> bool:
 
     frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000").rstrip("/")
     verify_link = f"{frontend_url}/auth/verify-email?uid={uid}&token={token}"
+    site_name = getattr(settings, "SITE_NAME", "Lamla AI")
+    user_name = getattr(user, "first_name", None) or user.email
+
+    # Try GAS typed send first (if configured), then fall back to template-based backends
+    priority = _get_backend_priority()
+    if "gas" in priority and getattr(settings, "GAS_AUTH_EMAIL_URL", None):
+        try:
+            _send_gas_typed(
+                email_type="verification",
+                to_email=user.email,
+                user_name=user_name,
+                action_link=verify_link,
+            )
+            return True
+        except EmailDeliveryError as exc:
+            logger.warning("GAS verification email failed for %s: %s — falling back", user.email, exc)
 
     context = {
         "user": user,
         "verify_link": verify_link,
-        "site_name": getattr(settings, "SITE_NAME", "Lamla AI"),
+        "site_name": site_name,
     }
     try:
         send_templated_email(
-            subject=f"Verify your email - {context['site_name']}",
+            subject=f"Verify your email - {site_name}",
             to_email=user.email,
             template_prefix="accounts/emails/verification_email",
             context=context,
@@ -247,15 +339,31 @@ def send_password_reset_email(user) -> bool:
 
     frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000").rstrip("/")
     reset_link = f"{frontend_url}/reset-password?uid={uid}&token={token}"
+    site_name = getattr(settings, "SITE_NAME", "Lamla AI")
+    user_name = getattr(user, "first_name", None) or user.email
+
+    # Try GAS typed send first (if configured), then fall back to template-based backends
+    priority = _get_backend_priority()
+    if "gas" in priority and getattr(settings, "GAS_AUTH_EMAIL_URL", None):
+        try:
+            _send_gas_typed(
+                email_type="password_reset",
+                to_email=user.email,
+                user_name=user_name,
+                action_link=reset_link,
+            )
+            return True
+        except EmailDeliveryError as exc:
+            logger.warning("GAS password reset email failed for %s: %s — falling back", user.email, exc)
 
     context = {
         "user": user,
         "reset_link": reset_link,
-        "site_name": getattr(settings, "SITE_NAME", "Lamla AI"),
+        "site_name": site_name,
     }
     try:
         send_templated_email(
-            subject=f"Reset your password - {context['site_name']}",
+            subject=f"Reset your password - {site_name}",
             to_email=user.email,
             template_prefix="accounts/emails/password_reset_email",
             context=context,
