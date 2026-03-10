@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install sonner --save)",
+      "Bash(npm run build)",
+      "Bash(ls -la /c/Users/user/Code/lamla-ai/frontend-next/*.ts /c/Users/user/Code/lamla-ai/frontend-next/*.js)",
+      "Bash(npx shadcn@latest add navigation-menu --yes)",
+      "Bash(npx shadcn@latest add dropdown-menu --yes)"
+    ]
+  }
+}
