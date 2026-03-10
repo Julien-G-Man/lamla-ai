@@ -58,17 +58,18 @@ const Home = ({ user }) => {
 
     try {
       setIsSendingContact(true);
-<<<<<<< HEAD
       await djangoApi.post("/dashboard/contact/", payload);
       setContactStatus(
         "Thanks for reaching out. We will get back to you soon.",
       );
-=======
 
       if (gasUrl) {
         const res = await fetch(gasUrl, {
           method: "POST",
           body: JSON.stringify(payload),
+          headers: {
+        "Content-Type": "application/json",
+      },
         });
         const data = await res.json();
         if (!data.success) throw new Error(data.error || "GAS error");
@@ -78,7 +79,6 @@ const Home = ({ user }) => {
       }
 
       setContactStatus("Thanks for reaching out. We will get back to you soon.");
->>>>>>> f779302208ad4867752a8065c8e92f0a11f6698c
       form.reset();
     } catch (err) {
       console.error("Contact form error:", err);
