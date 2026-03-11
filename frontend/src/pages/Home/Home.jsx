@@ -54,7 +54,10 @@ const Home = ({ user }) => {
       message: formData.get("message"),
     };
 
-    const gasUrl = process.env.REACT_APP_GAS_CONTACT_URL;
+    // Strip accidental surrounding quotes (e.g. Vercel dashboard sets `"https://..."`)
+    const gasUrl = (process.env.REACT_APP_GAS_CONTACT_URL || "")
+      .replace(/^["']|["']$/g, "")
+      .trim() || null;
 
     try {
       setIsSendingContact(true);
