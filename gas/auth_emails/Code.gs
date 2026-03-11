@@ -41,15 +41,23 @@ function doPost(e) {
     var userName   = (data.user_name  || toEmail).trim();
     var actionLink = data.action_link || "";
 
-    if (!type || !toEmail || !actionLink) {
+    if (!type || !toEmail) {
       return jsonResponse({ success: false, error: "Missing required fields" });
     }
 
     cfg_log("Auth email request: type=" + type + " to=" + toEmail);
 
-    if (type === "verification") {
+    if (type === "__raw__") {
+      var subject  = data.subject   || "(no subject)";
+      var htmlBody = data.html_body || "";
+      var to       = cfg_recipientEmail(toEmail);
+      GmailApp.sendEmail(to, subject, stripTags(htmlBody), { htmlBody: htmlBody });
+      cfg_log("Raw email sent to " + to);
+    } else if (type === "verification") {
+      if (!actionLink) return jsonResponse({ success: false, error: "Missing required fields" });
       sendVerificationEmail(toEmail, userName, actionLink);
     } else if (type === "password_reset") {
+      if (!actionLink) return jsonResponse({ success: false, error: "Missing required fields" });
       sendPasswordResetEmail(toEmail, userName, actionLink);
     } else {
       return jsonResponse({ success: false, error: "Unknown email type: " + type });
