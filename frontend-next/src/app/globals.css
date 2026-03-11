@@ -136,36 +136,26 @@
   }
 }
 
-/* ── Gradient utilities ─────────────────────────────────── */
+/* ── Solid color utilities (formerly gradient) ───────────── */
 @layer utilities {
   .gradient-text {
-    background: linear-gradient(135deg, #3b82f6, #06b6d4);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--primary);
   }
 
   .gradient-text-strong {
-    background: linear-gradient(135deg, #60a5fa, #22d3ee);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: oklch(0.70 0.20 245);
   }
 
   .gradient-bg {
-    background: linear-gradient(135deg, #2563eb, #06b6d4);
+    background-color: var(--primary);
   }
 
   .gradient-bg-hover:hover {
-    background: linear-gradient(135deg, #1d4ed8, #0891b2);
+    filter: brightness(0.88);
   }
 
   .gradient-border {
-    border: 1px solid transparent;
-    background-clip: padding-box;
-    background-image: linear-gradient(var(--background), var(--background)),
-      linear-gradient(135deg, #2563eb, #06b6d4);
-    background-origin: border-box;
+    border: 1px solid var(--primary);
   }
 
   /* Glass card — adapts to light/dark theme via CSS variables */
