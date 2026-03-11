@@ -47,8 +47,8 @@ const AppSidebar = () => {
       <aside className="hidden md:flex flex-col w-60 shrink-0 min-h-screen border-r border-border bg-sidebar">
         {/* Logo */}
         <div className="flex items-center gap-2.5 px-5 h-16 border-b border-border shrink-0">
-          <div className="w-7 h-7 rounded-lg gradient-bg flex items-center justify-center shrink-0">
-            <Sparkles size={14} className="text-white" />
+          <div className="w-7 h-7 rounded-lg overflow-hidden shrink-0">
+            <Image src="/lamla_logo.png" alt="Lamla AI" width={28} height={28} className="w-full h-full object-cover" />
           </div>
           <span className="font-bold text-lg gradient-text">Lamla.ai</span>
         </div>

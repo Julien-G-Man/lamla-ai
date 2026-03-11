@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Sparkles, Brain, Bot, Layers, Target, Users, Zap, ArrowRight } from 'lucide-react';
@@ -117,8 +118,8 @@ export default function AboutPage() {
         {/* CTA */}
         <section className="px-4 py-20">
           <div className="max-w-2xl mx-auto glass rounded-2xl p-10 text-center flex flex-col items-center gap-6 border border-primary/20">
-            <div className="w-14 h-14 rounded-xl gradient-bg flex items-center justify-center glow-blue">
-              <Sparkles size={22} className="text-white" />
+            <div className="w-14 h-14 rounded-xl overflow-hidden glow-blue">
+              <Image src="/lamla_logo.png" alt="Lamla AI" width={56} height={56} className="w-full h-full object-cover" />
             </div>
             <div>
               <h2 className="text-2xl font-bold">Ready to study smarter?</h2>

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import GoogleSignInButton from '@/components/GoogleSignInButton';
+import Image from 'next/image';
 import { Eye, EyeOff, Check, X, Sparkles, Brain, Layers, Bot, AlertCircle } from 'lucide-react';
 
 const brandFeatures = [
@@ -72,8 +73,8 @@ export default function SignupPage() {
 
         <div className="relative z-10 flex flex-col gap-10">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
-              <Sparkles size={18} className="text-white" />
+            <div className="w-9 h-9 rounded-xl overflow-hidden">
+              <Image src="/lamla_logo.png" alt="Lamla AI" width={36} height={36} className="w-full h-full object-cover" />
             </div>
             <span className="text-xl font-bold text-white">Lamla.ai</span>
           </div>
@@ -108,8 +109,8 @@ export default function SignupPage() {
         <div className="w-full max-w-sm flex flex-col gap-5">
           {/* Mobile logo */}
           <div className="flex items-center gap-2 lg:hidden">
-            <div className="w-8 h-8 rounded-lg gradient-bg flex items-center justify-center">
-              <Sparkles size={14} className="text-white" />
+            <div className="w-8 h-8 rounded-lg overflow-hidden">
+              <Image src="/lamla_logo.png" alt="Lamla AI" width={32} height={32} className="w-full h-full object-cover" />
             </div>
             <span className="font-bold gradient-text">Lamla.ai</span>
           </div>

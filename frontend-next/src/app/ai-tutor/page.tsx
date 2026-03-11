@@ -7,6 +7,7 @@ import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
+import Image from 'next/image';
 import { Send, Paperclip, X, Copy, Check, Globe, Loader2, Bot, Sparkles } from 'lucide-react';
 
 type SearchMode = 'disabled' | 'web_search' | 'deep_research';
@@ -186,8 +187,8 @@ export default function AITutorPage() {
           {messages.map((msg) => (
             <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               {msg.role === 'assistant' && (
-                <div className="w-7 h-7 rounded-lg gradient-bg flex items-center justify-center shrink-0 mr-2 mt-1">
-                  <Sparkles size={13} className="text-white" />
+                <div className="w-7 h-7 rounded-lg overflow-hidden shrink-0 mr-2 mt-1">
+                  <Image src="/lamla_logo.png" alt="Lamla AI" width={28} height={28} className="w-full h-full object-cover" />
                 </div>
               )}
               <div className={`relative group max-w-[82%] rounded-2xl px-4 py-3 text-sm ${

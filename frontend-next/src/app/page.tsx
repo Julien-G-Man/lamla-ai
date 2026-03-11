@@ -3,9 +3,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, useInView } from 'framer-motion';
 import Link from 'next/link';
+import Image from 'next/image';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import HeroSection from '@/components/HeroSection';
+import FloatingContactIcons from '@/components/FloatingContactIcons';
 import { useAuth } from '@/context/AuthContext';
 import djangoApi from '@/services/api';
 import {
@@ -499,6 +501,8 @@ function FeatureCard({
 function FeaturesGrid() {
   return (
     <section id="features" className="relative py-24 px-4 overflow-hidden bg-background">
+      <div className="absolute top-0 left-0 right-0 h-32 pointer-events-none bg-[linear-gradient(to_top,transparent,var(--background))] z-20" />
+      <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none bg-[linear-gradient(to_bottom,transparent,var(--background))] z-20" />
       {/* Ambient glows */}
       <div className="absolute -top-48 -left-48 w-[700px] h-[700px] rounded-full bg-primary/[0.09] blur-[180px] pointer-events-none" />
       <div className="absolute -bottom-24 -right-24 w-[500px] h-[500px] rounded-full bg-violet-500/[0.07] blur-[140px] pointer-events-none" />
@@ -676,6 +680,408 @@ function HowItWorksArrow({ curveDown }: { curveDown: boolean }) {
 }
 
 
+// ─── FAQ Item ────────────────────────────────────────────────────────────────
+function FaqItem({
+  question,
+  answer,
+  open,
+  onToggle,
+}: {
+  question: string;
+  answer: string;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <motion.div
+      className={`border rounded-xl overflow-hidden transition-colors duration-200 ${
+        open ? 'border-primary/40 bg-primary/[0.03]' : 'border-border bg-transparent'
+      }`}
+      layout
+    >
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left hover:bg-surface-hover transition-colors"
+      >
+        <span className={`text-sm font-semibold transition-colors duration-150 ${open ? 'text-primary' : 'text-foreground'}`}>
+          {question}
+        </span>
+        <motion.svg
+          width="16" height="16" viewBox="0 0 16 16" fill="none"
+          animate={{ rotate: open ? 180 : 0 }}
+          transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
+          className="shrink-0 text-muted-foreground"
+        >
+          <path d="M3 6l5 5 5-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+        </motion.svg>
+      </button>
+      <motion.div
+        initial={false}
+        animate={{ height: open ? 'auto' : 0, opacity: open ? 1 : 0 }}
+        transition={{ duration: 0.28, ease: [0.25, 0.46, 0.45, 0.94] }}
+        style={{ overflow: 'hidden' }}
+      >
+        <div className="px-5 pb-4 pt-3 text-sm text-muted-foreground leading-relaxed border-t border-border/60">
+          {answer}
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+const faqItems = [
+  {
+    q: 'What file types can I upload?',
+    a: 'You can upload PDFs, Word documents, PowerPoint slides, and plain text files. We support most common study material formats.',
+  },
+  {
+    q: 'How does the quiz generator work?',
+    a: 'Our AI reads your uploaded materials and automatically extracts key concepts to generate multiple-choice, true/false, and short-answer questions tailored to your content.',
+  },
+  {
+    q: 'Is Lamla AI free to use?',
+    a: 'Yes — you can get started for free with no credit card required. Free accounts include quiz generation, flashcards, and limited AI tutor sessions.',
+  },
+  {
+    q: 'How accurate is the AI tutor?',
+    a: 'The AI tutor is powered by advanced language models and grounded in your uploaded materials, so answers are relevant and contextual to your specific course content.',
+  },
+  {
+    q: 'Can I use Lamla AI on mobile?',
+    a: 'Absolutely. Lamla AI is fully responsive and works on phones and tablets, so you can study anywhere at any time.',
+  },
+];
+
+function FaqAccordion() {
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-sm font-semibold text-primary tracking-widest uppercase mb-1">FAQ</p>
+      <h3 className="text-2xl font-bold text-foreground mb-4">Frequently Asked Questions</h3>
+      {faqItems.map(({ q, a }, i) => (
+        <FaqItem
+          key={i}
+          question={q}
+          answer={a}
+          open={openIndex === i}
+          onToggle={() => setOpenIndex(openIndex === i ? null : i)}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ─── About Section ───────────────────────────────────────────────────────────
+function AboutSection() {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, amount: 0.25 });
+
+  return (
+    <section id="about" className="relative py-24 px-4 bg-background overflow-hidden">
+      {/* bottom fade into next section */}
+      <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none bg-[linear-gradient(to_bottom,transparent,var(--background))]" />
+      <div className="max-w-6xl mx-auto" ref={ref}>
+        <div className="grid md:grid-cols-2 gap-16 items-center">
+
+          {/* Left — image */}
+          <motion.div
+            className="relative rounded-2xl overflow-hidden min-h-[420px] md:min-h-[480px]"
+            initial={{ opacity: 0, x: -40 }}
+            animate={inView ? { opacity: 1, x: 0 } : {}}
+            transition={{ duration: 0.65, ease: [0.25, 0.46, 0.45, 0.94] }}
+          >
+            <Image
+              src="/highfive-with-teacher.jpg"
+              alt="Students studying with Lamla AI"
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 50vw"
+            />
+            {/* Overlay badge */}
+            <div className="absolute bottom-5 left-5 px-4 py-2 rounded-full bg-background/70 backdrop-blur-md border border-border text-sm font-medium text-foreground">
+              AI-Powered Study Tool
+            </div>
+          </motion.div>
+
+          {/* Right — text */}
+          <motion.div
+            initial={{ opacity: 0, x: 40 }}
+            animate={inView ? { opacity: 1, x: 0 } : {}}
+            transition={{ duration: 0.65, ease: [0.25, 0.46, 0.45, 0.94], delay: 0.1 }}
+          >
+            <p className="text-sm font-extrabold tracking-widest uppercase text-primary mb-4">
+              About Lamla AI
+            </p>
+            <h3 className="text-3xl md:text-4xl font-bold text-foreground leading-[1.15] mb-6">
+              Smarter Studying,{' '}
+              <span className="text-primary">Better Results</span>
+            </h3>
+            <div className="flex flex-col gap-4 text-muted-foreground leading-relaxed text-[0.97rem]">
+              <p>
+                Lamla AI was built for students who want to study with purpose. We combine
+                cutting-edge AI with your own course materials to create a personalised study
+                experience that actually works.
+              </p>
+              <p>
+                Whether you&apos;re preparing for finals or just reviewing before a test —
+                Lamla AI turns your slides and notes into quizzes, flashcards, and instant
+                AI-powered explanations.
+              </p>
+              <p>
+                Built by students, for students. Our platform evolves with your feedback so
+                you can walk into every exam with confidence.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3 mt-8">
+              <Link
+                href="/quiz/create"
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity"
+              >
+                Start Studying →
+              </Link>
+              <a
+                href="#features"
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg border border-border bg-surface text-foreground font-semibold text-sm hover:bg-surface-hover transition-colors"
+              >
+                Our Features
+              </a>
+            </div>
+          </motion.div>
+
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── Testimonials Data ────────────────────────────────────────────────────────
+const testimonials = [
+  {
+    initials: 'CN',
+    name: 'Christopher N.',
+    role: 'Student @ KNUST',
+    quote:
+      '"Lamla AI completely changed how I prepare for exams. I upload my lecture slides and instantly get practice quizzes. My grades improved significantly after just two weeks."',
+  },
+  {
+    initials: 'AO',
+    name: 'Ama Owusu',
+    role: 'Medical Student, UG',
+    quote:
+      '"The AI tutor feature is incredible. It explains complex biochemistry concepts in ways my textbooks never could. I can ask follow-up questions and get instant, clear answers."',
+  },
+  {
+    initials: 'KA',
+    name: 'Kwame Asante',
+    role: 'Engineering Student, KNUST',
+    quote:
+      '"Flashcards used to take me hours to create. Now I generate a full deck from my notes in seconds. The spaced repetition makes revision so much more effective."',
+  },
+  {
+    initials: 'NB',
+    name: 'Nana Boateng',
+    role: 'Law Student, GIMPA',
+    quote:
+      '"I was skeptical at first, but Lamla AI genuinely understands my study materials. The quiz generator picks the most important concepts and turns them into exam-style questions."',
+  },
+  {
+    initials: 'EY',
+    name: 'Efua Yeboah',
+    role: 'Business Student, Ashesi',
+    quote:
+      '"Using Lamla AI feels like having a personal tutor available 24/7. It keeps me focused and on track even during the most stressful exam periods."',
+  },
+  {
+    initials: 'JM',
+    name: 'Joseph Mensah',
+    role: 'Computer Science, UCC',
+    quote:
+      '"The materials management feature alone is worth it. All my PDFs and notes are organised in one place, and I can generate quizzes from any of them instantly."',
+  },
+];
+
+function TestimonialsSection() {
+  const [current, setCurrent] = useState(0);
+  const [direction, setDirection] = useState(0);
+  const [animating, setAnimating] = useState(false);
+  const total = testimonials.length;
+
+  const go = (dir: number) => {
+    if (animating) return;
+    setDirection(dir);
+    setAnimating(true);
+    setTimeout(() => {
+      setCurrent((prev) => (prev + dir + total) % total);
+      setAnimating(false);
+    }, 280);
+  };
+
+  const jumpTo = (i: number) => {
+    if (animating || i === current) return;
+    setDirection(i > current ? 1 : -1);
+    setAnimating(true);
+    setTimeout(() => { setCurrent(i); setAnimating(false); }, 280);
+  };
+
+  const t = testimonials[current];
+
+  return (
+    <section className="relative py-28 px-4 overflow-hidden">
+      {/* top + bottom fades */}
+      <div className="absolute top-0 left-0 right-0 h-32 pointer-events-none bg-[linear-gradient(to_top,transparent,var(--background))] z-20" />
+      <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none bg-[linear-gradient(to_bottom,transparent,var(--background))] z-20" />
+      {/* Topographic SVG background */}
+      <svg
+        className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.07] dark:opacity-[0.09]"
+        xmlns="http://www.w3.org/2000/svg"
+        preserveAspectRatio="xMidYMid slice"
+      >
+        <defs>
+          <pattern id="topo-pattern" x="0" y="0" width="200" height="200" patternUnits="userSpaceOnUse">
+            <path d="M0 100 Q25 60 50 100 Q75 140 100 100 Q125 60 150 100 Q175 140 200 100" fill="none" stroke="currentColor" strokeWidth="1"/>
+            <path d="M0 80 Q25 40 50 80 Q75 120 100 80 Q125 40 150 80 Q175 120 200 80" fill="none" stroke="currentColor" strokeWidth="1"/>
+            <path d="M0 120 Q25 80 50 120 Q75 160 100 120 Q125 80 150 120 Q175 160 200 120" fill="none" stroke="currentColor" strokeWidth="1"/>
+            <path d="M0 60 Q25 20 50 60 Q75 100 100 60 Q125 20 150 60 Q175 100 200 60" fill="none" stroke="currentColor" strokeWidth="1"/>
+            <path d="M0 140 Q25 100 50 140 Q75 180 100 140 Q125 100 150 140 Q175 180 200 140" fill="none" stroke="currentColor" strokeWidth="1"/>
+            <path d="M0 40 Q30 10 60 40 Q90 70 120 40 Q150 10 180 40 Q195 55 200 40" fill="none" stroke="currentColor" strokeWidth="0.8"/>
+            <path d="M0 160 Q30 130 60 160 Q90 190 120 160 Q150 130 180 160 Q195 175 200 160" fill="none" stroke="currentColor" strokeWidth="0.8"/>
+            <path d="M0 20 Q40 -10 80 20 Q120 50 160 20 Q180 5 200 20" fill="none" stroke="currentColor" strokeWidth="0.7"/>
+            <path d="M0 180 Q40 150 80 180 Q120 210 160 180 Q180 165 200 180" fill="none" stroke="currentColor" strokeWidth="0.7"/>
+            <path d="M10 0 Q40 30 70 10 Q100 -10 130 20 Q160 50 190 10 Q195 5 200 0" fill="none" stroke="currentColor" strokeWidth="0.6"/>
+            <path d="M0 200 Q30 170 60 190 Q90 210 120 185 Q150 160 180 195 Q195 205 200 200" fill="none" stroke="currentColor" strokeWidth="0.6"/>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#topo-pattern)" className="text-foreground" color="currentColor"/>
+      </svg>
+
+      {/* Ambient glow — adapts to theme via primary */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: [
+            'radial-gradient(ellipse 65% 70% at 80% 50%, oklch(from var(--primary) l c h / 0.07), transparent 65%)',
+            'radial-gradient(ellipse 45% 55% at 20% 50%, oklch(from var(--primary) l c h / 0.04), transparent 60%)',
+          ].join(', '),
+        }}
+      />
+
+      <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center">
+
+        {/* Badge */}
+        <div className="inline-flex items-center px-4 py-1.5 rounded-full border border-primary/25 bg-primary/8 text-primary text-xs font-semibold tracking-widest uppercase mb-8">
+          Testimonials
+        </div>
+
+        {/* Headline */}
+        <h2 className="text-4xl md:text-5xl font-bold text-foreground text-center leading-[1.15] mb-3 max-w-2xl">
+          Loved by students
+          <br />
+          <span className="text-muted-foreground">and learners worldwide.</span>
+        </h2>
+        <p className="text-muted-foreground text-base text-center mb-16 max-w-md">
+          Real feedback from real students who use Lamla AI to study smarter and perform better every day.
+        </p>
+
+        {/* Card carousel */}
+        <div className="relative w-full max-w-2xl flex items-center justify-center" style={{ minHeight: 280 }}>
+
+          {/* Left arrow */}
+          <button
+            onClick={() => go(-1)}
+            className="absolute -left-4 sm:-left-14 z-20 w-11 h-11 rounded-full bg-surface border border-border flex items-center justify-center text-muted-foreground hover:bg-surface-hover hover:text-foreground transition-all duration-150"
+            aria-label="Previous testimonial"
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M11 4l-5 5 5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+
+          {/* Stacked cards */}
+          <div className="relative w-full">
+            {/* Card 3 — furthest back */}
+            <div
+              className="absolute inset-x-6 rounded-2xl border border-border bg-card"
+              style={{ top: 16, bottom: -16, transform: 'scale(0.94)', zIndex: 1, opacity: 0.5 }}
+            />
+            {/* Card 2 — middle */}
+            <div
+              className="absolute inset-x-3 rounded-2xl border border-border bg-card"
+              style={{ top: 8, bottom: -8, transform: 'scale(0.97)', zIndex: 2, opacity: 0.7 }}
+            />
+
+            {/* Active card */}
+            <motion.div
+              key={current}
+              initial={{ opacity: 0, x: direction * 60, scale: 0.97 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              transition={{ duration: 0.28, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="relative z-10 rounded-2xl border border-border bg-card p-8 md:p-10 shadow-lg"
+            >
+              {/* Stars */}
+              <div className="flex gap-1 mb-5">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} size={14} className="text-yellow-400 fill-yellow-400" />
+                ))}
+              </div>
+
+              {/* Quote */}
+              <p className="text-foreground text-lg md:text-xl leading-relaxed font-light mb-8 tracking-[-0.01em]">
+                {t.quote}
+              </p>
+
+              {/* Divider */}
+              <div className="h-px bg-border mb-6" />
+
+              {/* Author */}
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-bold shrink-0">
+                  {t.initials}
+                </div>
+                <div>
+                  <p className="text-foreground font-semibold text-sm">{t.name}</p>
+                  <p className="text-muted-foreground text-xs mt-0.5">{t.role}</p>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Right arrow */}
+          <button
+            onClick={() => go(1)}
+            className="absolute -right-4 sm:-right-14 z-20 w-11 h-11 rounded-full bg-surface border border-border flex items-center justify-center text-muted-foreground hover:bg-surface-hover hover:text-foreground transition-all duration-150"
+            aria-label="Next testimonial"
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M7 4l5 5-5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        </div>
+
+        {/* Dot indicators */}
+        <div className="flex items-center gap-2 mt-10">
+          {testimonials.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => jumpTo(i)}
+              className={`rounded-full transition-all duration-300 ${
+                i === current
+                  ? 'w-6 h-1.5 bg-primary'
+                  : 'w-1.5 h-1.5 bg-border hover:bg-muted-foreground'
+              }`}
+            />
+          ))}
+        </div>
+
+        {/* Social proof */}
+        <p className="text-muted-foreground text-sm mt-12 text-center">
+          Join <span className="text-foreground font-medium">2,000+</span> students who study smarter with Lamla AI.
+        </p>
+      </div>
+    </section>
+  );
+}
+
 export default function HomePage() {
   const { isAuthenticated } = useAuth();
   const [contactStatus, setContactStatus] = useState('');
@@ -710,8 +1116,13 @@ export default function HomePage() {
       {/* ── Hero ─────────────────────────────────────────── */}
       <HeroSection />
 
+      {/* ── About ────────────────────────────────────────── */}
+      <AboutSection />
+
       {/* ── Stats ─────────────────────────────────────── */}
       <section className="relative py-24 px-4 overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-32 pointer-events-none bg-[linear-gradient(to_top,transparent,var(--background))] z-20" />
+        <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none bg-[linear-gradient(to_bottom,transparent,var(--background))] z-20" />
         {/* Animated background orbs */}
         <motion.div
           className="absolute -top-20 -left-20 w-96 h-96 rounded-full bg-blue-500/10 blur-3xl pointer-events-none"
@@ -774,17 +1185,89 @@ export default function HomePage() {
       <FeaturesGrid />
 
       {/* ── How It Works ─────────────────────────────────── */}
-      <section className="py-24 px-4 border-t border-border bg-background">
-        <div className="max-w-5xl mx-auto">
+      <section className="relative py-24 px-4 overflow-hidden bg-background">
+        <div className="absolute top-0 left-0 right-0 h-32 pointer-events-none bg-[linear-gradient(to_top,transparent,var(--background))] z-20" />
+        <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none bg-[linear-gradient(to_bottom,transparent,var(--background))] z-20" />
+
+        {/* ── Background: large faint circuit / node grid ── */}
+        <svg
+          className="absolute inset-0 w-full h-full pointer-events-none"
+          xmlns="http://www.w3.org/2000/svg"
+          preserveAspectRatio="xMidYMid slice"
+        >
+          <defs>
+            {/* Dot grid */}
+            <pattern id="hiw-dots" x="0" y="0" width="48" height="48" patternUnits="userSpaceOnUse">
+              <circle cx="24" cy="24" r="1" fill="currentColor" className="text-border" opacity="1"/>
+            </pattern>
+            {/* Diagonal lines */}
+            <pattern id="hiw-diag" x="0" y="0" width="48" height="48" patternUnits="userSpaceOnUse">
+              <path d="M0 48 L48 0" stroke="currentColor" strokeWidth="0.4" className="text-border" opacity="0.7"/>
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#hiw-dots)"/>
+          <rect width="100%" height="100%" fill="url(#hiw-diag)"/>
+        </svg>
+
+        {/* ── Glowing orb — top-left ── */}
+        <div
+          className="absolute -top-32 -left-32 w-[520px] h-[520px] rounded-full pointer-events-none blur-3xl"
+          style={{ background: 'radial-gradient(circle, oklch(0.62 0.22 245 / 0.22) 0%, transparent 70%)' }}
+        />
+        {/* ── Glowing orb — bottom-right ── */}
+        <div
+          className="absolute -bottom-40 -right-24 w-[480px] h-[480px] rounded-full pointer-events-none blur-3xl"
+          style={{ background: 'radial-gradient(circle, oklch(0.78 0.16 195 / 0.18) 0%, transparent 70%)' }}
+        />
+        {/* ── Glowing orb — center ── */}
+        <div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[320px] rounded-full pointer-events-none blur-3xl"
+          style={{ background: 'radial-gradient(ellipse, oklch(0.62 0.22 245 / 0.10) 0%, transparent 70%)' }}
+        />
+
+        {/* ── Animated floating particles ── */}
+        {[
+          { cx: '12%', cy: '20%', r: 2.5, dur: '7s', dy: -18 },
+          { cx: '88%', cy: '15%', r: 1.8, dur: '9s', dy: -22 },
+          { cx: '25%', cy: '75%', r: 2,   dur: '6s', dy: -14 },
+          { cx: '70%', cy: '80%', r: 3,   dur: '11s', dy: -26 },
+          { cx: '55%', cy: '10%', r: 1.5, dur: '8s', dy: -20 },
+          { cx: '40%', cy: '90%', r: 2.2, dur: '10s', dy: -18 },
+        ].map(({ cx, cy, r, dur, dy }, i) => (
+          <motion.div
+            key={i}
+            className="absolute rounded-full bg-primary/25 pointer-events-none"
+            style={{ left: cx, top: cy, width: r * 2, height: r * 2 }}
+            animate={{ y: [0, dy, 0], opacity: [0.3, 0.7, 0.3] }}
+            transition={{ duration: parseFloat(dur), repeat: Infinity, ease: 'easeInOut', delay: i * 1.2 }}
+          />
+        ))}
+
+        {/* ── Horizontal scan-line ── */}
+        <motion.div
+          className="absolute left-0 right-0 h-px bg-primary/10 pointer-events-none"
+          animate={{ top: ['10%', '90%', '10%'] }}
+          transition={{ duration: 18, repeat: Infinity, ease: 'linear' }}
+        />
+
+        <div className="relative z-10 max-w-5xl mx-auto">
           {/* Header */}
           <div className="text-center mb-16">
-            <div className="w-10 h-0.5 bg-primary mx-auto mb-5" />
+            <motion.p
+              className="text-sm font-semibold text-primary mb-3 tracking-widest uppercase"
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.5 }}
+              transition={{ duration: 0.4 }}
+            >
+              How It Works
+            </motion.p>
             <motion.h2
               className="text-4xl font-bold tracking-tight"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.5 }}
-              transition={{ duration: 0.55 }}
+              transition={{ duration: 0.55, delay: 0.05 }}
             >
               From Notes to <span className="text-primary">A+ in 4 Steps</span>
             </motion.h2>
@@ -855,44 +1338,123 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── Testimonial ──────────────────────────────────── */}
-      <section className="py-24 px-4 border-t border-border">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12">
-            <p className="text-sm font-semibold text-primary mb-3 tracking-widest uppercase">Testimonials</p>
-            <h2 className="text-4xl font-bold tracking-tight">
-              What Students{' '}
-              <span className="gradient-text">Are Saying</span>
-            </h2>
+      {/* ── Testimonials ─────────────────────────────────── */}
+      <TestimonialsSection />
+
+      {/* ── Contact + FAQ ────────────────────────────────── */}
+      <section className="relative py-28 px-4 overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-32 pointer-events-none bg-[linear-gradient(to_top,transparent,var(--background))] z-20" />
+        <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none bg-[linear-gradient(to_bottom,transparent,var(--background))] z-20" />
+
+        {/* ── Layer 0: soft radial gradient (same as HeroSection) ── */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: [
+              'radial-gradient(ellipse 90% 60% at 50% 0%, oklch(0.62 0.22 245 / 0.12), transparent 70%)',
+              'radial-gradient(ellipse 60% 40% at 80% 80%, oklch(0.78 0.16 195 / 0.07), transparent 60%)',
+            ].join(', '),
+          }}
+        />
+
+        {/* ── Layer 1: floating contact / message icons ── */}
+        <div className="absolute inset-0 z-0">
+          <FloatingContactIcons />
+        </div>
+
+        <div className="relative z-10 max-w-6xl mx-auto">
+
+          {/* Section header */}
+          <div className="mb-14 text-center">
+            <motion.p
+              className="text-sm font-semibold text-primary tracking-widest uppercase mb-2"
+              initial={{ opacity: 0, y: 8 }} whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }} transition={{ duration: 0.4 }}
+            >
+              Support
+            </motion.p>
+            <motion.h2
+              className="text-4xl font-bold text-foreground"
+              initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.05 }}
+            >
+              Have a Question?
+            </motion.h2>
+            <motion.p
+              className="text-muted-foreground mt-3 max-w-md mx-auto"
+              initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.1 }}
+            >
+              Browse our FAQs or drop us a message — we&apos;re happy to help.
+            </motion.p>
           </div>
 
-          <div className="max-w-xl mx-auto">
-            <div className="glass rounded-2xl p-8">
-              <div className="flex gap-1 mb-4">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={16} className="text-yellow-400 fill-yellow-400" />
-                ))}
-              </div>
-              <blockquote className="text-foreground text-lg leading-relaxed mb-6">
-                &ldquo;Lamla AI helped me turn my lecture slides into practice quizzes in seconds.
-                It&apos;s an amazing tool for exam prep!&rdquo;
-              </blockquote>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full gradient-bg flex items-center justify-center font-bold text-sm text-white">
-                  CN
+          <div className="grid lg:grid-cols-2 gap-8 items-start">
+
+            {/* ── Contact card ── */}
+            <motion.div
+              className="relative rounded-2xl border border-border bg-card/80 backdrop-blur-sm p-8 shadow-sm overflow-hidden"
+              initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.15 }} transition={{ duration: 0.55 }}
+            >
+              {/* Top shimmer line */}
+              <div className="absolute top-0 inset-x-0 h-px bg-primary/30" />
+              {/* Hex accent behind card */}
+              <div className="absolute -bottom-10 -right-10 w-40 h-40 pointer-events-none blur-2xl"
+                style={{ background: 'radial-gradient(circle, oklch(0.62 0.22 245 / 0.10), transparent 70%)' }}
+              />
+
+              <p className="text-xs font-bold tracking-widest uppercase text-primary mb-1">Get In Touch</p>
+              <h3 className="text-xl font-bold text-foreground mb-1">Send Us A Message</h3>
+              <p className="text-muted-foreground text-sm mb-6">
+                Tell us what you need and the Lamla team will respond as soon as possible.
+              </p>
+
+              <form onSubmit={handleContactSubmit} className="flex flex-col gap-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <input name="name" type="text" placeholder="Your name" required
+                    className="px-4 py-2.5 rounded-lg border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow placeholder:text-muted-foreground"
+                  />
+                  <input name="email" type="email" placeholder="Your email" required
+                    className="px-4 py-2.5 rounded-lg border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow placeholder:text-muted-foreground"
+                  />
                 </div>
-                <div>
-                  <p className="font-semibold text-sm">Christopher N</p>
-                  <p className="text-xs text-muted-foreground">Student @ KNUST</p>
-                </div>
-              </div>
-            </div>
+                <input name="title" type="text" placeholder="Subject" required
+                  className="px-4 py-2.5 rounded-lg border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow placeholder:text-muted-foreground"
+                />
+                <textarea name="message" rows={4} placeholder="Type your message..." required
+                  className="px-4 py-2.5 rounded-lg border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow resize-none placeholder:text-muted-foreground"
+                />
+                <button type="submit" disabled={isSendingContact}
+                  className="px-6 py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-60"
+                >
+                  {isSendingContact ? 'Sending…' : 'Send Message →'}
+                </button>
+                {contactStatus && (
+                  <p className="text-sm text-muted-foreground">{contactStatus}</p>
+                )}
+              </form>
+            </motion.div>
+
+            {/* ── FAQ card ── */}
+            <motion.div
+              className="relative rounded-2xl border border-border bg-card/80 backdrop-blur-sm p-8 shadow-sm overflow-hidden"
+              initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.15 }} transition={{ duration: 0.55, delay: 0.1 }}
+            >
+              <div className="absolute top-0 inset-x-0 h-px bg-primary/30" />
+              <div className="absolute -top-10 -left-10 w-40 h-40 pointer-events-none blur-2xl"
+                style={{ background: 'radial-gradient(circle, oklch(0.78 0.16 195 / 0.10), transparent 70%)' }}
+              />
+              <FaqAccordion />
+            </motion.div>
+
           </div>
         </div>
       </section>
 
       {/* ── CTA Banner ───────────────────────────────────── */}
-      <section className="py-24 px-4 border-t border-border">
+      <section className="py-24 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="relative overflow-hidden rounded-2xl gradient-bg p-12 text-center">
             <div className="absolute inset-0 bg-grid opacity-20 pointer-events-none" />
@@ -903,71 +1465,22 @@ export default function HomePage() {
               <p className="text-white/80 text-lg mb-8 max-w-xl mx-auto">
                 Join thousands of students using Lamla AI to study smarter and score higher.
               </p>
-              <Link
-                href={isAuthenticated ? '/dashboard' : '/auth/signup'}
-                className="inline-flex items-center gap-2 px-8 py-3.5 rounded-lg bg-white text-blue-600 font-bold hover:bg-white/90 transition-colors"
-              >
-                {isAuthenticated ? 'Go to Dashboard' : 'Start for Free'}
-                <ArrowRight size={16} />
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Contact ──────────────────────────────────────── */}
-      <section className="py-24 px-4 border-t border-border">
-        <div className="max-w-5xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-16 items-start">
-            <div>
-              <p className="text-sm font-semibold text-primary mb-3 tracking-widest uppercase">Get In Touch</p>
-              <h3 className="text-3xl font-bold mb-4">Have Questions?<br />Send Us A Message</h3>
-              <p className="text-muted-foreground mb-8">
-                Tell us what you need and the Lamla team will respond as soon as possible.
-              </p>
-              <form onSubmit={handleContactSubmit} className="flex flex-col gap-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <input
-                    name="name" type="text" placeholder="Your name" required
-                    className="px-4 py-2.5 rounded-lg border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow placeholder:text-muted-foreground"
-                  />
-                  <input
-                    name="email" type="email" placeholder="Your email" required
-                    className="px-4 py-2.5 rounded-lg border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow placeholder:text-muted-foreground"
-                  />
-                </div>
-                <input
-                  name="title" type="text" placeholder="Subject" required
-                  className="px-4 py-2.5 rounded-lg border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow placeholder:text-muted-foreground"
-                />
-                <textarea
-                  name="message" rows={4} placeholder="Type your message..." required
-                  className="px-4 py-2.5 rounded-lg border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow resize-none placeholder:text-muted-foreground"
-                />
-                <button
-                  type="submit" disabled={isSendingContact}
-                  className="px-6 py-2.5 rounded-lg gradient-bg text-white font-semibold hover:opacity-90 transition-opacity disabled:opacity-60"
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <Link
+                  href={isAuthenticated ? '/dashboard' : '/auth/signup'}
+                  className="inline-flex items-center gap-2 px-8 py-3.5 rounded-lg bg-white text-blue-600 font-bold hover:bg-white/90 transition-colors"
                 >
-                  {isSendingContact ? 'Sending...' : 'Send Message'}
-                </button>
-                {contactStatus && (
-                  <p className="text-sm text-muted-foreground">{contactStatus}</p>
-                )}
-              </form>
-            </div>
-
-            <div className="flex flex-col gap-6 md:pt-16">
-              {features.slice(0, 3).map(({ icon: Icon, title, iconColor }) => (
-                <div key={title} className="flex items-start gap-4 glass rounded-xl p-4">
-                  <div className="w-9 h-9 rounded-lg bg-primary/12 flex items-center justify-center shrink-0">
-                    <Icon size={18} className={iconColor} />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm">{title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Powered by advanced AI models</p>
-                  </div>
-                </div>
-              ))}
+                  {isAuthenticated ? 'Go to Dashboard' : 'Start for Free'}
+                  <ArrowRight size={16} />
+                </Link>
+                <Link
+                  href="/quiz/create"
+                  className="inline-flex items-center gap-2 px-8 py-3.5 rounded-lg bg-white/15 border border-white/30 text-white font-bold hover:bg-white/25 transition-colors backdrop-blur-sm"
+                >
+                  Go to Quiz
+                  <ArrowRight size={16} />
+                </Link>
+              </div>
             </div>
           </div>
         </div>
