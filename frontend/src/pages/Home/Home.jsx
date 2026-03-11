@@ -72,9 +72,8 @@ const Home = ({ user }) => {
       },
         });
         const data = await res.json();
-        if (!data.success) throw new Error(data.error || "GAS error");
+        if (!res.ok || !data.success) throw new Error(data.error || "GAS error");
       } else {
-        // Fallback to Django backend if GAS URL is not configured
         await djangoApi.post("/dashboard/contact/", payload);
       }
 
