@@ -5,6 +5,78 @@ import { useAuth } from '@/context/AuthContext';
 import { ArrowRight, Sparkles, CheckCircle2, Play } from 'lucide-react';
 import FloatingStudyIcons from '@/components/FloatingStudyIcons';
 
+function ProductMockup() {
+  return (
+    <div className="w-full max-w-2xl mx-auto mt-10 px-2">
+      <div className="rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
+        {/* Browser chrome */}
+        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border bg-muted/20">
+          <div className="flex gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-red-400/50" />
+            <div className="w-2.5 h-2.5 rounded-full bg-yellow-400/50" />
+            <div className="w-2.5 h-2.5 rounded-full bg-green-400/50" />
+          </div>
+          <div className="flex-1 mx-3 h-4 rounded bg-background/60 flex items-center px-2.5">
+            <div className="w-16 h-1.5 rounded-full bg-muted-foreground/20" />
+          </div>
+        </div>
+        {/* Content */}
+        <div className="p-4 grid grid-cols-2 gap-3">
+          {/* Quiz panel */}
+          <div className="rounded-xl border border-border bg-background p-3 flex flex-col gap-2">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+              <span className="text-[9px] font-bold text-primary uppercase tracking-widest">Quiz</span>
+            </div>
+            <p className="text-[10px] font-semibold text-foreground/80 leading-tight">
+              What organelle produces ATP in a cell?
+            </p>
+            {['Nucleus', 'Mitochondria', 'Ribosome'].map((opt, i) => (
+              <div
+                key={opt}
+                className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-[9px] border ${
+                  i === 1
+                    ? 'bg-primary/12 border-primary/30 text-primary font-semibold'
+                    : 'bg-muted/20 border-border/40 text-muted-foreground'
+                }`}
+              >
+                <div className={`w-2 h-2 rounded-full shrink-0 ${i === 1 ? 'bg-primary' : 'bg-border'}`} />
+                {opt}
+              </div>
+            ))}
+            <div className="flex justify-end mt-1">
+              <div className="px-3 py-1 rounded-md bg-primary text-white text-[9px] font-semibold">Submit</div>
+            </div>
+          </div>
+          {/* AI Tutor panel */}
+          <div className="rounded-xl border border-border bg-background p-3 flex flex-col gap-1.5">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+              <span className="text-[9px] font-bold text-cyan-500 uppercase tracking-widest">AI Tutor</span>
+            </div>
+            <div
+              className="self-end rounded-xl rounded-br-sm px-2 py-1.5 bg-primary/15 border border-primary/20 text-[9px] text-foreground/70 max-w-[90%] leading-relaxed"
+            >
+              Explain photosynthesis
+            </div>
+            <div
+              className="self-start rounded-xl rounded-bl-sm px-2 py-1.5 bg-muted/40 border border-border/40 text-[9px] text-muted-foreground max-w-[95%] leading-relaxed"
+            >
+              Photosynthesis converts sunlight + CO₂ into glucose using chlorophyll...
+            </div>
+            <div className="mt-auto flex items-center gap-1.5 border border-border rounded-lg px-2 py-1 mt-2">
+              <div className="flex-1 h-1.5 rounded bg-muted-foreground/15" />
+              <div className="w-5 h-5 rounded-md bg-primary flex items-center justify-center shrink-0">
+                <svg width="8" height="8" viewBox="0 0 8 8" fill="white"><path d="M1 4h6M4 1l3 3-3 3" stroke="white" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function HeroSection() {
   const { isAuthenticated } = useAuth();
 
@@ -22,8 +94,6 @@ export default function HeroSection() {
         }}
       />
 
-      {/* ── Layer 1: subtle grid ── */}
-      <div className="absolute inset-0 bg-grid opacity-25 pointer-events-none" />
 
       {/* ── Layer 2: floating study icons (behind content) ── */}
       <div className="absolute inset-0 z-0">
@@ -43,7 +113,7 @@ export default function HeroSection() {
         <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight leading-[1.1]">
           Learn Smarter
           <br />
-          <span className="gradient-text-strong">with AI</span>
+          <span className="text-primary">with AI</span>
         </h1>
 
         {/* Description */}
@@ -57,7 +127,7 @@ export default function HeroSection() {
         <div className="flex gap-3 flex-wrap justify-center">
           <Link
             href={isAuthenticated ? '/quiz/create' : '/auth/signup'}
-            className="inline-flex items-center gap-2 px-7 py-3 rounded-lg gradient-bg text-white font-semibold hover:opacity-90 active:scale-95 transition-all duration-150 glow-blue text-base"
+            className="inline-flex items-center gap-2 px-7 py-3 rounded-lg bg-primary text-white font-semibold hover:opacity-90 active:scale-95 transition-all duration-150 glow-blue text-base"
           >
             {isAuthenticated ? 'Start Practising' : 'Get Started Free'}
             <ArrowRight size={16} />
@@ -80,10 +150,10 @@ export default function HeroSection() {
             </span>
           ))}
         </div>
-      </div>
 
-      {/* ── Bottom fade into next section ── */}
-      <div className="absolute bottom-0 left-0 right-0 h-28 pointer-events-none bg-linear-to-t from-background to-transparent" />
+        {/* Product illustration */}
+        {/* <ProductMockup /> */}
+      </div>
     </section>
   );
 }

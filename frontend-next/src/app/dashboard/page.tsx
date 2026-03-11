@@ -94,38 +94,38 @@ export default function DashboardPage() {
   const statCards = [
     {
       icon: BookOpen, label: 'Total Quizzes', value: stats.totalQuizzes,
-      color: 'from-blue-500/20 to-blue-600/5', iconColor: 'text-blue-400',
+      color: 'bg-blue-500/12', iconColor: 'text-blue-400',
     },
     {
       icon: Trophy, label: 'Avg Score', value: `${stats.averageScore}%`,
-      color: 'from-yellow-500/20 to-yellow-600/5', iconColor: 'text-yellow-400',
+      color: 'bg-yellow-500/12', iconColor: 'text-yellow-400',
     },
     {
       icon: Calendar, label: 'Study Streak', value: `${stats.studyStreak}d`,
-      color: 'from-green-500/20 to-green-600/5', iconColor: 'text-green-400',
+      color: 'bg-green-500/12', iconColor: 'text-green-400',
     },
     {
       icon: Layers, label: 'Flashcard Sets', value: stats.totalFlashcards,
-      color: 'from-violet-500/20 to-violet-600/5', iconColor: 'text-violet-400',
+      color: 'bg-violet-500/12', iconColor: 'text-violet-400',
     },
   ];
 
   const quickActions = [
     {
       icon: Brain, title: 'Create Quiz', desc: 'Generate questions from your notes',
-      path: '/quiz/create', color: 'from-blue-500 to-cyan-500',
+      path: '/quiz/create', color: 'bg-blue-500',
     },
     {
       icon: Layers, title: 'New Flashcards', desc: 'Build smart flashcard decks',
-      path: '/flashcards/create', color: 'from-violet-500 to-purple-500',
+      path: '/flashcards/create', color: 'bg-violet-500',
     },
     {
       icon: Bot, title: 'AI Tutor', desc: 'Get instant personalised help',
-      path: '/ai-tutor', color: 'from-cyan-500 to-teal-500',
+      path: '/ai-tutor', color: 'bg-cyan-500',
     },
     {
       icon: Upload, title: 'Upload Material', desc: 'Share your study files',
-      path: '/materials/upload', color: 'from-indigo-500 to-blue-500',
+      path: '/materials/upload', color: 'bg-indigo-500',
     },
   ];
 
@@ -202,7 +202,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {statCards.map(({ icon: Icon, label, value, color, iconColor }) => (
                 <div key={label} className="glass rounded-xl p-4 card-hover flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-lg bg-linear-to-br ${color} flex items-center justify-center shrink-0`}>
+                  <div className={`w-10 h-10 rounded-lg ${color} flex items-center justify-center shrink-0`}>
                     <Icon size={18} className={iconColor} />
                   </div>
                   <div>
@@ -225,7 +225,7 @@ export default function DashboardPage() {
                     href={path}
                     className="group glass rounded-xl p-4 card-hover flex flex-col items-center text-center gap-2"
                   >
-                    <div className={`w-10 h-10 rounded-lg bg-linear-to-br ${color} flex items-center justify-center group-hover:glow-blue-sm transition-all`}>
+                    <div className={`w-10 h-10 rounded-lg ${color} flex items-center justify-center group-hover:glow-blue-sm transition-all`}>
                       <Icon size={18} className="text-white" />
                     </div>
                     <h3 className="font-medium text-sm">{title}</h3>

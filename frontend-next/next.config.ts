@@ -1,5 +1,17 @@
 import type { NextConfig } from "next";
 
+const djangoApiUrl = process.env.NEXT_PUBLIC_DJANGO_API_URL ?? '';
+const fastapiUrl   = process.env.NEXT_PUBLIC_FASTAPI_URL   ?? '';
+
+const connectSrcAllowlist = [
+  "'self'",
+  "https://accounts.google.com",
+  "https://oauth2.googleapis.com",
+  djangoApiUrl,
+  fastapiUrl,
+  "ws://localhost:* wss://localhost:*",
+].filter(Boolean).join(' ');
+
 const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -21,7 +33,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob: https:",
-      "connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com",
+      `connect-src ${connectSrcAllowlist}`,
       "frame-src https://accounts.google.com",
       "object-src 'none'",
       "base-uri 'self'",

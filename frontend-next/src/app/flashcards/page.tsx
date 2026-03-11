@@ -9,12 +9,12 @@ import { Plus, Layers, BookOpen, Sparkles, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
 const DECK_COLORS = [
-  'from-blue-500/20 to-blue-600/5',
-  'from-violet-500/20 to-violet-600/5',
-  'from-cyan-500/20 to-cyan-600/5',
-  'from-indigo-500/20 to-indigo-600/5',
-  'from-sky-500/20 to-sky-600/5',
-  'from-teal-500/20 to-teal-600/5',
+  'bg-blue-500/12',
+  'bg-violet-500/12',
+  'bg-cyan-500/12',
+  'bg-indigo-500/12',
+  'bg-sky-500/12',
+  'bg-teal-500/12',
 ];
 
 export default function FlashcardDecksPage() {
@@ -91,7 +91,7 @@ export default function FlashcardDecksPage() {
                   className="glass rounded-xl p-5 flex flex-col gap-4 card-hover group"
                 >
                   <div className="flex items-start justify-between">
-                    <div className={`w-10 h-10 rounded-lg bg-linear-to-br ${color} flex items-center justify-center`}>
+                    <div className={`w-10 h-10 rounded-lg ${color} flex items-center justify-center`}>
                       <BookOpen size={18} className="text-primary" />
                     </div>
                     {deck.due_count > 0 && (
