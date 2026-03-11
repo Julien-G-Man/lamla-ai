@@ -247,7 +247,12 @@ def _send_gas_typed(*, email_type: str, to_email: str, user_name: str, action_li
 # ─── Router ───────────────────────────────────────────────────────────────────
 
 _BACKEND_MAP = {
-    "gas":     _send_via_gas,
+    # "gas" is intentionally excluded here.
+    # Auth emails (verification, password_reset) already call _send_gas_typed()
+    # directly in send_verification_email() / send_password_reset_email().
+    # The __raw__ GAS path is not available until the GAS script is redeployed
+    # with __raw__ type support — adding it here would cause a redundant failing
+    # attempt for every auth email that falls back to _send_email().
     "brevo":   _send_via_brevo,
     "resend":  _send_via_resend,
     "smtp":    _send_via_django_mail,
