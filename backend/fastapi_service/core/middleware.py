@@ -30,10 +30,29 @@ class InternalAuthMiddleware(BaseHTTPMiddleware):
     - Browser requests with `Origin` must come from FASTAPI_ALLOWED_ORIGINS.
     """
 
+    # Paths accessible with a user token (Authorization: Token ...) instead of the
+    # internal secret.  These are called directly by the frontend browser client.
+    USER_TOKEN_PATHS = {"/chat/stream", "/chat/stream/"}
+
     async def dispatch(self, request: Request, call_next):
         # Keep health endpoint publicly accessible.
-        if request.url.path == "/health":
+        if request.url.path in ("/health", "/"):
             return await call_next(request)
+
+        # Allow frontend-facing chat stream endpoint — authenticated via Django
+        # user token (Authorization: Token ...) rather than the internal secret.
+        if request.url.path in self.USER_TOKEN_PATHS:
+            # Always let CORS preflight pass so CORSMiddleware can respond correctly.
+            if request.method == "OPTIONS":
+                return await call_next(request)
+            auth_header = request.headers.get("authorization", "")
+            if auth_header.lower().startswith("token ") and len(auth_header) > 10:
+                return await call_next(request)
+            # No valid user token — reject with clear error
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Authentication required. Please log in."},
+            )
 
         # If this is a browser-originated request, enforce strict origin allowlist.
         origin = request.headers.get("origin")

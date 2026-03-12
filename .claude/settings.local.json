@@ -11,7 +11,12 @@
       "Bash(find /c/Users/user/Code/lamla-ai/frontend/src -type f \\\\\\(-name *Login* -o -name *login* -o -name *Signup* -o -name *signup* -o -name *api* -o -name *config* \\\\\\))",
       "Bash(find /c/Users/user/Code/lamla-ai/frontend -maxdepth 2 -type f \\\\\\(-name .env* -o -name App.jsx -o -name main.jsx -o -name index.jsx \\\\\\))",
       "Bash(xargs grep:*)",
-      "Bash(ls /c/Users/user/Code/lamla-ai/frontend-next/.env*)"
+      "Bash(ls /c/Users/user/Code/lamla-ai/frontend-next/.env*)",
+      "Bash(ls -la /c/Users/user/Code/lamla-ai/frontend-next/tailwind*)",
+      "Bash(grep -r \"var\\(--\\\\|:root\\\\|\\\\.dark\" /c/Users/user/Code/lamla-ai/frontend-next/src --include=*.css --include=*.tsx --include=*.ts)",
+      "Bash(grep -r chat/stream /c/Users/user/Code/lamla-ai/backend/fastapi_service --include=*.py)",
+      "Bash(grep -rn \"prefix.*chat\\\\|router.*chat\" /c/Users/user/Code/lamla-ai/backend --include=*.py)",
+      "Bash(xargs ls:*)"
     ]
   }
 }
