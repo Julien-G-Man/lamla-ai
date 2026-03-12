@@ -1,15 +1,14 @@
-'use client';
+"use client";
 
-import { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react';
-import { useRouter } from 'next/navigation';
-import Navbar from '@/components/Navbar';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import remarkMath from 'remark-math';
-import rehypeKatex from 'rehype-katex';
-import 'katex/dist/katex.min.css';
-import Image from 'next/image';
-import axios from 'axios';
+import { useState, useRef, useEffect, useCallback, useMemo, memo } from "react";
+import { useRouter } from "next/navigation";
+import Navbar from "@/components/Navbar";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import "katex/dist/katex.min.css";
+import Image from "next/image";
 import {
   Send,
   Paperclip,
@@ -31,13 +30,14 @@ import {
   FolderOpen,
   ChevronDown,
   Trash2,
-} from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
-import { AnimatePresence, motion } from 'framer-motion';
-import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
+} from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { AnimatePresence, motion, type Variants } from "framer-motion";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import djangoApi from "@/services/api";
 
-type SearchMode = 'disabled' | 'web_search' | 'deep_research';
+type SearchMode = "disabled" | "web_search" | "deep_research";
 
 interface SourceCard {
   title: string;
@@ -47,7 +47,7 @@ interface SourceCard {
 
 interface Message {
   id: string;
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
   createdAt: number;
   isStreaming?: boolean;
@@ -67,52 +67,68 @@ interface ChatSession {
   messages: Message[];
 }
 
-const DJANGO_API_URL = process.env.NEXT_PUBLIC_DJANGO_API_URL || 'http://localhost:8000/api';
-const SESSIONS_STORAGE_KEY = 'lamla_ai_tutor_sessions_v1';
-const FLASHCARD_PREFILL_KEY = 'lamla_flashcards_prefill';
-const QUIZ_PREFILL_KEY = 'lamla_quiz_prefill';
+const DJANGO_API_URL =
+  process.env.NEXT_PUBLIC_DJANGO_API_URL || "http://localhost:8000/api";
+const SESSIONS_STORAGE_KEY = "lamla_ai_tutor_sessions_v1";
+const FLASHCARD_PREFILL_KEY = "lamla_flashcards_prefill";
+const QUIZ_PREFILL_KEY = "lamla_quiz_prefill";
 const MAX_FILE_SIZE_MB = 15;
-const ALLOWED_FILE_EXTENSIONS = ['pdf', 'docx', 'pptx', 'txt'];
+const ALLOWED_FILE_EXTENSIONS = ["pdf", "docx", "pptx", "txt"];
 
 const suggestedPrompts = [
-  'Explain this concept in simple terms',
-  'Create a study plan for my exam',
-  'What are the key topics I should focus on?',
-  'Help me understand this formula',
+  "Explain this concept in simple terms",
+  "Create a study plan for my exam",
+  "What are the key topics I should focus on?",
+  "Help me understand this formula",
 ];
 
-const welcomeVariants = {
+const welcomeVariants: Variants = {
   hidden: { opacity: 0, y: 16 },
   show: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.45, ease: 'easeOut' as const, when: 'beforeChildren', staggerChildren: 0.08 },
+    transition: {
+      duration: 0.45,
+      ease: "easeOut" as const,
+      when: "beforeChildren",
+      staggerChildren: 0.08,
+    },
   },
 };
 
-const welcomeItemVariants = {
+const welcomeItemVariants: Variants = {
   hidden: { opacity: 0, y: 14 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' as const } },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.35, ease: "easeOut" as const },
+  },
 };
 
 const bubbleEnterVariants = {
   hidden: { opacity: 0, y: 8 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.16, ease: 'easeOut' as const } },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.16, ease: "easeOut" as const },
+  },
 };
 
 const sessionTitleFromMessages = (messages: Message[]) => {
-  const firstUser = messages.find(message => message.role === 'user' && message.content.trim());
-  if (!firstUser) return 'New Chat';
-  const trimmed = firstUser.content.replace(/\s+/g, ' ').trim();
+  const firstUser = messages.find(
+    (message) => message.role === "user" && message.content.trim(),
+  );
+  if (!firstUser) return "New Chat";
+  const trimmed = firstUser.content.replace(/\s+/g, " ").trim();
   return trimmed.length > 54 ? `${trimmed.slice(0, 54)}...` : trimmed;
 };
 
 const formatSessionTime = (timestamp: number) =>
   new Date(timestamp).toLocaleString([], {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 
 const extractSourcesFromText = (content: string): SourceCard[] => {
@@ -122,7 +138,7 @@ const extractSourcesFromText = (content: string): SourceCard[] => {
   const markdownLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
   const plainUrlRegex = /https?:\/\/[^\s<>"'`]+/g;
 
-  const normalizeUrl = (rawUrl: string) => rawUrl.replace(/[),.;!?]+$/g, '');
+  const normalizeUrl = (rawUrl: string) => rawUrl.replace(/[),.;!?]+$/g, "");
 
   const pushSource = (urlValue: string, titleValue?: string) => {
     const normalized = normalizeUrl(urlValue);
@@ -142,13 +158,13 @@ const extractSourcesFromText = (content: string): SourceCard[] => {
   };
 
   for (const match of content.matchAll(markdownLinkRegex)) {
-    const title = match[1] || '';
-    const url = match[2] || '';
+    const title = match[1] || "";
+    const url = match[2] || "";
     pushSource(url, title);
   }
 
   for (const match of content.matchAll(plainUrlRegex)) {
-    const url = match[0] || '';
+    const url = match[0] || "";
     pushSource(url);
   }
 
@@ -159,10 +175,10 @@ const createEmptySession = (): ChatSession => {
   const now = Date.now();
   return {
     id: `session-${now}-${Math.random().toString(36).slice(2, 8)}`,
-    title: 'New Chat',
+    title: "New Chat",
     createdAt: now,
     updatedAt: now,
-    searchMode: 'disabled',
+    searchMode: "disabled",
     messages: [],
   };
 };
@@ -182,7 +198,10 @@ interface BubbleProps {
   onCopy: (content: string, id: string) => void;
   onRetry: (msg: Message) => void;
   onRegenerate: (msg: Message) => void;
-  onQuickAction: (action: 'summarize' | 'simple' | 'flashcards' | 'quiz', msg: Message) => void;
+  onQuickAction: (
+    action: "summarize" | "simple" | "flashcards" | "quiz",
+    msg: Message,
+  ) => void;
   onEditResend: (msg: Message) => void;
   onToggleMenu: (id: string) => void;
 }
@@ -208,11 +227,11 @@ const MessageBubble = memo(function MessageBubble({
       initial="hidden"
       animate="show"
       className={cn(
-        'group flex items-start gap-2.5',
-        message.role === 'user' ? 'justify-end' : 'justify-start'
+        "group flex items-start gap-2.5",
+        message.role === "user" ? "justify-end" : "justify-start",
       )}
     >
-      {message.role === 'assistant' && (
+      {message.role === "assistant" && (
         <div className="w-8 h-8 rounded-lg overflow-hidden border border-border/70 shrink-0 mt-0.5 bg-background/80">
           <Image
             src="/lamla_logo.png"
@@ -227,19 +246,28 @@ const MessageBubble = memo(function MessageBubble({
       <div className="w-fit max-w-[91%] sm:max-w-[83%] space-y-1.5">
         <div
           className={cn(
-            'w-fit max-w-full rounded-2xl px-3 py-2.5',
-            message.role === 'assistant'
-              ? 'border border-border/70 bg-secondary/55 rounded-tl-sm'
-              : 'border border-primary/35 bg-primary/14 rounded-tr-sm text-right'
+            "w-fit max-w-full rounded-2xl px-3 py-2.5",
+            message.role === "assistant"
+              ? "border border-border/70 bg-secondary/55 rounded-tl-sm"
+              : "border border-primary/35 bg-primary/14 rounded-tr-sm text-right",
           )}
         >
-          {message.role === 'assistant' ? (
+          {message.role === "assistant" ? (
             <div className="prose prose-sm dark:prose-invert max-w-none text-foreground/95 leading-relaxed">
               {message.isStreaming && !message.content ? (
                 <div className="flex items-center gap-1 py-2 px-0.5">
-                  <span className="w-2 h-2 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-2 h-2 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-2 h-2 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <span
+                    className="w-2 h-2 rounded-full bg-muted-foreground/60 animate-bounce"
+                    style={{ animationDelay: "0ms" }}
+                  />
+                  <span
+                    className="w-2 h-2 rounded-full bg-muted-foreground/60 animate-bounce"
+                    style={{ animationDelay: "150ms" }}
+                  />
+                  <span
+                    className="w-2 h-2 rounded-full bg-muted-foreground/60 animate-bounce"
+                    style={{ animationDelay: "300ms" }}
+                  />
                 </div>
               ) : message.isStreaming ? (
                 <div className="text-sm leading-relaxed whitespace-pre-wrap">
@@ -257,7 +285,9 @@ const MessageBubble = memo(function MessageBubble({
             </div>
           ) : (
             <div>
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                {message.content}
+              </p>
               {isEditing && (
                 <p className="text-[11px] text-primary mt-1">Editing source</p>
               )}
@@ -271,12 +301,12 @@ const MessageBubble = memo(function MessageBubble({
           </div>
         )}
 
-        {message.role === 'assistant' &&
+        {message.role === "assistant" &&
           message.sources &&
           message.sources.length > 0 &&
-          message.mode !== 'disabled' && (
+          message.mode !== "disabled" && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
-              {message.sources.map(source => (
+              {message.sources.map((source) => (
                 <a
                   key={`${message.id}-${source.url}`}
                   href={source.url}
@@ -284,10 +314,16 @@ const MessageBubble = memo(function MessageBubble({
                   rel="noopener noreferrer"
                   className="rounded-lg border border-border/70 bg-background/45 px-2.5 py-2 hover:border-primary/40 hover:bg-background/70 transition-colors"
                 >
-                  <p className="text-xs font-medium truncate" title={source.title}>
+                  <p
+                    className="text-xs font-medium truncate"
+                    title={source.title}
+                  >
                     {source.title}
                   </p>
-                  <p className="text-[11px] text-muted-foreground truncate" title={source.domain}>
+                  <p
+                    className="text-[11px] text-muted-foreground truncate"
+                    title={source.domain}
+                  >
                     {source.domain}
                   </p>
                 </a>
@@ -295,12 +331,12 @@ const MessageBubble = memo(function MessageBubble({
             </div>
           )}
 
-        {!message.isStreaming && message.role === 'assistant' && (
+        {!message.isStreaming && message.role === "assistant" && (
           <div className="flex flex-wrap items-center gap-1.5 text-xs">
             <div className="relative group/copy">
               <button
                 onClick={() => onCopy(message.content, message.id)}
-                aria-label={copiedId === message.id ? 'Copied' : 'Copy'}
+                aria-label={copiedId === message.id ? "Copied" : "Copy"}
                 className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border hover:bg-surface-hover transition-colors"
               >
                 {copiedId === message.id ? (
@@ -310,7 +346,7 @@ const MessageBubble = memo(function MessageBubble({
                 )}
               </button>
               <span className="pointer-events-none absolute top-full mt-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-background/95 px-2 py-0.5 text-[10px] text-foreground opacity-0 group-hover/copy:opacity-100 transition-opacity z-20">
-                {copiedId === message.id ? 'Copied' : 'Copy'}
+                {copiedId === message.id ? "Copied" : "Copy"}
               </span>
             </div>
             {message.error ? (
@@ -344,7 +380,7 @@ const MessageBubble = memo(function MessageBubble({
             )}
             <div className="relative group/summarize">
               <button
-                onClick={() => onQuickAction('summarize', message)}
+                onClick={() => onQuickAction("summarize", message)}
                 aria-label="Summarize"
                 className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border hover:bg-surface-hover transition-colors"
               >
@@ -359,8 +395,8 @@ const MessageBubble = memo(function MessageBubble({
                 onClick={() => onToggleMenu(message.id)}
                 aria-label="More actions"
                 className={cn(
-                  'inline-flex h-7 w-7 items-center justify-center rounded-md border border-border hover:bg-surface-hover transition-colors',
-                  isMenuOpen && 'bg-surface-hover'
+                  "inline-flex h-7 w-7 items-center justify-center rounded-md border border-border hover:bg-surface-hover transition-colors",
+                  isMenuOpen && "bg-surface-hover",
                 )}
               >
                 <MoreHorizontal size={12} />
@@ -372,21 +408,21 @@ const MessageBubble = memo(function MessageBubble({
               {isMenuOpen && (
                 <div className="absolute top-full mt-2 right-0 z-30 min-w-37 rounded-lg border border-border bg-background/95 backdrop-blur-xl shadow-xl p-1.5 flex flex-col gap-1">
                   <button
-                    onClick={() => onQuickAction('simple', message)}
+                    onClick={() => onQuickAction("simple", message)}
                     className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-surface-hover transition-colors"
                   >
                     <Lightbulb size={12} />
                     Explain
                   </button>
                   <button
-                    onClick={() => onQuickAction('flashcards', message)}
+                    onClick={() => onQuickAction("flashcards", message)}
                     className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-surface-hover transition-colors"
                   >
                     <Layers size={12} />
                     Flashcards
                   </button>
                   <button
-                    onClick={() => onQuickAction('quiz', message)}
+                    onClick={() => onQuickAction("quiz", message)}
                     className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-surface-hover transition-colors"
                   >
                     <Brain size={12} />
@@ -398,7 +434,7 @@ const MessageBubble = memo(function MessageBubble({
           </div>
         )}
 
-        {!message.isStreaming && message.role === 'user' && (
+        {!message.isStreaming && message.role === "user" && (
           <div className="flex justify-end">
             <div className="relative group/edit">
               <button
@@ -416,7 +452,7 @@ const MessageBubble = memo(function MessageBubble({
         )}
       </div>
 
-      {message.role === 'user' && (
+      {message.role === "user" && (
         <div className="w-8 h-8 rounded-lg overflow-hidden border border-border/70 shrink-0 mt-0.5 bg-background/80">
           {user?.profile_image ? (
             <Image
@@ -445,23 +481,24 @@ export default function AITutorPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [fileError, setFileError] = useState('');
-  const [searchMode, setSearchMode] = useState<SearchMode>('disabled');
+  const [fileError, setFileError] = useState("");
+  const [searchMode, setSearchMode] = useState<SearchMode>("disabled");
   const [isLoading, setIsLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showSearchMenu, setShowSearchMenu] = useState(false);
   const [showSessionSidebar, setShowSessionSidebar] = useState(false);
-  const [showDesktopSessionSidebar, setShowDesktopSessionSidebar] = useState(false);
+  const [showDesktopSessionSidebar, setShowDesktopSessionSidebar] =
+    useState(false);
   const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
-  const [greeting, setGreeting] = useState('Hello');
+  const [greeting, setGreeting] = useState("Hello");
   const [isOffline, setIsOffline] = useState(false);
   const [isDragActive, setIsDragActive] = useState(false);
   const [editingSourceId, setEditingSourceId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
-  const [activeSessionId, setActiveSessionId] = useState('');
+  const [activeSessionId, setActiveSessionId] = useState("");
   const [sessionReady, setSessionReady] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
 
@@ -480,11 +517,13 @@ export default function AITutorPage() {
       // Always follow the streaming response — no distance guard.
       // Double-RAF ensures the DOM has repainted (important on the first
       // message when the welcome screen unmounts and the list mounts).
-      if (rafScrollRef.current !== null) cancelAnimationFrame(rafScrollRef.current);
+      if (rafScrollRef.current !== null)
+        cancelAnimationFrame(rafScrollRef.current);
       rafScrollRef.current = requestAnimationFrame(() => {
         rafScrollRef.current = requestAnimationFrame(() => {
           if (scrollContainerRef.current) {
-            scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+            scrollContainerRef.current.scrollTop =
+              scrollContainerRef.current.scrollHeight;
           }
           rafScrollRef.current = null;
         });
@@ -494,28 +533,28 @@ export default function AITutorPage() {
       const distanceFromBottom =
         container.scrollHeight - container.scrollTop - container.clientHeight;
       if (distanceFromBottom <= 140) {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
       }
     }
   }, [messages, isLoading]);
 
   useEffect(() => {
     const hour = new Date().getHours();
-    if (hour < 12) setGreeting('Good morning');
-    else if (hour < 17) setGreeting('Good afternoon');
-    else if (hour < 22) setGreeting('Good evening');
-    else setGreeting('Good night');
+    if (hour < 12) setGreeting("Good morning");
+    else if (hour < 17) setGreeting("Good afternoon");
+    else if (hour < 22) setGreeting("Good evening");
+    else setGreeting("Good night");
   }, []);
 
   useEffect(() => {
-    setIsOffline(typeof navigator !== 'undefined' ? !navigator.onLine : false);
+    setIsOffline(typeof navigator !== "undefined" ? !navigator.onLine : false);
     const onOnline = () => setIsOffline(false);
     const onOffline = () => setIsOffline(true);
-    window.addEventListener('online', onOnline);
-    window.addEventListener('offline', onOffline);
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
     return () => {
-      window.removeEventListener('online', onOnline);
-      window.removeEventListener('offline', onOffline);
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
     };
   }, []);
 
@@ -533,18 +572,18 @@ export default function AITutorPage() {
         container.scrollHeight - container.scrollTop - container.clientHeight;
       setShowScrollButton(distanceFromBottom > 140);
     };
-    container.addEventListener('scroll', onScroll, { passive: true });
-    return () => container.removeEventListener('scroll', onScroll);
+    container.addEventListener("scroll", onScroll, { passive: true });
+    return () => container.removeEventListener("scroll", onScroll);
   }, [sessionReady]);
 
   useEffect(() => {
     const handleOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement | null;
-      if (target?.closest('[data-action-menu-root]')) return;
+      if (target?.closest("[data-action-menu-root]")) return;
       setOpenActionMenuId(null);
     };
-    window.addEventListener('mousedown', handleOutside);
-    return () => window.removeEventListener('mousedown', handleOutside);
+    window.addEventListener("mousedown", handleOutside);
+    return () => window.removeEventListener("mousedown", handleOutside);
   }, []);
 
   useEffect(() => {
@@ -555,14 +594,14 @@ export default function AITutorPage() {
         const parsed = JSON.parse(raw) as ChatSession[];
         if (Array.isArray(parsed)) {
           loaded = parsed
-            .filter(session => session?.id && Array.isArray(session.messages))
-            .map(session => ({
+            .filter((session) => session?.id && Array.isArray(session.messages))
+            .map((session) => ({
               ...session,
-              searchMode: session.searchMode || 'disabled',
+              searchMode: session.searchMode || "disabled",
               messages: session.messages || [],
               updatedAt: session.updatedAt || Date.now(),
               createdAt: session.createdAt || Date.now(),
-              title: session.title || 'New Chat',
+              title: session.title || "New Chat",
             }));
         }
       }
@@ -583,16 +622,16 @@ export default function AITutorPage() {
       setSessions([fallback]);
       setActiveSessionId(fallback.id);
       setMessages([]);
-      setSearchMode('disabled');
+      setSearchMode("disabled");
       setSessionReady(true);
     }
   }, []);
 
   useEffect(() => {
     if (!sessionReady || !activeSessionId) return;
-    setSessions(prev =>
+    setSessions((prev) =>
       prev
-        .map(session =>
+        .map((session) =>
           session.id === activeSessionId
             ? {
                 ...session,
@@ -601,9 +640,9 @@ export default function AITutorPage() {
                 updatedAt: Date.now(),
                 title: sessionTitleFromMessages(messages),
               }
-            : session
+            : session,
         )
-        .sort((a, b) => b.updatedAt - a.updatedAt)
+        .sort((a, b) => b.updatedAt - a.updatedAt),
     );
   }, [messages, searchMode, activeSessionId, sessionReady]);
 
@@ -613,17 +652,17 @@ export default function AITutorPage() {
   }, [sessions, sessionReady]);
 
   const getAuthToken = () =>
-    typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
 
   const validateFile = (candidate: File): string => {
-    const extension = candidate.name.split('.').pop()?.toLowerCase() || '';
+    const extension = candidate.name.split(".").pop()?.toLowerCase() || "";
     if (!ALLOWED_FILE_EXTENSIONS.includes(extension)) {
-      return `Unsupported file type. Use ${ALLOWED_FILE_EXTENSIONS.join(', ').toUpperCase()}.`;
+      return `Unsupported file type. Use ${ALLOWED_FILE_EXTENSIONS.join(", ").toUpperCase()}.`;
     }
     if (candidate.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
       return `File is too large. Max size is ${MAX_FILE_SIZE_MB}MB.`;
     }
-    return '';
+    return "";
   };
 
   const handleSelectFile = (candidate: File | null) => {
@@ -635,7 +674,7 @@ export default function AITutorPage() {
       toast.error(error);
       return;
     }
-    setFileError('');
+    setFileError("");
     setFile(candidate);
   };
 
@@ -646,14 +685,14 @@ export default function AITutorPage() {
 
   const openSession = (id: string) => {
     if (isLoading) handleStopGenerating();
-    const selected = sessions.find(session => session.id === id);
+    const selected = sessions.find((session) => session.id === id);
     if (!selected) return;
     setActiveSessionId(selected.id);
     setMessages(selected.messages || []);
-    setSearchMode(selected.searchMode || 'disabled');
-    setInput('');
+    setSearchMode(selected.searchMode || "disabled");
+    setInput("");
     setFile(null);
-    setFileError('');
+    setFileError("");
     setUploadProgress(0);
     setShowSearchMenu(false);
     setShowSessionSidebar(false);
@@ -663,13 +702,13 @@ export default function AITutorPage() {
 
   const deleteSession = (id: string) => {
     if (isLoading && activeSessionId === id) handleStopGenerating();
-    setSessions(prev => {
-      const remaining = prev.filter(s => s.id !== id);
+    setSessions((prev) => {
+      const remaining = prev.filter((s) => s.id !== id);
       if (remaining.length === 0) {
         const next = createEmptySession();
         setActiveSessionId(next.id);
         setMessages([]);
-        setSearchMode('disabled');
+        setSearchMode("disabled");
         return [next];
       }
       if (activeSessionId === id) {
@@ -685,13 +724,13 @@ export default function AITutorPage() {
   const createNewSession = () => {
     if (isLoading) handleStopGenerating();
     const next = createEmptySession();
-    setSessions(prev => [next, ...prev]);
+    setSessions((prev) => [next, ...prev]);
     setActiveSessionId(next.id);
     setMessages([]);
-    setSearchMode('disabled');
-    setInput('');
+    setSearchMode("disabled");
+    setInput("");
     setFile(null);
-    setFileError('');
+    setFileError("");
     setUploadProgress(0);
     setShowSearchMenu(false);
     setShowSessionSidebar(false);
@@ -719,7 +758,7 @@ export default function AITutorPage() {
       const trimmedPrompt = prompt.trim();
       if (!trimmedPrompt || isLoading) return;
       if (isOffline) {
-        toast.error('You are offline. Reconnect and try again.');
+        toast.error("You are offline. Reconnect and try again.");
         return;
       }
 
@@ -728,11 +767,11 @@ export default function AITutorPage() {
       setUploadProgress(0);
 
       if (includeUserMessage) {
-        setMessages(prev => [
+        setMessages((prev) => [
           ...prev,
           {
             id: `user-${Date.now()}`,
-            role: 'user',
+            role: "user",
             content: trimmedPrompt,
             createdAt: Date.now(),
           },
@@ -741,12 +780,12 @@ export default function AITutorPage() {
 
       const assistantId = targetAssistantId || `assistant-${Date.now()}`;
       if (targetAssistantId) {
-        setMessages(prev =>
-          prev.map(message =>
+        setMessages((prev) =>
+          prev.map((message) =>
             message.id === assistantId
               ? {
                   ...message,
-                  content: '',
+                  content: "",
                   isStreaming: true,
                   error: null,
                   stopped: false,
@@ -754,16 +793,16 @@ export default function AITutorPage() {
                   mode: searchMode,
                   sources: [],
                 }
-              : message
-          )
+              : message,
+          ),
         );
       } else {
-        setMessages(prev => [
+        setMessages((prev) => [
           ...prev,
           {
             id: assistantId,
-            role: 'assistant',
-            content: '',
+            role: "assistant",
+            content: "",
             isStreaming: true,
             prompt: trimmedPrompt,
             mode: searchMode,
@@ -778,13 +817,19 @@ export default function AITutorPage() {
 
       try {
         const token = getAuthToken();
-        const res = await fetch(`${DJANGO_API_URL}/chat/stream/`, {
-          method: 'POST',
+
+        const baseUrl = (djangoApi.defaults.baseURL || "").replace(/\/+$/, "");
+
+        const res = await fetch(`${baseUrl}/chat/stream/`, {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
             ...(token ? { Authorization: `Token ${token}` } : {}),
           },
-          body: JSON.stringify({ message: trimmedPrompt, search_mode: searchMode }),
+          body: JSON.stringify({
+            message: trimmedPrompt,
+            search_mode: searchMode,
+          }),
           signal: controller.signal,
         });
 
@@ -792,21 +837,21 @@ export default function AITutorPage() {
           let detail = `Request failed (${res.status}).`;
           try {
             const errJson = await res.json();
-            if (typeof errJson?.detail === 'string') detail = errJson.detail;
-            else if (typeof errJson?.error === 'string') detail = errJson.error;
+            if (typeof errJson?.detail === "string") detail = errJson.detail;
+            else if (typeof errJson?.error === "string") detail = errJson.error;
           } catch {
             // Ignore JSON parse errors
           }
           throw new Error(detail);
         }
 
-        if (!res.body) throw new Error('No stream body');
+        if (!res.body) throw new Error("No stream body");
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
-        let accumulated = '';
+        let accumulated = "";
         let sseMode = false;
-        let buffered = '';
+        let buffered = "";
 
         // RAF-throttled chunk batching
         let rafPending = false;
@@ -819,8 +864,10 @@ export default function AITutorPage() {
             requestAnimationFrame(() => {
               rafPending = false;
               const snap = accumulated;
-              setMessages(prev =>
-                prev.map(m => (m.id === assistantId ? { ...m, content: snap } : m))
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantId ? { ...m, content: snap } : m,
+                ),
               );
             });
           }
@@ -832,28 +879,32 @@ export default function AITutorPage() {
           const chunk = decoder.decode(value, { stream: true });
           if (!chunk) continue;
 
-          if (chunk.includes('data:')) sseMode = true;
+          if (chunk.includes("data:")) sseMode = true;
 
           if (sseMode) {
             buffered += chunk;
             const lines = buffered.split(/\r?\n/);
-            buffered = lines.pop() || '';
+            buffered = lines.pop() || "";
 
             for (const rawLine of lines) {
               const line = rawLine.trim();
               if (!line) continue;
-              if (!line.startsWith('data:')) {
+              if (!line.startsWith("data:")) {
                 appendChunk(rawLine);
                 continue;
               }
               const payload = line.slice(5).trim();
-              if (!payload || payload === '[DONE]') continue;
+              if (!payload || payload === "[DONE]") continue;
 
               try {
                 const parsed = JSON.parse(payload);
                 const text =
-                  parsed.text || parsed.content || parsed.delta || parsed.message || '';
-                if (typeof text === 'string') appendChunk(text);
+                  parsed.text ||
+                  parsed.content ||
+                  parsed.delta ||
+                  parsed.message ||
+                  "";
+                if (typeof text === "string") appendChunk(text);
               } catch {
                 appendChunk(payload);
               }
@@ -865,13 +916,18 @@ export default function AITutorPage() {
 
         if (buffered && sseMode) {
           const remainder = buffered.trim();
-          if (remainder.startsWith('data:')) {
+          if (remainder.startsWith("data:")) {
             const payload = remainder.slice(5).trim();
-            if (payload && payload !== '[DONE]') {
+            if (payload && payload !== "[DONE]") {
               try {
                 const parsed = JSON.parse(payload);
-                const text = parsed.text || parsed.content || parsed.delta || parsed.message || '';
-                if (typeof text === 'string') appendChunk(text);
+                const text =
+                  parsed.text ||
+                  parsed.content ||
+                  parsed.delta ||
+                  parsed.message ||
+                  "";
+                if (typeof text === "string") appendChunk(text);
               } catch {
                 appendChunk(payload);
               }
@@ -882,8 +938,8 @@ export default function AITutorPage() {
         }
 
         const extractedSources = extractSourcesFromText(accumulated);
-        setMessages(prev =>
-          prev.map(message =>
+        setMessages((prev) =>
+          prev.map((message) =>
             message.id === assistantId
               ? {
                   ...message,
@@ -892,53 +948,54 @@ export default function AITutorPage() {
                     : "I couldn't get a response this time. Please tap retry.",
                   isStreaming: false,
                   stopped: false,
-                  error: accumulated.trim() ? null : 'temporary_failure',
+                  error: accumulated.trim() ? null : "temporary_failure",
                   sources: extractedSources,
                 }
-              : message
-          )
+              : message,
+          ),
         );
       } catch (err: unknown) {
         const maybeErr = err as { name?: string; message?: string };
-        const aborted = maybeErr?.name === 'AbortError';
-        const offlineNow = typeof navigator !== 'undefined' && !navigator.onLine;
+        const aborted = maybeErr?.name === "AbortError";
+        const offlineNow =
+          typeof navigator !== "undefined" && !navigator.onLine;
         const fallbackReply = offlineNow
           ? "I can't reach the server right now. Please reconnect and tap retry."
           : "I couldn't fetch a response right now. Please tap retry.";
 
-        setMessages(prev =>
-          prev.map(message =>
+        setMessages((prev) =>
+          prev.map((message) =>
             message.id === assistantId
               ? {
                   ...message,
                   content: aborted
                     ? message.content
                     : message.content.trim()
-                    ? message.content
-                    : fallbackReply,
+                      ? message.content
+                      : fallbackReply,
                   isStreaming: false,
                   stopped: aborted,
-                  error: aborted ? null : 'temporary_failure',
+                  error: aborted ? null : "temporary_failure",
                 }
-              : message
-          )
+              : message,
+          ),
         );
 
         if (!aborted) {
-          toast.info('Response unavailable. Use retry.');
+          toast.info("Response unavailable. Use retry.");
         }
       } finally {
         abortControllerRef.current = null;
         setIsLoading(false);
       }
     },
-    [isLoading, isOffline, searchMode]
+    [isLoading, isOffline, searchMode],
   );
 
   const handleFileUpload = useCallback(async () => {
     if (!file || isLoading) return;
     if (isOffline) {
-      toast.error('You are offline. Reconnect and try again.');
+      toast.error("You are offline. Reconnect and try again.");
       return;
     }
 
@@ -947,49 +1004,48 @@ export default function AITutorPage() {
     setShowSearchMenu(false);
 
     const userInput =
-      input.trim() || 'Please analyze this file and summarize the key points.';
-    setInput('');
-    setMessages(prev => [
+      input.trim() || "Please analyze this file and summarize the key points.";
+    setInput("");
+    setMessages((prev) => [
       ...prev,
       {
         id: `user-${Date.now()}`,
-        role: 'user',
+        role: "user",
         content: userInput,
         createdAt: Date.now(),
       },
     ]);
 
     const formData = new FormData();
-    formData.append('file', file);
-    formData.append('message', userInput);
+    formData.append("file", file);
+    formData.append("message", userInput);
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
-    const token = getAuthToken();
 
     try {
-      const res = await axios.post(`${DJANGO_API_URL}/chat/file/`, formData, {
+      const res = await djangoApi.post("/chat/file/", formData, {
         signal: controller.signal,
-        headers: token ? { Authorization: `Token ${token}` } : undefined,
-        onUploadProgress: progressEvent => {
+        headers: { "Content-Type": "multipart/form-data" },
+        onUploadProgress: (progressEvent) => {
           if (!progressEvent.total) return;
           const percent = Math.min(
             100,
-            Math.round((progressEvent.loaded * 100) / progressEvent.total)
+            Math.round((progressEvent.loaded * 100) / progressEvent.total),
           );
           setUploadProgress(percent);
         },
       });
 
       const responseText =
-        res.data?.response || res.data?.message || 'No response received.';
+        res.data?.response || res.data?.message || "No response received.";
       const sources = extractSourcesFromText(responseText);
 
-      setMessages(prev => [
+      setMessages((prev) => [
         ...prev,
         {
           id: `assistant-${Date.now()}`,
-          role: 'assistant',
+          role: "assistant",
           content: responseText,
           createdAt: Date.now(),
           prompt: userInput,
@@ -999,18 +1055,20 @@ export default function AITutorPage() {
       ]);
     } catch (err: unknown) {
       const maybeErr = err as { code?: string; name?: string };
-      const cancelled = maybeErr?.name === 'CanceledError' || maybeErr?.code === 'ERR_CANCELED';
+      const cancelled =
+        maybeErr?.name === "CanceledError" || maybeErr?.code === "ERR_CANCELED";
       if (!cancelled) {
-        const offlineNow = typeof navigator !== 'undefined' && !navigator.onLine;
+        const offlineNow =
+          typeof navigator !== "undefined" && !navigator.onLine;
         const message = offlineNow
-          ? 'You are offline. Reconnect and retry.'
-          : 'Sorry, I could not process your file. Please try again.';
+          ? "You are offline. Reconnect and retry."
+          : "Sorry, I could not process your file. Please try again.";
         toast.error(message);
-        setMessages(prev => [
+        setMessages((prev) => [
           ...prev,
           {
             id: `assistant-${Date.now()}`,
-            role: 'assistant',
+            role: "assistant",
             content: message,
             createdAt: Date.now(),
             prompt: userInput,
@@ -1019,7 +1077,7 @@ export default function AITutorPage() {
           },
         ]);
       } else {
-        toast.info('Upload stopped.');
+        toast.info("Upload stopped.");
       }
     } finally {
       abortControllerRef.current = null;
@@ -1036,7 +1094,7 @@ export default function AITutorPage() {
     }
     const prompt = input.trim();
     if (!prompt || isLoading) return;
-    setInput('');
+    setInput("");
     setEditingSourceId(null);
     void streamAssistantResponse({ prompt, includeUserMessage: true });
   }, [file, handleFileUpload, input, isLoading, streamAssistantResponse]);
@@ -1047,78 +1105,87 @@ export default function AITutorPage() {
     textareaRef.current?.focus();
   }, []);
 
-  const handleRegenerate = useCallback((message: Message) => {
-    if (!message.prompt) {
-      toast.error('Cannot regenerate: original prompt not found.');
-      return;
-    }
-    setEditingSourceId(null);
-    void streamAssistantResponse({
-      prompt: message.prompt,
-      includeUserMessage: false,
-      targetAssistantId: message.id,
-    });
-  }, [streamAssistantResponse]);
+  const handleRegenerate = useCallback(
+    (message: Message) => {
+      if (!message.prompt) {
+        toast.error("Cannot regenerate: original prompt not found.");
+        return;
+      }
+      setEditingSourceId(null);
+      void streamAssistantResponse({
+        prompt: message.prompt,
+        includeUserMessage: false,
+        targetAssistantId: message.id,
+      });
+    },
+    [streamAssistantResponse],
+  );
 
-  const handleRetry = useCallback((message: Message) => {
-    if (!message.prompt) {
-      toast.error('Cannot retry: original prompt not found.');
-      return;
-    }
-    void streamAssistantResponse({
-      prompt: message.prompt,
-      includeUserMessage: false,
-      targetAssistantId: message.id,
-    });
-  }, [streamAssistantResponse]);
+  const handleRetry = useCallback(
+    (message: Message) => {
+      if (!message.prompt) {
+        toast.error("Cannot retry: original prompt not found.");
+        return;
+      }
+      void streamAssistantResponse({
+        prompt: message.prompt,
+        includeUserMessage: false,
+        targetAssistantId: message.id,
+      });
+    },
+    [streamAssistantResponse],
+  );
 
-  const handleQuickAction = useCallback((
-    action: 'summarize' | 'simple' | 'flashcards' | 'quiz',
-    message: Message
-  ) => {
-    setOpenActionMenuId(null);
-    const trimmed = message.content.trim();
-    if (!trimmed) return;
+  const handleQuickAction = useCallback(
+    (
+      action: "summarize" | "simple" | "flashcards" | "quiz",
+      message: Message,
+    ) => {
+      setOpenActionMenuId(null);
+      const trimmed = message.content.trim();
+      if (!trimmed) return;
 
-    if (action === 'flashcards') {
-      localStorage.setItem(
-        FLASHCARD_PREFILL_KEY,
-        JSON.stringify({
-          sourceText: trimmed,
-          title: 'AI Tutor Deck',
-          subject: 'AI Tutor',
-        })
-      );
-      router.push('/flashcards/create');
-      return;
-    }
+      if (action === "flashcards") {
+        localStorage.setItem(
+          FLASHCARD_PREFILL_KEY,
+          JSON.stringify({
+            sourceText: trimmed,
+            title: "AI Tutor Deck",
+            subject: "AI Tutor",
+          }),
+        );
+        router.push("/flashcards/create");
+        return;
+      }
 
-    if (action === 'quiz') {
-      localStorage.setItem(
-        QUIZ_PREFILL_KEY,
-        JSON.stringify({
-          studyText: trimmed,
-          subject: 'AI Tutor',
-        })
-      );
-      router.push('/quiz/create');
-      return;
-    }
+      if (action === "quiz") {
+        localStorage.setItem(
+          QUIZ_PREFILL_KEY,
+          JSON.stringify({
+            studyText: trimmed,
+            subject: "AI Tutor",
+          }),
+        );
+        router.push("/quiz/create");
+        return;
+      }
 
-    const prompt =
-      action === 'summarize'
-        ? `Summarize the following answer into 5 concise bullet points:\n\n${trimmed}`
-        : `Explain the following answer in very simple terms for a beginner:\n\n${trimmed}`;
+      const prompt =
+        action === "summarize"
+          ? `Summarize the following answer into 5 concise bullet points:\n\n${trimmed}`
+          : `Explain the following answer in very simple terms for a beginner:\n\n${trimmed}`;
 
-    void streamAssistantResponse({ prompt, includeUserMessage: true });
-  }, [router, streamAssistantResponse]);
+      void streamAssistantResponse({ prompt, includeUserMessage: true });
+    },
+    [router, streamAssistantResponse],
+  );
 
   const handleToggleMenu = useCallback((id: string) => {
-    setOpenActionMenuId(prev => (prev === id ? null : id));
+    setOpenActionMenuId((prev) => (prev === id ? null : id));
   }, []);
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === 'Enter' && !event.shiftKey) {
+    if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       if (!isLoading && (input.trim() || file)) handleSend();
     }
@@ -1129,25 +1196,25 @@ export default function AITutorPage() {
       const target = event.target as HTMLElement | null;
       const typingInField =
         !!target &&
-        (target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.tagName === 'SELECT' ||
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
           target.isContentEditable);
 
-      if (event.key === 'Escape') {
+      if (event.key === "Escape") {
         setShowSearchMenu(false);
         setShowSessionSidebar(false);
         setOpenActionMenuId(null);
         return;
       }
 
-      if (event.key === '/' && !typingInField) {
+      if (event.key === "/" && !typingInField) {
         event.preventDefault();
         textareaRef.current?.focus();
         return;
       }
 
-      if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+      if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
         if (!isLoading && (input.trim() || file)) {
           event.preventDefault();
           handleSend();
@@ -1155,27 +1222,27 @@ export default function AITutorPage() {
       }
     };
 
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, [file, handleSend, input, isLoading]);
 
   const searchModeLabels: Record<SearchMode, string> = {
-    disabled: 'No Search',
-    web_search: 'Web Search',
-    deep_research: 'Deep Research',
+    disabled: "No Search",
+    web_search: "Web Search",
+    deep_research: "Deep Research",
   };
 
   const sortedSessions = useMemo(
     () => [...sessions].sort((a, b) => b.updatedAt - a.updatedAt),
-    [sessions]
+    [sessions],
   );
   const userInitials = useMemo(() => {
     const username = user?.username?.trim();
     const email = user?.email?.trim();
-    const base = username || email || 'User';
+    const base = username || email || "User";
     const parts = base.split(/\s+/).filter(Boolean);
     if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-    return `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase();
+    return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
   }, [user?.email, user?.username]);
 
   const canSend = !isLoading && (Boolean(file) || Boolean(input.trim()));
@@ -1204,7 +1271,7 @@ export default function AITutorPage() {
             className="absolute inset-0 opacity-[0.55] dark:opacity-[0.35]"
             style={{
               background:
-                'radial-gradient(120% 70% at 0% 0%, color-mix(in oklch, var(--primary) 22%, transparent), transparent 55%), radial-gradient(100% 60% at 100% 0%, color-mix(in oklch, var(--accent) 35%, transparent), transparent 60%), radial-gradient(120% 80% at 50% 100%, color-mix(in oklch, var(--primary) 14%, transparent), transparent 65%)',
+                "radial-gradient(120% 70% at 0% 0%, color-mix(in oklch, var(--primary) 22%, transparent), transparent 55%), radial-gradient(100% 60% at 100% 0%, color-mix(in oklch, var(--accent) 35%, transparent), transparent 60%), radial-gradient(120% 80% at 50% 100%, color-mix(in oklch, var(--primary) 14%, transparent), transparent 65%)",
             }}
           />
           <motion.div
@@ -1212,22 +1279,22 @@ export default function AITutorPage() {
             className="absolute -top-24 left-1/2 -translate-x-1/2 w-[140%] h-64 blur-3xl opacity-30 dark:opacity-20"
             style={{
               background:
-                'linear-gradient(95deg, color-mix(in oklch, var(--primary) 55%, transparent), color-mix(in oklch, var(--accent) 48%, transparent), color-mix(in oklch, var(--primary) 38%, transparent))',
+                "linear-gradient(95deg, color-mix(in oklch, var(--primary) 55%, transparent), color-mix(in oklch, var(--accent) 48%, transparent), color-mix(in oklch, var(--primary) 38%, transparent))",
             }}
             animate={{ x: [-80, 40, -80], rotate: [-4, 2, -4] }}
-            transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
+            transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
           />
           <motion.div
             aria-hidden
             className="absolute top-[18%] right-[8%] w-56 h-56 rounded-full blur-3xl bg-cyan-500/25 dark:bg-cyan-500/15"
             animate={{ y: [0, -26, 0], scale: [1, 1.08, 1] }}
-            transition={{ duration: 9.2, repeat: Infinity, ease: 'easeInOut' }}
+            transition={{ duration: 9.2, repeat: Infinity, ease: "easeInOut" }}
           />
           <motion.div
             aria-hidden
             className="absolute bottom-[8%] left-[10%] w-72 h-72 rounded-full blur-3xl bg-primary/25 dark:bg-primary/18"
             animate={{ y: [0, 22, 0], x: [0, 12, 0], scale: [1, 0.94, 1] }}
-            transition={{ duration: 11.6, repeat: Infinity, ease: 'easeInOut' }}
+            transition={{ duration: 11.6, repeat: Infinity, ease: "easeInOut" }}
           />
         </div>
 
@@ -1238,81 +1305,87 @@ export default function AITutorPage() {
                 initial={{ x: -24, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: -24, opacity: 0 }}
-                transition={{ duration: 0.22, ease: 'easeOut' }}
+                transition={{ duration: 0.22, ease: "easeOut" }}
                 className="hidden md:flex absolute inset-y-4 left-4 w-68 glass rounded-2xl border border-border/70 p-3 flex-col"
               >
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-semibold text-muted-foreground">Saved Sessions</p>
-                <button
-                  onClick={createNewSession}
-                  className="h-8 px-2.5 rounded-lg border border-border text-xs font-medium hover:bg-surface-hover transition-colors"
-                >
-                  New Chat
-                </button>
-              </div>
-
-              <div className="mt-3 flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-1.5 pr-1">
-                {sortedSessions.map(session => (
-                  <div
-                    key={session.id}
-                    className={cn(
-                      'group/session relative rounded-xl border transition-colors',
-                      activeSessionId === session.id
-                        ? 'border-primary/55 bg-primary/12'
-                        : 'border-transparent hover:border-border/70 hover:bg-surface-hover/70'
-                    )}
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold text-muted-foreground">
+                    Saved Sessions
+                  </p>
+                  <button
+                    onClick={createNewSession}
+                    className="h-8 px-2.5 rounded-lg border border-border text-xs font-medium hover:bg-surface-hover transition-colors"
                   >
-                    <button
-                      onClick={() => openSession(session.id)}
-                      className="w-full text-left px-3 py-2.5 pr-8"
-                    >
-                      <p className="text-sm font-medium line-clamp-2">{session.title}</p>
-                      <p className="text-[11px] text-muted-foreground mt-1">
-                        {formatSessionTime(session.updatedAt)}
-                      </p>
-                    </button>
-                    <button
-                      onClick={e => { e.stopPropagation(); deleteSession(session.id); }}
-                      aria-label="Delete session"
-                      className="absolute top-2 right-2 h-6 w-6 rounded-md grid place-items-center text-muted-foreground opacity-0 group-hover/session:opacity-100 hover:text-destructive hover:bg-destructive/10 transition-all"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                ))}
-              </div>
+                    New Chat
+                  </button>
+                </div>
 
+                <div className="mt-3 flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-1.5 pr-1">
+                  {sortedSessions.map((session) => (
+                    <div
+                      key={session.id}
+                      className={cn(
+                        "group/session relative rounded-xl border transition-colors",
+                        activeSessionId === session.id
+                          ? "border-primary/55 bg-primary/12"
+                          : "border-transparent hover:border-border/70 hover:bg-surface-hover/70",
+                      )}
+                    >
+                      <button
+                        onClick={() => openSession(session.id)}
+                        className="w-full text-left px-3 py-2.5 pr-8"
+                      >
+                        <p className="text-sm font-medium line-clamp-2">
+                          {session.title}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground mt-1">
+                          {formatSessionTime(session.updatedAt)}
+                        </p>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteSession(session.id);
+                        }}
+                        aria-label="Delete session"
+                        className="absolute top-2 right-2 h-6 w-6 rounded-md grid place-items-center text-muted-foreground opacity-0 group-hover/session:opacity-100 hover:text-destructive hover:bg-destructive/10 transition-all"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </motion.aside>
             )}
           </AnimatePresence>
 
           <div
             className={cn(
-              'h-full flex flex-col transition-[padding] duration-300 ease-out',
-              showDesktopSessionSidebar ? 'md:pl-71.5' : 'md:pl-0'
+              "h-full flex flex-col transition-[padding] duration-300 ease-out",
+              showDesktopSessionSidebar ? "md:pl-71.5" : "md:pl-0",
             )}
           >
             <div
               className={cn(
-                'relative min-h-0 flex-1 flex flex-col rounded-2xl border border-border/70 bg-background/55 dark:bg-background/45 backdrop-blur-xl overflow-hidden transition-colors',
-                isDragActive && 'border-primary/60 bg-primary/5'
+                "relative min-h-0 flex-1 flex flex-col rounded-2xl border border-border/70 bg-background/55 dark:bg-background/45 backdrop-blur-xl overflow-hidden transition-colors",
+                isDragActive && "border-primary/60 bg-primary/5",
               )}
-              onDragEnter={event => {
+              onDragEnter={(event) => {
                 event.preventDefault();
                 setIsDragActive(true);
               }}
-              onDragOver={event => {
+              onDragOver={(event) => {
                 event.preventDefault();
                 if (!isDragActive) setIsDragActive(true);
               }}
-              onDragLeave={event => {
+              onDragLeave={(event) => {
                 event.preventDefault();
                 const nextTarget = event.relatedTarget as Node | null;
                 if (!nextTarget || !event.currentTarget.contains(nextTarget)) {
                   setIsDragActive(false);
                 }
               }}
-              onDrop={event => {
+              onDrop={(event) => {
                 event.preventDefault();
                 setIsDragActive(false);
                 const candidate = event.dataTransfer.files?.[0] || null;
@@ -1322,11 +1395,15 @@ export default function AITutorPage() {
               <div className="shrink-0 border-b border-border/60 px-3 py-2.5">
                 <div className="hidden md:flex items-center justify-between gap-2">
                   <button
-                    onClick={() => setShowDesktopSessionSidebar(prev => !prev)}
+                    onClick={() =>
+                      setShowDesktopSessionSidebar((prev) => !prev)
+                    }
                     className="h-10 px-3 rounded-lg border border-border text-sm font-medium hover:bg-surface-hover transition-colors inline-flex items-center gap-2"
                   >
                     <PanelLeft size={15} />
-                    {showDesktopSessionSidebar ? 'Hide Sessions' : 'Show Sessions'}
+                    {showDesktopSessionSidebar
+                      ? "Hide Sessions"
+                      : "Show Sessions"}
                   </button>
                   <div className="flex items-center gap-2">
                     {!showDesktopSessionSidebar && (
@@ -1365,7 +1442,10 @@ export default function AITutorPage() {
                 </div>
               )}
 
-              <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-3 py-4 sm:px-5 sm:py-5">
+              <div
+                ref={scrollContainerRef}
+                className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-3 py-4 sm:px-5 sm:py-5"
+              >
                 {messages.length === 0 ? (
                   <motion.div
                     variants={welcomeVariants}
@@ -1380,12 +1460,16 @@ export default function AITutorPage() {
                       <Bot size={28} className="text-white" />
                     </motion.div>
 
-                    <motion.div variants={welcomeItemVariants} className="space-y-1">
+                    <motion.div
+                      variants={welcomeItemVariants}
+                      className="space-y-1"
+                    >
                       <h2 className="text-xl sm:text-2xl font-semibold">
-                        {greeting}, {user?.username || 'there'}.
+                        {greeting}, {user?.username || "there"}.
                       </h2>
                       <p className="text-sm text-muted-foreground max-w-xl">
-                        Ask for explanations, upload materials, and generate quizzes or flashcards from any response.
+                        Ask for explanations, upload materials, and generate
+                        quizzes or flashcards from any response.
                       </p>
                     </motion.div>
 
@@ -1393,12 +1477,15 @@ export default function AITutorPage() {
                       variants={welcomeItemVariants}
                       className="flex flex-wrap justify-center gap-2 max-w-2xl"
                     >
-                      {suggestedPrompts.map(prompt => (
+                      {suggestedPrompts.map((prompt) => (
                         <button
                           key={prompt}
                           onClick={() => {
                             setEditingSourceId(null);
-                            void streamAssistantResponse({ prompt, includeUserMessage: true });
+                            void streamAssistantResponse({
+                              prompt,
+                              includeUserMessage: true,
+                            });
                           }}
                           className="px-3 py-1.5 rounded-full border border-border bg-background/55 text-xs hover:border-primary/50 hover:text-primary hover:bg-background/70 transition-colors"
                         >
@@ -1409,7 +1496,7 @@ export default function AITutorPage() {
                   </motion.div>
                 ) : (
                   <div className="space-y-5">
-                    {messages.map(message => (
+                    {messages.map((message) => (
                       <MessageBubble
                         key={message.id}
                         message={message}
@@ -1439,8 +1526,12 @@ export default function AITutorPage() {
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 6 }}
-                    transition={{ duration: 0.18, ease: 'easeOut' }}
-                    onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                    transition={{ duration: 0.18, ease: "easeOut" }}
+                    onClick={() =>
+                      messagesEndRef.current?.scrollIntoView({
+                        behavior: "smooth",
+                      })
+                    }
                     className="absolute bottom-[88px] left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-background/90 backdrop-blur-sm text-xs font-medium text-muted-foreground hover:text-foreground hover:border-primary/50 shadow-md transition-colors"
                     aria-label="Scroll to latest message"
                   >
@@ -1451,235 +1542,251 @@ export default function AITutorPage() {
               </AnimatePresence>
 
               <div className="shrink-0 px-3 py-3 sm:px-4 pb-[calc(env(safe-area-inset-bottom)+0.35rem)]">
-              {editingSourceId && (
-                <div className="mb-2 flex items-center justify-between rounded-lg border border-primary/35 bg-primary/10 px-2.5 py-1.5 text-xs">
-                  <span>Editing a previous user message</span>
-                  <button
-                    onClick={() => setEditingSourceId(null)}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              )}
-
-              {file && (
-                <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-border bg-background/60 text-xs">
-                    <FolderOpen size={12} />
-                    <span className="max-w-[220px] truncate">{file.name}</span>
+                {editingSourceId && (
+                  <div className="mb-2 flex items-center justify-between rounded-lg border border-primary/35 bg-primary/10 px-2.5 py-1.5 text-xs">
+                    <span>Editing a previous user message</span>
                     <button
-                      onClick={() => {
-                        setFile(null);
-                        setFileError('');
-                        setUploadProgress(0);
-                      }}
-                      className="hover:text-destructive transition-colors"
+                      onClick={() => setEditingSourceId(null)}
+                      className="text-muted-foreground hover:text-foreground"
                     >
-                      <X size={12} />
+                      Cancel
                     </button>
                   </div>
-                  <p className="text-[11px] text-muted-foreground">
-                    Drag and drop another file to replace it.
-                  </p>
-                </div>
-              )}
+                )}
 
-              {uploadProgress > 0 && isLoading && file && (
-                <div className="mb-2">
-                  <div className="w-full h-1.5 rounded-full bg-border overflow-hidden">
-                    <div
-                      className="h-full gradient-bg rounded-full transition-all duration-150"
-                      style={{ width: `${uploadProgress}%` }}
-                    />
+                {file && (
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-border bg-background/60 text-xs">
+                      <FolderOpen size={12} />
+                      <span className="max-w-[220px] truncate">
+                        {file.name}
+                      </span>
+                      <button
+                        onClick={() => {
+                          setFile(null);
+                          setFileError("");
+                          setUploadProgress(0);
+                        }}
+                        className="hover:text-destructive transition-colors"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Drag and drop another file to replace it.
+                    </p>
                   </div>
-                  <p className="text-[11px] text-muted-foreground mt-1">
-                    Uploading file... {uploadProgress}%
-                  </p>
-                </div>
-              )}
+                )}
 
-              {fileError && <p className="mb-2 text-xs text-destructive">{fileError}</p>}
+                {uploadProgress > 0 && isLoading && file && (
+                  <div className="mb-2">
+                    <div className="w-full h-1.5 rounded-full bg-border overflow-hidden">
+                      <div
+                        className="h-full gradient-bg rounded-full transition-all duration-150"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      Uploading file... {uploadProgress}%
+                    </p>
+                  </div>
+                )}
 
-              <div className="flex items-end gap-2 rounded-xl border border-border/70 bg-background/45 px-2 py-1.5">
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  title="Attach file"
-                  className="h-11 w-11 rounded-lg text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-colors grid place-items-center shrink-0"
-                >
-                  <Paperclip size={18} />
-                </button>
+                {fileError && (
+                  <p className="mb-2 text-xs text-destructive">{fileError}</p>
+                )}
 
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf,.docx,.pptx,.txt"
-                  className="hidden"
-                  onChange={event => handleSelectFile(event.target.files?.[0] || null)}
-                />
-
-                <div className="relative shrink-0" data-search-menu-root>
+                <div className="flex items-end gap-2 rounded-xl border border-border/70 bg-background/45 px-2 py-1.5">
                   <button
-                    onClick={() => setShowSearchMenu(prev => !prev)}
-                    title={searchModeLabels[searchMode]}
+                    onClick={() => fileInputRef.current?.click()}
+                    title="Attach file"
+                    className="h-11 w-11 rounded-lg text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-colors grid place-items-center shrink-0"
+                  >
+                    <Paperclip size={18} />
+                  </button>
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.docx,.pptx,.txt"
+                    className="hidden"
+                    onChange={(event) =>
+                      handleSelectFile(event.target.files?.[0] || null)
+                    }
+                  />
+
+                  <div className="relative shrink-0" data-search-menu-root>
+                    <button
+                      onClick={() => setShowSearchMenu((prev) => !prev)}
+                      title={searchModeLabels[searchMode]}
+                      className={cn(
+                        "h-11 w-11 rounded-lg border transition-colors grid place-items-center",
+                        searchMode !== "disabled"
+                          ? "border-primary/55 text-primary bg-primary/10"
+                          : "border-border text-muted-foreground hover:bg-surface-hover",
+                      )}
+                    >
+                      <Globe size={16} />
+                    </button>
+                    {showSearchMenu && (
+                      <div className="absolute bottom-full left-0 mb-2 z-30 rounded-lg border border-border bg-background/95 backdrop-blur-xl shadow-xl py-1 min-w-[154px]">
+                        {(Object.keys(searchModeLabels) as SearchMode[]).map(
+                          (mode) => (
+                            <button
+                              key={mode}
+                              onClick={() => {
+                                setSearchMode(mode);
+                                setShowSearchMenu(false);
+                              }}
+                              className={cn(
+                                "w-full text-left px-3 py-2 text-xs transition-colors",
+                                searchMode === mode
+                                  ? "text-primary bg-primary/10"
+                                  : "text-muted-foreground hover:bg-surface-hover",
+                              )}
+                            >
+                              {searchModeLabels[mode]}
+                            </button>
+                          ),
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <textarea
+                    ref={textareaRef}
+                    value={input}
+                    onChange={(event) => setInput(event.target.value)}
+                    onKeyDown={handleKeyDown}
+                    onInput={(event) => {
+                      const target = event.currentTarget;
+                      target.style.height = "0px";
+                      target.style.height = `${Math.min(target.scrollHeight, 170)}px`;
+                    }}
+                    placeholder={
+                      file
+                        ? "Add a note or leave blank to analyze the file directly..."
+                        : "Ask me anything... (Shift+Enter for new line)"
+                    }
+                    rows={1}
+                    className="flex-1 bg-transparent resize-none text-sm focus:outline-none max-h-[170px] overflow-y-auto no-scrollbar placeholder:text-muted-foreground leading-relaxed py-2"
+                  />
+
+                  <button
+                    onClick={isLoading ? handleStopGenerating : handleSend}
+                    disabled={isLoading ? false : !canSend}
                     className={cn(
-                      'h-11 w-11 rounded-lg border transition-colors grid place-items-center',
-                      searchMode !== 'disabled'
-                        ? 'border-primary/55 text-primary bg-primary/10'
-                        : 'border-border text-muted-foreground hover:bg-surface-hover'
+                      "h-11 w-11 rounded-lg transition-all grid place-items-center shrink-0",
+                      isLoading
+                        ? "bg-destructive/10 text-destructive border border-destructive/25 hover:bg-destructive/20"
+                        : "gradient-bg text-white hover:opacity-90 disabled:opacity-45",
                     )}
                   >
-                    <Globe size={16} />
+                    {isLoading ? <Square size={16} /> : <Send size={18} />}
                   </button>
-                  {showSearchMenu && (
-                    <div className="absolute bottom-full left-0 mb-2 z-30 rounded-lg border border-border bg-background/95 backdrop-blur-xl shadow-xl py-1 min-w-[154px]">
-                      {(Object.keys(searchModeLabels) as SearchMode[]).map(mode => (
-                        <button
-                          key={mode}
-                          onClick={() => {
-                            setSearchMode(mode);
-                            setShowSearchMenu(false);
-                          }}
-                          className={cn(
-                            'w-full text-left px-3 py-2 text-xs transition-colors',
-                            searchMode === mode
-                              ? 'text-primary bg-primary/10'
-                              : 'text-muted-foreground hover:bg-surface-hover'
-                          )}
-                        >
-                          {searchModeLabels[mode]}
-                        </button>
-                      ))}
-                    </div>
-                  )}
                 </div>
 
-                <textarea
-                  ref={textareaRef}
-                  value={input}
-                  onChange={event => setInput(event.target.value)}
-                  onKeyDown={handleKeyDown}
-                  onInput={event => {
-                    const target = event.currentTarget;
-                    target.style.height = '0px';
-                    target.style.height = `${Math.min(target.scrollHeight, 170)}px`;
-                  }}
-                  placeholder={
-                    file
-                      ? 'Add a note or leave blank to analyze the file directly...'
-                      : 'Ask me anything... (Shift+Enter for new line)'
-                  }
-                  rows={1}
-                  className="flex-1 bg-transparent resize-none text-sm focus:outline-none max-h-[170px] overflow-y-auto no-scrollbar placeholder:text-muted-foreground leading-relaxed py-2"
-                />
-
-                <button
-                  onClick={isLoading ? handleStopGenerating : handleSend}
-                  disabled={isLoading ? false : !canSend}
-                  className={cn(
-                    'h-11 w-11 rounded-lg transition-all grid place-items-center shrink-0',
-                    isLoading
-                      ? 'bg-destructive/10 text-destructive border border-destructive/25 hover:bg-destructive/20'
-                      : 'gradient-bg text-white hover:opacity-90 disabled:opacity-45'
-                  )}
-                >
-                  {isLoading ? <Square size={16} /> : <Send size={18} />}
-                </button>
-              </div>
-
-              <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
-                <span>
-                  {file
-                    ? 'File mode active. Press Send to upload and analyze.'
-                    : 'AI can make mistakes. Verify important details.'}
-                </span>
-                <span className="hidden md:inline">Shortcuts: `/` focus, `Ctrl/Cmd+Enter` send, `Esc` close menu</span>
+                <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                  <span>
+                    {file
+                      ? "File mode active. Press Send to upload and analyze."
+                      : "AI can make mistakes. Verify important details."}
+                  </span>
+                  <span className="hidden md:inline">
+                    Shortcuts: `/` focus, `Ctrl/Cmd+Enter` send, `Esc` close
+                    menu
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <AnimatePresence>
-            {showSessionSidebar && (
-              <motion.div
-                className="md:hidden absolute inset-0 z-40"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2, ease: 'easeOut' }}
-              >
-                <button
-                  onClick={() => setShowSessionSidebar(false)}
-                  className="absolute inset-0 bg-black/50 backdrop-blur-[1px]"
-                  aria-label="Close sessions sidebar"
-                />
-                <motion.aside
-                  className="absolute inset-y-0 left-0 w-[82%] max-w-[320px] glass border-r border-border/70 p-3 flex flex-col"
-                  initial={{ x: -28 }}
-                  animate={{ x: 0 }}
-                  exit={{ x: -28 }}
-                  transition={{ duration: 0.24, ease: 'easeOut' }}
+            <AnimatePresence>
+              {showSessionSidebar && (
+                <motion.div
+                  className="md:hidden absolute inset-0 z-40"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-semibold">Saved Sessions</p>
-                    <button
-                      onClick={() => setShowSessionSidebar(false)}
-                      className="h-8 w-8 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-surface-hover grid place-items-center transition-colors"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-
                   <button
-                    onClick={createNewSession}
-                    className="mt-3 h-10 rounded-lg border border-border text-sm font-medium hover:bg-surface-hover transition-colors"
+                    onClick={() => setShowSessionSidebar(false)}
+                    className="absolute inset-0 bg-black/50 backdrop-blur-[1px]"
+                    aria-label="Close sessions sidebar"
+                  />
+                  <motion.aside
+                    className="absolute inset-y-0 left-0 w-[82%] max-w-[320px] glass border-r border-border/70 p-3 flex flex-col"
+                    initial={{ x: -28 }}
+                    animate={{ x: 0 }}
+                    exit={{ x: -28 }}
+                    transition={{ duration: 0.24, ease: "easeOut" }}
                   >
-                    New Chat
-                  </button>
-
-                  <div className="mt-3 flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-1.5 pr-1">
-                    {sortedSessions.map(session => (
-                      <div
-                        key={session.id}
-                        className={cn(
-                          'relative rounded-xl border transition-colors',
-                          activeSessionId === session.id
-                            ? 'border-primary/55 bg-primary/12'
-                            : 'border-transparent hover:border-border/70 hover:bg-surface-hover/70'
-                        )}
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-semibold">Saved Sessions</p>
+                      <button
+                        onClick={() => setShowSessionSidebar(false)}
+                        className="h-8 w-8 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-surface-hover grid place-items-center transition-colors"
                       >
-                        <button
-                          onClick={() => openSession(session.id)}
-                          className="w-full text-left px-3 py-2.5 pr-9"
-                        >
-                          <p className="text-sm font-medium line-clamp-2">{session.title}</p>
-                          <p className="text-[11px] text-muted-foreground mt-1">
-                            {formatSessionTime(session.updatedAt)}
-                          </p>
-                        </button>
-                        <button
-                          onClick={e => { e.stopPropagation(); deleteSession(session.id); }}
-                          aria-label="Delete session"
-                          className="absolute top-2 right-2 h-6 w-6 rounded-md grid place-items-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+                        <X size={14} />
+                      </button>
+                    </div>
 
-                  {isLoading && (
                     <button
-                      onClick={handleStopGenerating}
-                      className="mt-3 h-10 rounded-lg bg-destructive text-white text-sm font-semibold hover:bg-destructive/90 transition-colors inline-flex items-center justify-center gap-1.5"
+                      onClick={createNewSession}
+                      className="mt-3 h-10 rounded-lg border border-border text-sm font-medium hover:bg-surface-hover transition-colors"
                     >
-                      <Square size={13} />
-                      Stop
+                      New Chat
                     </button>
-                  )}
-                </motion.aside>
-              </motion.div>
-            )}
-          </AnimatePresence>
+
+                    <div className="mt-3 flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-1.5 pr-1">
+                      {sortedSessions.map((session) => (
+                        <div
+                          key={session.id}
+                          className={cn(
+                            "relative rounded-xl border transition-colors",
+                            activeSessionId === session.id
+                              ? "border-primary/55 bg-primary/12"
+                              : "border-transparent hover:border-border/70 hover:bg-surface-hover/70",
+                          )}
+                        >
+                          <button
+                            onClick={() => openSession(session.id)}
+                            className="w-full text-left px-3 py-2.5 pr-9"
+                          >
+                            <p className="text-sm font-medium line-clamp-2">
+                              {session.title}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground mt-1">
+                              {formatSessionTime(session.updatedAt)}
+                            </p>
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteSession(session.id);
+                            }}
+                            aria-label="Delete session"
+                            className="absolute top-2 right-2 h-6 w-6 rounded-md grid place-items-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    {isLoading && (
+                      <button
+                        onClick={handleStopGenerating}
+                        className="mt-3 h-10 rounded-lg bg-destructive text-white text-sm font-semibold hover:bg-destructive/90 transition-colors inline-flex items-center justify-center gap-1.5"
+                      >
+                        <Square size={13} />
+                        Stop
+                      </button>
+                    )}
+                  </motion.aside>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </main>
