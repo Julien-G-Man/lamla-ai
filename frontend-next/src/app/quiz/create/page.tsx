@@ -13,6 +13,7 @@ const SUBJECTS = [
   'Mathematics', 'Computer Science', 'Engineering', 'Biology',
   'Chemistry', 'Physics', 'English', 'History', 'Geography', 'Economics',
 ];
+const QUIZ_PREFILL_KEY = 'lamla_quiz_prefill';
 
 export default function CreateQuizPage() {
   const router = useRouter();
@@ -46,6 +47,41 @@ export default function CreateQuizPage() {
   useEffect(() => {
     if (!isLoading && !isAuthenticated) router.push('/auth/login');
   }, [isLoading, isAuthenticated, router]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(QUIZ_PREFILL_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as { studyText?: string; subject?: string };
+
+      const prefillText = parsed.studyText?.trim();
+      if (prefillText) {
+        setStudyText(prefillText);
+        setActiveTab('text');
+      }
+
+      const prefillSubject = parsed.subject?.trim();
+      if (prefillSubject) {
+        if (SUBJECTS.includes(prefillSubject)) {
+          setSubject(prefillSubject);
+          setCustomSubject('');
+          setIsOther(false);
+        } else {
+          setSubject('Other');
+          setCustomSubject(prefillSubject);
+          setIsOther(true);
+        }
+      }
+
+      if (prefillText || prefillSubject) {
+        toast.success('Imported content from AI Tutor. You can edit before generating.');
+      }
+    } catch {
+      // Ignore malformed prefill payload
+    } finally {
+      localStorage.removeItem(QUIZ_PREFILL_KEY);
+    }
+  }, []);
 
   const handleSubjectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value;

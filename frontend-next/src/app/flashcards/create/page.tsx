@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import Navbar from '@/components/Navbar';
@@ -8,15 +8,49 @@ import djangoApi from '@/services/api';
 import { getApiErrorMessage } from '@/services/api';
 import { toast } from 'sonner';
 
+const FLASHCARD_PREFILL_KEY = 'lamla_flashcards_prefill';
+
 export default function FlashcardCreatePage() {
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
 
   const [title, setTitle] = useState('');
   const [subject, setSubject] = useState('');
   const [sourceText, setSourceText] = useState('');
   const [numCards, setNumCards] = useState(10);
   const [generating, setGenerating] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push('/auth/login');
+    }
+  }, [isAuthenticated, isLoading, router]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(FLASHCARD_PREFILL_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as { sourceText?: string; title?: string; subject?: string };
+
+      if (typeof parsed.title === 'string' && parsed.title.trim()) {
+        setTitle(parsed.title.trim());
+      }
+      if (typeof parsed.subject === 'string' && parsed.subject.trim()) {
+        setSubject(parsed.subject.trim());
+      }
+      if (typeof parsed.sourceText === 'string' && parsed.sourceText.trim()) {
+        setSourceText(parsed.sourceText.trim());
+      }
+
+      if (parsed.sourceText || parsed.title || parsed.subject) {
+        toast.success('Imported content from AI Tutor. You can edit before generating.');
+      }
+    } catch {
+      // Ignore malformed prefill payload
+    } finally {
+      localStorage.removeItem(FLASHCARD_PREFILL_KEY);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
