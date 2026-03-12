@@ -8,6 +8,7 @@ from .chatbot_service import chatbot_service
 
 logger = logging.getLogger(__name__)
 
+
 async def _resolve_authenticated_user(request):
     """
     Resolve authenticated user for non-DRF async Django views.
@@ -26,7 +27,8 @@ async def _resolve_authenticated_user(request):
     except AuthenticationFailed:
         return None
     except Exception:
-        logger.exception("Token authentication failed in chatbot session resolver")
+        logger.exception(
+            "Token authentication failed in chatbot session resolver")
         return None
 
     if not auth_result:
@@ -69,7 +71,8 @@ async def _save_user_message(session_obj, user_message: str):
             sender="user",
             content=user_message,
         )
-        logger.debug("Saved user message ID %s to session %s", msg_obj.id, session_obj.id)
+        logger.debug("Saved user message ID %s to session %s",
+                     msg_obj.id, session_obj.id)
         return msg_obj
     except Exception as exc:
         logger.error("Failed to save user message: %s", exc, exc_info=True)
@@ -86,7 +89,8 @@ async def _save_ai_message(session_obj, ai_message: str):
             sender="ai",
             content=ai_message,
         )
-        logger.debug("Saved AI message ID %s to session %s", msg_obj.id, session_obj.id)
+        logger.debug("Saved AI message ID %s to session %s",
+                     msg_obj.id, session_obj.id)
         return msg_obj
     except Exception as exc:
         logger.error("Failed to save AI message: %s", exc, exc_info=True)
@@ -103,7 +107,8 @@ async def _get_conversation_history(session_obj, limit: int = 10):
     history_qs = await sync_to_async(list)(session_obj.messages.order_by("-created_at")[:limit])
     conversation_history = []
     for msg in reversed(history_qs):
-        conversation_history.append({"message_type": msg.sender, "content": msg.content})
+        conversation_history.append(
+            {"message_type": msg.sender, "content": msg.content})
     return conversation_history
 
 

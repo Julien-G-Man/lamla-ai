@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import ReactMarkdown from 'react-markdown';
@@ -29,6 +29,8 @@ import {
   Layers,
   Brain,
   FolderOpen,
+  ChevronDown,
+  Trash2,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -65,7 +67,7 @@ interface ChatSession {
   messages: Message[];
 }
 
-const FASTAPI_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || '';
+const DJANGO_API_URL = process.env.NEXT_PUBLIC_DJANGO_API_URL || 'http://localhost:8000/api';
 const SESSIONS_STORAGE_KEY = 'lamla_ai_tutor_sessions_v1';
 const FLASHCARD_PREFILL_KEY = 'lamla_flashcards_prefill';
 const QUIZ_PREFILL_KEY = 'lamla_quiz_prefill';
@@ -84,13 +86,18 @@ const welcomeVariants = {
   show: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.45, ease: 'easeOut', when: 'beforeChildren', staggerChildren: 0.08 },
+    transition: { duration: 0.45, ease: 'easeOut' as const, when: 'beforeChildren', staggerChildren: 0.08 },
   },
 };
 
 const welcomeItemVariants = {
   hidden: { opacity: 0, y: 14 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' as const } },
+};
+
+const bubbleEnterVariants = {
+  hidden: { opacity: 0, y: 8 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.16, ease: 'easeOut' as const } },
 };
 
 const sessionTitleFromMessages = (messages: Message[]) => {
@@ -160,6 +167,280 @@ const createEmptySession = (): ChatSession => {
   };
 };
 
+// ---------------------------------------------------------------------------
+// MessageBubble — memoised so only the actively-streaming bubble re-renders
+// ---------------------------------------------------------------------------
+
+interface BubbleProps {
+  message: Message;
+  user: { username?: string; email?: string; profile_image?: string } | null;
+  userInitials: string;
+  copiedId: string | null;
+  isLoading: boolean;
+  isMenuOpen: boolean;
+  isEditing: boolean;
+  onCopy: (content: string, id: string) => void;
+  onRetry: (msg: Message) => void;
+  onRegenerate: (msg: Message) => void;
+  onQuickAction: (action: 'summarize' | 'simple' | 'flashcards' | 'quiz', msg: Message) => void;
+  onEditResend: (msg: Message) => void;
+  onToggleMenu: (id: string) => void;
+}
+
+const MessageBubble = memo(function MessageBubble({
+  message,
+  user,
+  userInitials,
+  copiedId,
+  isLoading,
+  isMenuOpen,
+  isEditing,
+  onCopy,
+  onRetry,
+  onRegenerate,
+  onQuickAction,
+  onEditResend,
+  onToggleMenu,
+}: BubbleProps) {
+  return (
+    <motion.div
+      variants={bubbleEnterVariants}
+      initial="hidden"
+      animate="show"
+      className={cn(
+        'group flex items-start gap-2.5',
+        message.role === 'user' ? 'justify-end' : 'justify-start'
+      )}
+    >
+      {message.role === 'assistant' && (
+        <div className="w-8 h-8 rounded-lg overflow-hidden border border-border/70 shrink-0 mt-0.5 bg-background/80">
+          <Image
+            src="/lamla_logo.png"
+            alt="Lamla AI"
+            width={32}
+            height={32}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      )}
+
+      <div className="w-fit max-w-[91%] sm:max-w-[83%] space-y-1.5">
+        <div
+          className={cn(
+            'w-fit max-w-full rounded-2xl px-3 py-2.5',
+            message.role === 'assistant'
+              ? 'border border-border/70 bg-secondary/55 rounded-tl-sm'
+              : 'border border-primary/35 bg-primary/14 rounded-tr-sm text-right'
+          )}
+        >
+          {message.role === 'assistant' ? (
+            <div className="prose prose-sm dark:prose-invert max-w-none text-foreground/95 leading-relaxed">
+              {message.isStreaming && !message.content ? (
+                <div className="flex items-center gap-1 py-2 px-0.5">
+                  <span className="w-2 h-2 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-2 h-2 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-2 h-2 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              ) : message.isStreaming ? (
+                <div className="text-sm leading-relaxed whitespace-pre-wrap">
+                  {message.content}
+                  <span className="inline-block w-0.5 h-4 bg-primary animate-pulse ml-0.5 align-middle" />
+                </div>
+              ) : (
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm, remarkMath]}
+                  rehypePlugins={[rehypeKatex]}
+                >
+                  {message.content}
+                </ReactMarkdown>
+              )}
+            </div>
+          ) : (
+            <div>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+              {isEditing && (
+                <p className="text-[11px] text-primary mt-1">Editing source</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {message.stopped && !message.error && (
+          <div className="text-xs text-muted-foreground">
+            Generation stopped.
+          </div>
+        )}
+
+        {message.role === 'assistant' &&
+          message.sources &&
+          message.sources.length > 0 &&
+          message.mode !== 'disabled' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
+              {message.sources.map(source => (
+                <a
+                  key={`${message.id}-${source.url}`}
+                  href={source.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-lg border border-border/70 bg-background/45 px-2.5 py-2 hover:border-primary/40 hover:bg-background/70 transition-colors"
+                >
+                  <p className="text-xs font-medium truncate" title={source.title}>
+                    {source.title}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground truncate" title={source.domain}>
+                    {source.domain}
+                  </p>
+                </a>
+              ))}
+            </div>
+          )}
+
+        {!message.isStreaming && message.role === 'assistant' && (
+          <div className="flex flex-wrap items-center gap-1.5 text-xs">
+            <div className="relative group/copy">
+              <button
+                onClick={() => onCopy(message.content, message.id)}
+                aria-label={copiedId === message.id ? 'Copied' : 'Copy'}
+                className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border hover:bg-surface-hover transition-colors"
+              >
+                {copiedId === message.id ? (
+                  <Check size={12} className="text-green-500" />
+                ) : (
+                  <Copy size={12} />
+                )}
+              </button>
+              <span className="pointer-events-none absolute top-full mt-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-background/95 px-2 py-0.5 text-[10px] text-foreground opacity-0 group-hover/copy:opacity-100 transition-opacity z-20">
+                {copiedId === message.id ? 'Copied' : 'Copy'}
+              </span>
+            </div>
+            {message.error ? (
+              <div className="relative group/retry">
+                <button
+                  onClick={() => onRetry(message)}
+                  aria-label="Retry"
+                  disabled={!message.prompt || isLoading}
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border hover:bg-surface-hover transition-colors disabled:opacity-50"
+                >
+                  <RefreshCw size={12} />
+                </button>
+                <span className="pointer-events-none absolute top-full mt-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-background/95 px-2 py-0.5 text-[10px] text-foreground opacity-0 group-hover/retry:opacity-100 transition-opacity z-20">
+                  Retry
+                </span>
+              </div>
+            ) : (
+              <div className="relative group/regenerate">
+                <button
+                  onClick={() => onRegenerate(message)}
+                  aria-label="Regenerate"
+                  disabled={!message.prompt || isLoading}
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border hover:bg-surface-hover transition-colors disabled:opacity-50"
+                >
+                  <RefreshCw size={12} />
+                </button>
+                <span className="pointer-events-none absolute top-full mt-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-background/95 px-2 py-0.5 text-[10px] text-foreground opacity-0 group-hover/regenerate:opacity-100 transition-opacity z-20">
+                  Regenerate
+                </span>
+              </div>
+            )}
+            <div className="relative group/summarize">
+              <button
+                onClick={() => onQuickAction('summarize', message)}
+                aria-label="Summarize"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border hover:bg-surface-hover transition-colors"
+              >
+                <ListCollapse size={12} />
+              </button>
+              <span className="pointer-events-none absolute top-full mt-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-background/95 px-2 py-0.5 text-[10px] text-foreground opacity-0 group-hover/summarize:opacity-100 transition-opacity z-20">
+                Summarize
+              </span>
+            </div>
+            <div className="relative group/more" data-action-menu-root>
+              <button
+                onClick={() => onToggleMenu(message.id)}
+                aria-label="More actions"
+                className={cn(
+                  'inline-flex h-7 w-7 items-center justify-center rounded-md border border-border hover:bg-surface-hover transition-colors',
+                  isMenuOpen && 'bg-surface-hover'
+                )}
+              >
+                <MoreHorizontal size={12} />
+              </button>
+              <span className="pointer-events-none absolute top-full mt-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-background/95 px-2 py-0.5 text-[10px] text-foreground opacity-0 group-hover/more:opacity-100 transition-opacity z-20">
+                More
+              </span>
+
+              {isMenuOpen && (
+                <div className="absolute top-full mt-2 right-0 z-30 min-w-37 rounded-lg border border-border bg-background/95 backdrop-blur-xl shadow-xl p-1.5 flex flex-col gap-1">
+                  <button
+                    onClick={() => onQuickAction('simple', message)}
+                    className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-surface-hover transition-colors"
+                  >
+                    <Lightbulb size={12} />
+                    Explain
+                  </button>
+                  <button
+                    onClick={() => onQuickAction('flashcards', message)}
+                    className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-surface-hover transition-colors"
+                  >
+                    <Layers size={12} />
+                    Flashcards
+                  </button>
+                  <button
+                    onClick={() => onQuickAction('quiz', message)}
+                    className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-surface-hover transition-colors"
+                  >
+                    <Brain size={12} />
+                    Quiz
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {!message.isStreaming && message.role === 'user' && (
+          <div className="flex justify-end">
+            <div className="relative group/edit">
+              <button
+                onClick={() => onEditResend(message)}
+                aria-label="Edit & Resend"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border text-xs hover:bg-surface-hover transition-colors"
+              >
+                <PencilLine size={12} />
+              </button>
+              <span className="pointer-events-none absolute top-full mt-1 right-0 whitespace-nowrap rounded-md border border-border bg-background/95 px-2 py-0.5 text-[10px] text-foreground opacity-0 group-hover/edit:opacity-100 transition-opacity z-20">
+                Edit & Resend
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {message.role === 'user' && (
+        <div className="w-8 h-8 rounded-lg overflow-hidden border border-border/70 shrink-0 mt-0.5 bg-background/80">
+          {user?.profile_image ? (
+            <Image
+              src={user.profile_image}
+              alt="You"
+              width={32}
+              height={32}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full grid place-items-center text-[11px] font-semibold text-foreground/85">
+              {userInitials}
+            </div>
+          )}
+        </div>
+      )}
+    </motion.div>
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Main page component
+// ---------------------------------------------------------------------------
+
 export default function AITutorPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -173,7 +454,7 @@ export default function AITutorPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showSearchMenu, setShowSearchMenu] = useState(false);
   const [showSessionSidebar, setShowSessionSidebar] = useState(false);
-  const [showDesktopSessionSidebar, setShowDesktopSessionSidebar] = useState(true);
+  const [showDesktopSessionSidebar, setShowDesktopSessionSidebar] = useState(false);
   const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
   const [greeting, setGreeting] = useState('Hello');
   const [isOffline, setIsOffline] = useState(false);
@@ -182,15 +463,41 @@ export default function AITutorPage() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState('');
   const [sessionReady, setSessionReady] = useState(false);
+  const [showScrollButton, setShowScrollButton] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const rafScrollRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    if (isLoading) {
+      // Always follow the streaming response — no distance guard.
+      // Double-RAF ensures the DOM has repainted (important on the first
+      // message when the welcome screen unmounts and the list mounts).
+      if (rafScrollRef.current !== null) cancelAnimationFrame(rafScrollRef.current);
+      rafScrollRef.current = requestAnimationFrame(() => {
+        rafScrollRef.current = requestAnimationFrame(() => {
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+          }
+          rafScrollRef.current = null;
+        });
+      });
+    } else {
+      // Only auto-scroll to bottom when idle if user is already near the bottom
+      const distanceFromBottom =
+        container.scrollHeight - container.scrollTop - container.clientHeight;
+      if (distanceFromBottom <= 140) {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }, [messages, isLoading]);
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -217,6 +524,18 @@ export default function AITutorPage() {
       abortControllerRef.current?.abort();
     };
   }, []);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const onScroll = () => {
+      const distanceFromBottom =
+        container.scrollHeight - container.scrollTop - container.clientHeight;
+      setShowScrollButton(distanceFromBottom > 140);
+    };
+    container.addEventListener('scroll', onScroll, { passive: true });
+    return () => container.removeEventListener('scroll', onScroll);
+  }, [sessionReady]);
 
   useEffect(() => {
     const handleOutside = (event: MouseEvent) => {
@@ -342,6 +661,27 @@ export default function AITutorPage() {
     setEditingSourceId(null);
   };
 
+  const deleteSession = (id: string) => {
+    if (isLoading && activeSessionId === id) handleStopGenerating();
+    setSessions(prev => {
+      const remaining = prev.filter(s => s.id !== id);
+      if (remaining.length === 0) {
+        const next = createEmptySession();
+        setActiveSessionId(next.id);
+        setMessages([]);
+        setSearchMode('disabled');
+        return [next];
+      }
+      if (activeSessionId === id) {
+        const next = remaining[0];
+        setActiveSessionId(next.id);
+        setMessages(next.messages);
+        setSearchMode(next.searchMode);
+      }
+      return remaining;
+    });
+  };
+
   const createNewSession = () => {
     if (isLoading) handleStopGenerating();
     const next = createEmptySession();
@@ -360,11 +700,11 @@ export default function AITutorPage() {
     textareaRef.current?.focus();
   };
 
-  const handleCopy = async (content: string, id: string) => {
+  const handleCopy = useCallback(async (content: string, id: string) => {
     await navigator.clipboard.writeText(content);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
-  };
+  }, []);
 
   const streamAssistantResponse = useCallback(
     async ({
@@ -438,7 +778,7 @@ export default function AITutorPage() {
 
       try {
         const token = getAuthToken();
-        const res = await fetch(`${FASTAPI_URL}/chat/stream/`, {
+        const res = await fetch(`${DJANGO_API_URL}/chat/stream/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -468,14 +808,22 @@ export default function AITutorPage() {
         let sseMode = false;
         let buffered = '';
 
+        // RAF-throttled chunk batching
+        let rafPending = false;
+
         const appendChunk = (chunkText: string) => {
           if (!chunkText) return;
           accumulated += chunkText;
-          setMessages(prev =>
-            prev.map(message =>
-              message.id === assistantId ? { ...message, content: accumulated } : message
-            )
-          );
+          if (!rafPending) {
+            rafPending = true;
+            requestAnimationFrame(() => {
+              rafPending = false;
+              const snap = accumulated;
+              setMessages(prev =>
+                prev.map(m => (m.id === assistantId ? { ...m, content: snap } : m))
+              );
+            });
+          }
         };
 
         while (true) {
@@ -620,7 +968,7 @@ export default function AITutorPage() {
     const token = getAuthToken();
 
     try {
-      const res = await axios.post(`${FASTAPI_URL}/chat/file/`, formData, {
+      const res = await axios.post(`${DJANGO_API_URL}/chat/file/`, formData, {
         signal: controller.signal,
         headers: token ? { Authorization: `Token ${token}` } : undefined,
         onUploadProgress: progressEvent => {
@@ -693,13 +1041,13 @@ export default function AITutorPage() {
     void streamAssistantResponse({ prompt, includeUserMessage: true });
   }, [file, handleFileUpload, input, isLoading, streamAssistantResponse]);
 
-  const handleEditResend = (message: Message) => {
+  const handleEditResend = useCallback((message: Message) => {
     setInput(message.content);
     setEditingSourceId(message.id);
     textareaRef.current?.focus();
-  };
+  }, []);
 
-  const handleRegenerate = (message: Message) => {
+  const handleRegenerate = useCallback((message: Message) => {
     if (!message.prompt) {
       toast.error('Cannot regenerate: original prompt not found.');
       return;
@@ -710,9 +1058,9 @@ export default function AITutorPage() {
       includeUserMessage: false,
       targetAssistantId: message.id,
     });
-  };
+  }, [streamAssistantResponse]);
 
-  const handleRetry = (message: Message) => {
+  const handleRetry = useCallback((message: Message) => {
     if (!message.prompt) {
       toast.error('Cannot retry: original prompt not found.');
       return;
@@ -722,9 +1070,9 @@ export default function AITutorPage() {
       includeUserMessage: false,
       targetAssistantId: message.id,
     });
-  };
+  }, [streamAssistantResponse]);
 
-  const handleAssistantQuickAction = (
+  const handleQuickAction = useCallback((
     action: 'summarize' | 'simple' | 'flashcards' | 'quiz',
     message: Message
   ) => {
@@ -763,7 +1111,11 @@ export default function AITutorPage() {
         : `Explain the following answer in very simple terms for a beginner:\n\n${trimmed}`;
 
     void streamAssistantResponse({ prompt, includeUserMessage: true });
-  };
+  }, [router, streamAssistantResponse]);
+
+  const handleToggleMenu = useCallback((id: string) => {
+    setOpenActionMenuId(prev => (prev === id ? null : id));
+  }, []);
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Enter' && !event.shiftKey) {
@@ -877,16 +1229,6 @@ export default function AITutorPage() {
             animate={{ y: [0, 22, 0], x: [0, 12, 0], scale: [1, 0.94, 1] }}
             transition={{ duration: 11.6, repeat: Infinity, ease: 'easeInOut' }}
           />
-          <motion.div
-            aria-hidden
-            className="absolute inset-0 opacity-[0.22] dark:opacity-[0.12]"
-            style={{
-              background:
-                'repeating-radial-gradient(circle at 12% 18%, color-mix(in oklch, var(--border) 65%, transparent) 0 2px, transparent 2px 18px)',
-            }}
-            animate={{ opacity: [0.18, 0.3, 0.18] }}
-            transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
-          />
         </div>
 
         <div className="relative h-[calc(100vh-4rem)] max-w-6xl mx-auto w-full px-3 py-3 sm:px-4 sm:py-4">
@@ -897,7 +1239,7 @@ export default function AITutorPage() {
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: -24, opacity: 0 }}
                 transition={{ duration: 0.22, ease: 'easeOut' }}
-                className="hidden md:flex absolute inset-y-4 left-4 w-[272px] glass rounded-2xl border border-border/70 p-3 flex-col"
+                className="hidden md:flex absolute inset-y-4 left-4 w-68 glass rounded-2xl border border-border/70 p-3 flex-col"
               >
               <div className="flex items-center justify-between gap-2">
                 <p className="text-xs font-semibold text-muted-foreground">Saved Sessions</p>
@@ -911,33 +1253,35 @@ export default function AITutorPage() {
 
               <div className="mt-3 flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-1.5 pr-1">
                 {sortedSessions.map(session => (
-                  <button
+                  <div
                     key={session.id}
-                    onClick={() => openSession(session.id)}
                     className={cn(
-                      'w-full text-left rounded-xl border px-3 py-2.5 transition-colors',
+                      'group/session relative rounded-xl border transition-colors',
                       activeSessionId === session.id
                         ? 'border-primary/55 bg-primary/12'
                         : 'border-transparent hover:border-border/70 hover:bg-surface-hover/70'
                     )}
                   >
-                    <p className="text-sm font-medium line-clamp-2">{session.title}</p>
-                    <p className="text-[11px] text-muted-foreground mt-1">
-                      {formatSessionTime(session.updatedAt)}
-                    </p>
-                  </button>
+                    <button
+                      onClick={() => openSession(session.id)}
+                      className="w-full text-left px-3 py-2.5 pr-8"
+                    >
+                      <p className="text-sm font-medium line-clamp-2">{session.title}</p>
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        {formatSessionTime(session.updatedAt)}
+                      </p>
+                    </button>
+                    <button
+                      onClick={e => { e.stopPropagation(); deleteSession(session.id); }}
+                      aria-label="Delete session"
+                      className="absolute top-2 right-2 h-6 w-6 rounded-md grid place-items-center text-muted-foreground opacity-0 group-hover/session:opacity-100 hover:text-destructive hover:bg-destructive/10 transition-all"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
                 ))}
               </div>
 
-              {isLoading && (
-                <button
-                  onClick={handleStopGenerating}
-                  className="mt-3 h-9 rounded-lg bg-destructive text-white text-xs font-semibold hover:bg-destructive/90 transition-colors inline-flex items-center justify-center gap-1.5"
-                >
-                  <Square size={12} />
-                  Stop
-                </button>
-              )}
               </motion.aside>
             )}
           </AnimatePresence>
@@ -945,12 +1289,12 @@ export default function AITutorPage() {
           <div
             className={cn(
               'h-full flex flex-col transition-[padding] duration-300 ease-out',
-              showDesktopSessionSidebar ? 'md:pl-[286px]' : 'md:pl-0'
+              showDesktopSessionSidebar ? 'md:pl-71.5' : 'md:pl-0'
             )}
           >
             <div
               className={cn(
-                'min-h-0 flex-1 flex flex-col rounded-2xl border border-border/70 bg-background/55 dark:bg-background/45 backdrop-blur-xl overflow-hidden transition-colors',
+                'relative min-h-0 flex-1 flex flex-col rounded-2xl border border-border/70 bg-background/55 dark:bg-background/45 backdrop-blur-xl overflow-hidden transition-colors',
                 isDragActive && 'border-primary/60 bg-primary/5'
               )}
               onDragEnter={event => {
@@ -993,15 +1337,6 @@ export default function AITutorPage() {
                         New Chat
                       </button>
                     )}
-                    {isLoading && (
-                      <button
-                        onClick={handleStopGenerating}
-                        className="h-10 px-3 rounded-lg bg-destructive text-white text-sm font-semibold hover:bg-destructive/90 transition-colors inline-flex items-center gap-1.5"
-                      >
-                        <Square size={13} />
-                        Stop
-                      </button>
-                    )}
                   </div>
                 </div>
 
@@ -1020,15 +1355,6 @@ export default function AITutorPage() {
                     >
                       New Chat
                     </button>
-                    {isLoading && (
-                      <button
-                        onClick={handleStopGenerating}
-                        className="h-10 px-3 rounded-lg bg-destructive text-white text-sm font-semibold hover:bg-destructive/90 transition-colors inline-flex items-center gap-1.5"
-                      >
-                        <Square size={13} />
-                        Stop
-                      </button>
-                    )}
                   </div>
                 </div>
               </div>
@@ -1039,13 +1365,13 @@ export default function AITutorPage() {
                 </div>
               )}
 
-              <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-3 py-4 sm:px-5 sm:py-5">
+              <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-3 py-4 sm:px-5 sm:py-5">
                 {messages.length === 0 ? (
                   <motion.div
                     variants={welcomeVariants}
                     initial="hidden"
                     animate="show"
-                    className="h-full min-h-[360px] flex flex-col items-center justify-center text-center gap-4"
+                    className="h-full min-h-90 flex flex-col items-center justify-center text-center gap-4"
                   >
                     <motion.div
                       variants={welcomeItemVariants}
@@ -1084,242 +1410,45 @@ export default function AITutorPage() {
                 ) : (
                   <div className="space-y-5">
                     {messages.map(message => (
-                      <div
+                      <MessageBubble
                         key={message.id}
-                        className={cn(
-                          'group flex items-start gap-2.5',
-                          message.role === 'user' ? 'justify-end' : 'justify-start'
-                        )}
-                      >
-                        {message.role === 'assistant' && (
-                          <div className="w-8 h-8 rounded-lg overflow-hidden border border-border/70 shrink-0 mt-0.5 bg-background/80">
-                            <Image
-                              src="/lamla_logo.png"
-                              alt="Lamla AI"
-                              width={32}
-                              height={32}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        )}
-
-                        <div className="w-fit max-w-[91%] sm:max-w-[83%] space-y-1.5">
-                          <div
-                            className={cn(
-                              'w-fit max-w-full rounded-2xl px-3 py-2.5',
-                              message.role === 'assistant'
-                                ? 'border border-border/70 bg-secondary/55 rounded-tl-sm'
-                                : 'border border-primary/35 bg-primary/14 rounded-tr-sm text-right'
-                            )}
-                          >
-                            {message.role === 'assistant' ? (
-                              <div className="prose prose-sm dark:prose-invert max-w-none text-foreground/95 leading-relaxed">
-                                {message.isStreaming && !message.content ? (
-                                  <div className="space-y-2 py-1">
-                                    <div className="h-3 rounded bg-muted animate-pulse w-48 max-w-full" />
-                                    <div className="h-3 rounded bg-muted animate-pulse w-72 max-w-full" />
-                                    <div className="h-3 rounded bg-muted animate-pulse w-56 max-w-full" />
-                                  </div>
-                                ) : (
-                                  <ReactMarkdown
-                                    remarkPlugins={[remarkGfm, remarkMath]}
-                                    rehypePlugins={[rehypeKatex]}
-                                  >
-                                    {message.content}
-                                  </ReactMarkdown>
-                                )}
-
-                                {message.isStreaming && message.content && (
-                                  <span className="inline-block w-1 h-4 bg-primary animate-pulse ml-0.5 align-middle" />
-                                )}
-                              </div>
-                            ) : (
-                              <div>
-                                <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
-                                {editingSourceId === message.id && (
-                                  <p className="text-[11px] text-primary mt-1">Editing source</p>
-                                )}
-                              </div>
-                            )}
-                          </div>
-
-                          {message.stopped && !message.error && (
-                            <div className="text-xs text-muted-foreground">
-                              Generation stopped.
-                            </div>
-                          )}
-
-                          {message.role === 'assistant' &&
-                            message.sources &&
-                            message.sources.length > 0 &&
-                            message.mode !== 'disabled' && (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
-                                {message.sources.map(source => (
-                                  <a
-                                    key={`${message.id}-${source.url}`}
-                                    href={source.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="rounded-lg border border-border/70 bg-background/45 px-2.5 py-2 hover:border-primary/40 hover:bg-background/70 transition-colors"
-                                  >
-                                    <p className="text-xs font-medium truncate" title={source.title}>
-                                      {source.title}
-                                    </p>
-                                    <p className="text-[11px] text-muted-foreground truncate" title={source.domain}>
-                                      {source.domain}
-                                    </p>
-                                  </a>
-                                ))}
-                              </div>
-                            )}
-
-                          {!message.isStreaming && message.role === 'assistant' && (
-                            <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                              <div className="relative group/copy">
-                                <button
-                                  onClick={() => handleCopy(message.content, message.id)}
-                                  aria-label={copiedId === message.id ? 'Copied' : 'Copy'}
-                                  className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border hover:bg-surface-hover transition-colors"
-                                >
-                                  {copiedId === message.id ? (
-                                    <Check size={12} className="text-green-500" />
-                                  ) : (
-                                    <Copy size={12} />
-                                  )}
-                                </button>
-                                <span className="pointer-events-none absolute top-full mt-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-background/95 px-2 py-0.5 text-[10px] text-foreground opacity-0 group-hover/copy:opacity-100 transition-opacity z-20">
-                                  {copiedId === message.id ? 'Copied' : 'Copy'}
-                                </span>
-                              </div>
-                              {message.error ? (
-                                <div className="relative group/retry">
-                                  <button
-                                    onClick={() => handleRetry(message)}
-                                    aria-label="Retry"
-                                    disabled={!message.prompt || isLoading}
-                                    className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border hover:bg-surface-hover transition-colors disabled:opacity-50"
-                                  >
-                                    <RefreshCw size={12} />
-                                  </button>
-                                  <span className="pointer-events-none absolute top-full mt-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-background/95 px-2 py-0.5 text-[10px] text-foreground opacity-0 group-hover/retry:opacity-100 transition-opacity z-20">
-                                    Retry
-                                  </span>
-                                </div>
-                              ) : (
-                                <div className="relative group/regenerate">
-                                  <button
-                                    onClick={() => handleRegenerate(message)}
-                                    aria-label="Regenerate"
-                                    disabled={!message.prompt || isLoading}
-                                    className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border hover:bg-surface-hover transition-colors disabled:opacity-50"
-                                  >
-                                    <RefreshCw size={12} />
-                                  </button>
-                                  <span className="pointer-events-none absolute top-full mt-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-background/95 px-2 py-0.5 text-[10px] text-foreground opacity-0 group-hover/regenerate:opacity-100 transition-opacity z-20">
-                                    Regenerate
-                                  </span>
-                                </div>
-                              )}
-                              <div className="relative group/summarize">
-                                <button
-                                  onClick={() => handleAssistantQuickAction('summarize', message)}
-                                  aria-label="Summarize"
-                                  className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border hover:bg-surface-hover transition-colors"
-                                >
-                                  <ListCollapse size={12} />
-                                </button>
-                                <span className="pointer-events-none absolute top-full mt-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-background/95 px-2 py-0.5 text-[10px] text-foreground opacity-0 group-hover/summarize:opacity-100 transition-opacity z-20">
-                                  Summarize
-                                </span>
-                              </div>
-                              <div className="relative group/more" data-action-menu-root>
-                                <button
-                                  onClick={() =>
-                                    setOpenActionMenuId(prev => (prev === message.id ? null : message.id))
-                                  }
-                                  aria-label="More actions"
-                                  className={cn(
-                                    'inline-flex h-7 w-7 items-center justify-center rounded-md border border-border hover:bg-surface-hover transition-colors',
-                                    openActionMenuId === message.id && 'bg-surface-hover'
-                                  )}
-                                >
-                                  <MoreHorizontal size={12} />
-                                </button>
-                                <span className="pointer-events-none absolute top-full mt-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-background/95 px-2 py-0.5 text-[10px] text-foreground opacity-0 group-hover/more:opacity-100 transition-opacity z-20">
-                                  More
-                                </span>
-
-                                {openActionMenuId === message.id && (
-                                  <div className="absolute top-full mt-2 right-0 z-30 min-w-[148px] rounded-lg border border-border bg-background/95 backdrop-blur-xl shadow-xl p-1.5 flex flex-col gap-1">
-                                    <button
-                                      onClick={() => handleAssistantQuickAction('simple', message)}
-                                      className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-surface-hover transition-colors"
-                                    >
-                                      <Lightbulb size={12} />
-                                      Explain
-                                    </button>
-                                    <button
-                                      onClick={() => handleAssistantQuickAction('flashcards', message)}
-                                      className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-surface-hover transition-colors"
-                                    >
-                                      <Layers size={12} />
-                                      Flashcards
-                                    </button>
-                                    <button
-                                      onClick={() => handleAssistantQuickAction('quiz', message)}
-                                      className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-surface-hover transition-colors"
-                                    >
-                                      <Brain size={12} />
-                                      Quiz
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          )}
-
-                          {!message.isStreaming && message.role === 'user' && (
-                            <div className="flex justify-end">
-                              <div className="relative group/edit">
-                                <button
-                                  onClick={() => handleEditResend(message)}
-                                  aria-label="Edit & Resend"
-                                  className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border text-xs hover:bg-surface-hover transition-colors"
-                                >
-                                  <PencilLine size={12} />
-                                </button>
-                                <span className="pointer-events-none absolute top-full mt-1 right-0 whitespace-nowrap rounded-md border border-border bg-background/95 px-2 py-0.5 text-[10px] text-foreground opacity-0 group-hover/edit:opacity-100 transition-opacity z-20">
-                                  Edit & Resend
-                                </span>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        {message.role === 'user' && (
-                          <div className="w-8 h-8 rounded-lg overflow-hidden border border-border/70 shrink-0 mt-0.5 bg-background/80">
-                            {user?.profile_image ? (
-                              <Image
-                                src={user.profile_image}
-                                alt="You"
-                                width={32}
-                                height={32}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full grid place-items-center text-[11px] font-semibold text-foreground/85">
-                                {userInitials}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
+                        message={message}
+                        user={user}
+                        userInitials={userInitials}
+                        copiedId={copiedId}
+                        isLoading={isLoading}
+                        isMenuOpen={openActionMenuId === message.id}
+                        isEditing={editingSourceId === message.id}
+                        onCopy={handleCopy}
+                        onRetry={handleRetry}
+                        onRegenerate={handleRegenerate}
+                        onQuickAction={handleQuickAction}
+                        onEditResend={handleEditResend}
+                        onToggleMenu={handleToggleMenu}
+                      />
                     ))}
 
                     <div ref={messagesEndRef} />
                   </div>
                 )}
               </div>
+
+              <AnimatePresence>
+                {showScrollButton && (
+                  <motion.button
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 6 }}
+                    transition={{ duration: 0.18, ease: 'easeOut' }}
+                    onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                    className="absolute bottom-[88px] left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-background/90 backdrop-blur-sm text-xs font-medium text-muted-foreground hover:text-foreground hover:border-primary/50 shadow-md transition-colors"
+                    aria-label="Scroll to latest message"
+                  >
+                    <ChevronDown size={13} />
+                    Latest
+                  </motion.button>
+                )}
+              </AnimatePresence>
 
               <div className="shrink-0 px-3 py-3 sm:px-4 pb-[calc(env(safe-area-inset-bottom)+0.35rem)]">
               {editingSourceId && (
@@ -1445,11 +1574,16 @@ export default function AITutorPage() {
                 />
 
                 <button
-                  onClick={handleSend}
-                  disabled={!canSend}
-                  className="h-11 w-11 rounded-lg gradient-bg text-white hover:opacity-90 transition-opacity disabled:opacity-45 grid place-items-center shrink-0"
+                  onClick={isLoading ? handleStopGenerating : handleSend}
+                  disabled={isLoading ? false : !canSend}
+                  className={cn(
+                    'h-11 w-11 rounded-lg transition-all grid place-items-center shrink-0',
+                    isLoading
+                      ? 'bg-destructive/10 text-destructive border border-destructive/25 hover:bg-destructive/20'
+                      : 'gradient-bg text-white hover:opacity-90 disabled:opacity-45'
+                  )}
                 >
-                  {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                  {isLoading ? <Square size={16} /> : <Send size={18} />}
                 </button>
               </div>
 
@@ -1504,21 +1638,32 @@ export default function AITutorPage() {
 
                   <div className="mt-3 flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-1.5 pr-1">
                     {sortedSessions.map(session => (
-                      <button
+                      <div
                         key={session.id}
-                        onClick={() => openSession(session.id)}
                         className={cn(
-                          'w-full text-left rounded-xl border px-3 py-2.5 transition-colors',
+                          'relative rounded-xl border transition-colors',
                           activeSessionId === session.id
                             ? 'border-primary/55 bg-primary/12'
                             : 'border-transparent hover:border-border/70 hover:bg-surface-hover/70'
                         )}
                       >
-                        <p className="text-sm font-medium line-clamp-2">{session.title}</p>
-                        <p className="text-[11px] text-muted-foreground mt-1">
-                          {formatSessionTime(session.updatedAt)}
-                        </p>
-                      </button>
+                        <button
+                          onClick={() => openSession(session.id)}
+                          className="w-full text-left px-3 py-2.5 pr-9"
+                        >
+                          <p className="text-sm font-medium line-clamp-2">{session.title}</p>
+                          <p className="text-[11px] text-muted-foreground mt-1">
+                            {formatSessionTime(session.updatedAt)}
+                          </p>
+                        </button>
+                        <button
+                          onClick={e => { e.stopPropagation(); deleteSession(session.id); }}
+                          aria-label="Delete session"
+                          className="absolute top-2 right-2 h-6 w-6 rounded-md grid place-items-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
                     ))}
                   </div>
 
