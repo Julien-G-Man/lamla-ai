@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import Navbar from '@/components/Navbar';
 import { Camera, Moon, Sun, Shield, GraduationCap } from 'lucide-react';
+import { toast } from 'sonner';
 import Image from 'next/image';
 
 export default function ProfilePage() {
@@ -17,8 +18,6 @@ export default function ProfilePage() {
   const [email, setEmail] = useState('');
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [profileMsg, setProfileMsg] = useState('');
-  const [passwordMsg, setPasswordMsg] = useState('');
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -36,41 +35,36 @@ export default function ProfilePage() {
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    setProfileMsg('');
     try {
       await updateProfile(username, email);
-      setProfileMsg('Profile updated successfully.');
+      toast.success('Profile updated successfully.');
     } catch (err) {
-      setProfileMsg(typeof err === 'string' ? err : 'Update failed.');
+      toast.error(typeof err === 'string' ? err : 'Update failed.');
     } finally {
       setSaving(false);
-      setTimeout(() => setProfileMsg(''), 3000);
     }
   };
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
-    setPasswordMsg('');
     try {
       await changePassword(oldPassword, newPassword);
-      setPasswordMsg('Password changed successfully.');
+      toast.success('Password changed successfully.');
       setOldPassword('');
       setNewPassword('');
     } catch (err) {
-      setPasswordMsg(typeof err === 'string' ? err : 'Password change failed.');
-    } finally {
-      setTimeout(() => setPasswordMsg(''), 3000);
+      toast.error(typeof err === 'string' ? err : 'Password change failed.');
     }
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { alert('Image must be under 5MB.'); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error('Image must be under 5MB.'); return; }
     try {
       await uploadProfileImage(file);
     } catch (err) {
-      alert(typeof err === 'string' ? err : 'Upload failed.');
+      toast.error(typeof err === 'string' ? err : 'Upload failed.');
     }
   };
 
@@ -130,7 +124,6 @@ export default function ProfilePage() {
             className="self-start px-6 py-2 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors disabled:opacity-60 text-sm">
             {saving ? 'Saving...' : 'Save Changes'}
           </button>
-          {profileMsg && <p className="text-sm text-muted-foreground">{profileMsg}</p>}
         </form>
 
         {/* Password Form */}
@@ -150,7 +143,6 @@ export default function ProfilePage() {
             className="self-start px-6 py-2 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors text-sm">
             Change Password
           </button>
-          {passwordMsg && <p className="text-sm text-muted-foreground">{passwordMsg}</p>}
         </form>
 
         {/* Theme */}

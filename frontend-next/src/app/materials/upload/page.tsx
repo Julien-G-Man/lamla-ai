@@ -7,6 +7,8 @@ import Navbar from '@/components/Navbar';
 import { materialsService } from '@/services/materials';
 import { Upload, FileText, X } from 'lucide-react';
 import Link from 'next/link';
+import { toast } from 'sonner';
+
 
 const SUBJECTS = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science', 'History', 'Literature', 'Other'];
 
@@ -20,29 +22,26 @@ export default function MaterialUploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    if (f.size > 50 * 1024 * 1024) { setError('File must be under 50MB.'); return; }
+    if (f.size > 50 * 1024 * 1024) { toast.error('File must be under 50MB.'); return; }
     setFile(f);
-    setError('');
     if (!title) setTitle(f.name.replace(/\.[^.]+$/, ''));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) { setError('Please select a file.'); return; }
-    setError('');
+    if (!file) { toast.error('Please select a file.'); return; }
     setUploading(true);
     setProgress(0);
     try {
       await materialsService.upload({ title, description, subject, file }, setProgress);
       router.push('/materials');
     } catch (err) {
-      setError(typeof err === 'string' ? err : 'Upload failed. Please try again.');
+      toast.error(typeof err === 'string' ? err : 'Upload failed. Please try again.');
     } finally {
       setUploading(false);
     }
@@ -61,8 +60,6 @@ export default function MaterialUploadPage() {
           <h1 className="text-2xl font-bold">Upload Material</h1>
           <p className="text-muted-foreground">Share study materials with the community.</p>
         </div>
-
-        {error && <div className="px-4 py-3 rounded-md bg-destructive/10 text-destructive text-sm">{error}</div>}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           {/* File Drop Zone */}

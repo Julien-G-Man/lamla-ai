@@ -7,6 +7,7 @@ import Navbar from '@/components/Navbar';
 import { materialsService } from '@/services/materials';
 import { Search, Upload, Download, Trash2, FileText } from 'lucide-react';
 import Link from 'next/link';
+import { toast } from 'sonner';
 
 const SUBJECTS = ['', 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science', 'History', 'Literature', 'Other'];
 
@@ -49,7 +50,7 @@ export default function MaterialsPage() {
     try {
       const url = await materialsService.download(id);
       window.open(url, '_blank');
-    } catch { alert('Download failed.'); }
+    } catch { toast.error('Download failed.'); }
   };
 
   const handleDelete = async (id: string | number) => {
@@ -57,7 +58,8 @@ export default function MaterialsPage() {
     try {
       await materialsService.delete(id);
       setMaterials((prev) => prev.filter((m) => m.id !== id));
-    } catch { alert('Delete failed.'); }
+      toast.success('Material deleted.');
+    } catch { toast.error('Delete failed.'); }
   };
 
   const handleExtractQuiz = async (id: string | number) => {
@@ -65,7 +67,7 @@ export default function MaterialsPage() {
       const data = await materialsService.extractForQuiz(id);
       localStorage.setItem('quiz_source_text', data.text || '');
       router.push('/quiz/create');
-    } catch { alert('Extraction failed.'); }
+    } catch { toast.error('Extraction failed.'); }
   };
 
   return (

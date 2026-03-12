@@ -13,7 +13,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       <ThemeProvider>
         <AuthProvider>
           {children}
-          <Toaster position="bottom-right" richColors closeButton />
+          <Toaster position="top-center" richColors closeButton />
         </AuthProvider>
       </ThemeProvider>
     </GoogleOAuthProvider>

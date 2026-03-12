@@ -7,7 +7,11 @@
       "Bash(npx shadcn@latest add navigation-menu --yes)",
       "Bash(npx shadcn@latest add dropdown-menu --yes)",
       "Bash(npm install framer-motion)",
-      "Bash(grep -n \"gradient-bg\\\\|gradient-text\\\\|bg-linear-to\\\\|linear-gradient\" /c/Users/user/Code/lamla-ai/frontend-next/src/app/flashcards/page.tsx /c/Users/user/Code/lamla-ai/frontend-next/src/app/flashcards/study/[id]/page.tsx /c/Users/user/Code/lamla-ai/frontend-next/src/app/quiz/create/page.tsx /c/Users/user/Code/lamla-ai/frontend-next/src/app/quiz/play/page.tsx /c/Users/user/Code/lamla-ai/frontend-next/src/app/quiz/results/page.tsx)"
+      "Bash(grep -n \"gradient-bg\\\\|gradient-text\\\\|bg-linear-to\\\\|linear-gradient\" /c/Users/user/Code/lamla-ai/frontend-next/src/app/flashcards/page.tsx /c/Users/user/Code/lamla-ai/frontend-next/src/app/flashcards/study/[id]/page.tsx /c/Users/user/Code/lamla-ai/frontend-next/src/app/quiz/create/page.tsx /c/Users/user/Code/lamla-ai/frontend-next/src/app/quiz/play/page.tsx /c/Users/user/Code/lamla-ai/frontend-next/src/app/quiz/results/page.tsx)",
+      "Bash(find /c/Users/user/Code/lamla-ai/frontend/src -type f \\\\\\(-name *Login* -o -name *login* -o -name *Signup* -o -name *signup* -o -name *api* -o -name *config* \\\\\\))",
+      "Bash(find /c/Users/user/Code/lamla-ai/frontend -maxdepth 2 -type f \\\\\\(-name .env* -o -name App.jsx -o -name main.jsx -o -name index.jsx \\\\\\))",
+      "Bash(xargs grep:*)",
+      "Bash(ls /c/Users/user/Code/lamla-ai/frontend-next/.env*)"
     ]
   }
 }

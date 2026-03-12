@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import GoogleSignInButton from '@/components/GoogleSignInButton';
 import Image from 'next/image';
-import { Eye, EyeOff, Sparkles, Brain, Layers, Bot, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Sparkles, Brain, Layers, Bot } from 'lucide-react';
+import { toast } from 'sonner';
 
 const brandFeatures = [
   { icon: Brain, label: 'AI Quiz Generator', desc: 'Turn notes into practice questions instantly' },
@@ -21,33 +22,30 @@ export default function LoginPage() {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setIsLoading(true);
     try {
       const { user } = await login(identifier, password);
       const role = user?.is_admin ? 'admin' : 'user';
       router.push(role === 'admin' ? '/admin-dashboard' : '/dashboard');
     } catch (err) {
-      setError(typeof err === 'string' ? err : 'Login failed. Please try again.');
+      toast.error(typeof err === 'string' ? err : 'Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleGoogleSuccess = async (token: string) => {
-    setError('');
     setIsLoading(true);
     try {
       const { user } = await googleAuth(token);
       const role = user?.is_admin ? 'admin' : 'user';
       router.push(role === 'admin' ? '/admin-dashboard' : '/dashboard');
     } catch (err) {
-      setError(typeof err === 'string' ? err : 'Google sign-in failed.');
+      toast.error(typeof err === 'string' ? err : 'Google sign-in failed.');
     } finally {
       setIsLoading(false);
     }
@@ -111,13 +109,6 @@ export default function LoginPage() {
             <h2 className="text-2xl font-bold">Welcome back</h2>
             <p className="text-muted-foreground text-sm mt-1">Sign in to continue learning</p>
           </div>
-
-          {error && (
-            <div className="flex items-start gap-2.5 px-4 py-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm">
-              <AlertCircle size={15} className="mt-0.5 shrink-0" />
-              {error}
-            </div>
-          )}
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">

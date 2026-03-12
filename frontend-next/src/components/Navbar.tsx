@@ -15,9 +15,17 @@ import {
   NavigationMenuTrigger,
 } from '@/components/ui/navigation-menu';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   Menu, X, Sun, Moon,
   Brain, Bot, Layers, Microscope, BarChart3, FolderOpen,
-  Home, LayoutDashboard, Info, ChevronDown, LogOut, User,
+  Home, LayoutDashboard, Info, ChevronDown, LogOut, User, UserRound,
 } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
@@ -72,13 +80,14 @@ const Navbar = ({ brandOnly = false }: NavbarProps) => {
   const scrollTop = (e: React.MouseEvent) => {
     if (isHome) { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
   };
+  const scrolledHeaderClass = 'bg-background';
 
   return (
     <>
       <header
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
           isScrolled
-            ? 'bg-background/80 backdrop-blur-md border-b border-border/60 shadow-lg shadow-black/20'
+            ? scrolledHeaderClass
             : 'bg-transparent'
         }`}
       >
@@ -152,32 +161,51 @@ const Navbar = ({ brandOnly = false }: NavbarProps) => {
 
               {/* Right actions */}
               <div className="flex items-center gap-2 z-10">
-                {/* Theme toggle */}
-                <button onClick={toggleTheme}
-                  className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-border/40 transition-colors"
-                  aria-label="Toggle theme">
-                  {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
-                </button>
-
                 {/* Desktop auth */}
                 <div className="hidden md:flex items-center gap-2">
                   {isAuthenticated ? (
-                    <>
-                      <Link href="/profile">
-                        {profileImageUrl ? (
-                          <Image src={profileImageUrl} alt="Profile" width={32} height={32}
-                            className="rounded-full object-cover ring-2 ring-border hover:ring-primary transition-all duration-200" />
-                        ) : (
-                          <div className="w-8 h-8 rounded-full gradient-bg flex items-center justify-center text-sm font-bold text-white hover:glow-blue-sm transition-all duration-200">
-                            {user?.username?.[0]?.toUpperCase() || 'U'}
-                          </div>
-                        )}
-                      </Link>
-                      <button onClick={handleLogout}
-                        className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-md hover:bg-border/40">
-                        Logout
-                      </button>
-                    </>
+                    <DropdownMenu modal={false}>
+                      <DropdownMenuTrigger asChild>
+                        <button className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 transition-all duration-200" aria-label="Profile menu">
+                          {profileImageUrl ? (
+                            <Image src={profileImageUrl} alt="Profile" width={32} height={32}
+                              className="rounded-full object-cover ring-2 ring-border hover:ring-primary transition-all duration-200" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full gradient-bg flex items-center justify-center text-sm font-bold text-white hover:glow-blue-sm transition-all duration-200">
+                              {user?.username?.[0]?.toUpperCase() || 'U'}
+                            </div>
+                          )}
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-52 mt-1">
+                        <DropdownMenuLabel className="flex flex-col gap-0.5 pb-2">
+                          <span className="text-sm font-semibold text-foreground truncate">{user?.username || 'User'}</span>
+                          <span className="text-xs font-normal text-muted-foreground truncate">{user?.email}</span>
+                        </DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild className="focus:bg-primary/10 focus:text-primary cursor-pointer">
+                          <Link href="/profile" className="flex items-center gap-2">
+                            <UserRound size={14} />
+                            Edit Profile
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={toggleTheme}
+                          className="flex items-center gap-2 focus:bg-primary/10 focus:text-primary cursor-pointer"
+                        >
+                          {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+                          {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={handleLogout}
+                          className="flex items-center gap-2 text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
+                        >
+                          <LogOut size={14} />
+                          Logout
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   ) : (
                     <>
                       <Link href="/auth/login"
@@ -308,17 +336,17 @@ const Navbar = ({ brandOnly = false }: NavbarProps) => {
                   </AnimatePresence>
                 </div>
 
-                {/* Divider */}
-                <div className="h-px bg-border my-2" />
+              </div>
 
-                {/* Auth section */}
+              {/* ── Drawer bottom — profile / auth + theme ── */}
+              <div className="border-t border-border shrink-0">
                 {isAuthenticated ? (
                   <>
-                    {/* User card */}
+                    {/* User profile row */}
                     <Link href="/profile" onClick={close}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-hover transition-colors">
+                      className="flex items-center gap-3 px-5 py-3.5 hover:bg-surface-hover transition-colors">
                       {profileImageUrl ? (
-                        <Image src={profileImageUrl} alt="Profile" width={36} height={36}
+                        <Image src={profileImageUrl} alt="Profile" width={38} height={38}
                           className="rounded-full object-cover ring-2 ring-border shrink-0" />
                       ) : (
                         <div className="w-9 h-9 rounded-full gradient-bg flex items-center justify-center text-sm font-bold text-white shrink-0">
@@ -332,13 +360,22 @@ const Navbar = ({ brandOnly = false }: NavbarProps) => {
                       <User size={14} className="text-muted-foreground shrink-0" />
                     </Link>
 
-                    <button onClick={handleLogout}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors w-full text-left mt-0.5">
-                      <LogOut size={16} className="shrink-0" /> Logout
-                    </button>
+                    {/* Theme + Logout row */}
+                    <div className="flex items-center border-t border-border">
+                      <button onClick={toggleTheme}
+                        className="flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-colors">
+                        {theme === 'dark' ? <Sun size={15} className="shrink-0" /> : <Moon size={15} className="shrink-0" />}
+                        {theme === 'dark' ? 'Light' : 'Dark'}
+                      </button>
+                      <div className="w-px h-8 bg-border" />
+                      <button onClick={handleLogout}
+                        className="flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors">
+                        <LogOut size={15} className="shrink-0" /> Logout
+                      </button>
+                    </div>
                   </>
                 ) : (
-                  <div className="flex flex-col gap-2 mt-1">
+                  <div className="px-4 pt-4 pb-3 flex flex-col gap-2">
                     <Link href="/auth/login" onClick={close}
                       className="flex items-center justify-center px-4 py-2.5 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-surface-hover transition-colors">
                       Sign In
@@ -347,17 +384,14 @@ const Navbar = ({ brandOnly = false }: NavbarProps) => {
                       className="flex items-center justify-center px-4 py-2.5 rounded-xl gradient-bg text-white text-sm font-semibold hover:opacity-90 transition-opacity glow-blue-sm">
                       Get Started Free
                     </Link>
+                    <div className="h-px bg-border mt-1" />
+                    <button onClick={toggleTheme}
+                      className="flex items-center justify-center gap-2 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-colors">
+                      {theme === 'dark' ? <Sun size={15} className="shrink-0" /> : <Moon size={15} className="shrink-0" />}
+                      {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+                    </button>
                   </div>
                 )}
-              </div>
-
-              {/* Drawer footer — theme toggle */}
-              <div className="px-5 py-4 border-t border-border shrink-0">
-                <button onClick={toggleTheme}
-                  className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-colors">
-                  {theme === 'dark' ? <Sun size={16} className="shrink-0" /> : <Moon size={16} className="shrink-0" />}
-                  {theme === 'dark' ? 'Light mode' : 'Dark mode'}
-                </button>
               </div>
             </motion.div>
           </>

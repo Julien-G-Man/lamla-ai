@@ -257,4 +257,35 @@
     transform: translateY(-2px);
     box-shadow: 0 8px 32px oklch(0.62 0.22 245 / 0.2);
   }
+
+  /* Quiz timer border pulse states */
+  @keyframes timer-border-green {
+    0%, 100% {
+      border-color: oklch(0.78 0.14 155);
+      box-shadow: 0 0 0 0 oklch(0.78 0.14 155 / 0.08);
+    }
+    50% {
+      border-color: oklch(0.72 0.16 155);
+      box-shadow: 0 0 0 4px oklch(0.72 0.16 155 / 0.2);
+    }
+  }
+
+  @keyframes timer-border-red {
+    0%, 100% {
+      border-color: oklch(0.62 0.22 28);
+      box-shadow: 0 0 0 0 oklch(0.62 0.22 28 / 0.12);
+    }
+    50% {
+      border-color: oklch(0.58 0.24 28);
+      box-shadow: 0 0 0 5px oklch(0.58 0.24 28 / 0.26);
+    }
+  }
+
+  .timer-border-green {
+    animation: timer-border-green 1s ease-in-out infinite;
+  }
+
+  .timer-border-red {
+    animation: timer-border-red 0.8s ease-in-out infinite;
+  }
 }

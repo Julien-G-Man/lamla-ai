@@ -3,13 +3,18 @@ import type { NextConfig } from "next";
 const djangoApiUrl = process.env.NEXT_PUBLIC_DJANGO_API_URL ?? '';
 const fastapiUrl   = process.env.NEXT_PUBLIC_FASTAPI_URL   ?? '';
 
+// CSP connect-src needs origins (without path) so subpaths like /api/auth/login/ are allowed.
+// Strip any trailing path (e.g. "/api") from the Django base URL.
+const djangoOrigin = djangoApiUrl ? djangoApiUrl.replace(/\/api\/?$/, '') : '';
+
 const connectSrcAllowlist = [
   "'self'",
   "https://accounts.google.com",
   "https://oauth2.googleapis.com",
-  djangoApiUrl,
+  djangoOrigin,
   fastapiUrl,
-  "ws://localhost:* wss://localhost:*",
+  "ws://localhost:*",
+  "wss://localhost:*",
 ].filter(Boolean).join(' ');
 
 const securityHeaders = [

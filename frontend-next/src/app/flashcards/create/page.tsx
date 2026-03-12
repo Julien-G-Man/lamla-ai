@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import Navbar from '@/components/Navbar';
 import djangoApi from '@/services/api';
 import { getApiErrorMessage } from '@/services/api';
+import { toast } from 'sonner';
 
 export default function FlashcardCreatePage() {
   const router = useRouter();
@@ -16,12 +17,10 @@ export default function FlashcardCreatePage() {
   const [sourceText, setSourceText] = useState('');
   const [numCards, setNumCards] = useState(10);
   const [generating, setGenerating] = useState(false);
-  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!sourceText.trim()) { setError('Please enter source text.'); return; }
-    setError('');
+    if (!sourceText.trim()) { toast.error('Please enter source text.'); return; }
     setGenerating(true);
     try {
       const res = await djangoApi.post('/flashcards/generate/', {
@@ -32,7 +31,7 @@ export default function FlashcardCreatePage() {
       });
       router.push(`/flashcards/deck/${res.data.id}`);
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Failed to create flashcard deck.'));
+      toast.error(getApiErrorMessage(err, 'Failed to create flashcard deck.'));
     } finally {
       setGenerating(false);
     }
@@ -46,8 +45,6 @@ export default function FlashcardCreatePage() {
           <h1 className="text-2xl font-bold">Create Flashcard Deck</h1>
           <p className="text-muted-foreground">Generate AI-powered flashcards from your study material.</p>
         </div>
-
-        {error && <div className="px-4 py-3 rounded-md bg-destructive/10 text-destructive text-sm">{error}</div>}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           <div className="rounded-xl border border-border bg-card p-5 flex flex-col gap-4">
