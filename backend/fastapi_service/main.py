@@ -3,7 +3,7 @@ import logging
 from fastapi import FastAPI
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
-from services.chatbot.routes import chatbot_router, chat_router
+from services.chatbot.routes import chatbot_router
 from services.quiz.routes import quiz_router
 from services.flashcards.routes import flashcards_router
 from core.middleware import InternalAuthMiddleware
@@ -31,7 +31,6 @@ app.add_middleware(
 app.add_middleware(InternalAuthMiddleware)
 
 app.include_router(chatbot_router, prefix="/chatbot")
-app.include_router(chat_router, prefix="/chat")
 app.include_router(quiz_router, prefix="/quiz")
 app.include_router(flashcards_router, prefix="/flashcards")
 
