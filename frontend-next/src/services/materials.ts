@@ -25,7 +25,7 @@ export const materialsService = {
     form.append('subject', subject || '');
     form.append('file', file);
     const res = await djangoApi.post('/materials/upload/', form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 0, // no timeout — large files + server processing can be slow
       onUploadProgress: onProgress
         ? (e) => onProgress(e.total ? Math.round((e.loaded / e.total) * 100) : 0)
         : undefined,

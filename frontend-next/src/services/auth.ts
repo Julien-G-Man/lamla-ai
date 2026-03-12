@@ -140,9 +140,7 @@ export const authService = {
     try {
       const formData = new FormData();
       formData.append("profile_image", file);
-      const response = await authApi.post("/profile/upload-profile-image/", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const response = await authApi.post("/profile/upload-profile-image/", formData);
       if (response.data.user) localStorage.setItem("user", JSON.stringify(response.data.user));
       return response.data;
     } catch (err) {

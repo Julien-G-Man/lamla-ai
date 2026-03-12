@@ -9,6 +9,8 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import Image from "next/image";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import {
   Send,
   Paperclip,
@@ -27,9 +29,14 @@ import {
   Lightbulb,
   Layers,
   Brain,
-  FolderOpen,
   ChevronDown,
   Trash2,
+  ThumbsUp,
+  ThumbsDown,
+  Download,
+  Search,
+  Edit2,
+  FileText,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { AnimatePresence, motion, type Variants } from "framer-motion";
@@ -56,6 +63,13 @@ interface Message {
   sources?: SourceCard[];
   error?: string | null;
   stopped?: boolean;
+  rating?: "up" | "down" | null;
+  attachments?: { name: string; size: number }[];
+}
+
+interface StagedFile {
+  id: string;
+  file: File;
 }
 
 interface ChatSession {
@@ -65,6 +79,7 @@ interface ChatSession {
   updatedAt: number;
   searchMode: SearchMode;
   messages: Message[];
+  customTitle?: boolean;
 }
 
 const DJANGO_API_URL =
@@ -72,7 +87,7 @@ const DJANGO_API_URL =
 const SESSIONS_STORAGE_KEY = "lamla_ai_tutor_sessions_v1";
 const FLASHCARD_PREFILL_KEY = "lamla_flashcards_prefill";
 const QUIZ_PREFILL_KEY = "lamla_quiz_prefill";
-const MAX_FILE_SIZE_MB = 15;
+const MAX_FILE_SIZE_MB = 10; // backend hard limit is 10MB
 const ALLOWED_FILE_EXTENSIONS = ["pdf", "docx", "pptx", "txt"];
 
 const suggestedPrompts = [
@@ -131,6 +146,27 @@ const formatSessionTime = (timestamp: number) =>
     minute: "2-digit",
   });
 
+const formatFileSize = (bytes: number) => {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+};
+
+const formatMessageTime = (ts: number): string => {
+  const d = new Date(ts);
+  const now = new Date();
+  const isToday =
+    d.getDate() === now.getDate() &&
+    d.getMonth() === now.getMonth() &&
+    d.getFullYear() === now.getFullYear();
+  return isToday
+    ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    : d.toLocaleDateString([], {
+        weekday: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+};
+
 const extractSourcesFromText = (content: string): SourceCard[] => {
   if (!content) return [];
 
@@ -183,6 +219,33 @@ const createEmptySession = (): ChatSession => {
   };
 };
 
+const exportSessionAsMarkdown = (session: ChatSession) => {
+  const date = new Date().toLocaleDateString([], {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  const lines: string[] = [`# ${session.title}`, `_Exported ${date}_`, ""];
+  for (const msg of session.messages) {
+    if (msg.isStreaming) continue;
+    const label = msg.role === "user" ? "**You:**" : "**Lamla AI:**";
+    lines.push(label, msg.content.trim(), "");
+  }
+  const md = lines.join("\n");
+  const blob = new Blob([md], { type: "text/markdown" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${
+    session.title
+      .replace(/[^\w\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .toLowerCase() || "chat"
+  }.md`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
 // ---------------------------------------------------------------------------
 // MessageBubble — memoised so only the actively-streaming bubble re-renders
 // ---------------------------------------------------------------------------
@@ -204,6 +267,7 @@ interface BubbleProps {
   ) => void;
   onEditResend: (msg: Message) => void;
   onToggleMenu: (id: string) => void;
+  onRate: (id: string, rating: "up" | "down" | null) => void;
 }
 
 const MessageBubble = memo(function MessageBubble({
@@ -220,6 +284,7 @@ const MessageBubble = memo(function MessageBubble({
   onQuickAction,
   onEditResend,
   onToggleMenu,
+  onRate,
 }: BubbleProps) {
   return (
     <motion.div
@@ -278,6 +343,45 @@ const MessageBubble = memo(function MessageBubble({
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm, remarkMath]}
                   rehypePlugins={[rehypeKatex]}
+                  components={{
+                    code(props) {
+                      const { children, className } = props as {
+                        children?: React.ReactNode;
+                        className?: string;
+                        inline?: boolean;
+                      };
+                      const inline = (props as { inline?: boolean }).inline;
+                      const lang = /language-(\w+)/.exec(className || "")?.[1];
+                      const codeString = String(children).replace(/\n$/, "");
+                      if (!inline && lang) {
+                        return (
+                          <div className="relative group/codeblock">
+                            <SyntaxHighlighter
+                              language={lang}
+                              style={oneDark}
+                              PreTag="div"
+                              customStyle={{
+                                borderRadius: "0.5rem",
+                                fontSize: "0.8rem",
+                                margin: "0.5rem 0",
+                              }}
+                            >
+                              {codeString}
+                            </SyntaxHighlighter>
+                            <button
+                              onClick={() =>
+                                navigator.clipboard.writeText(codeString)
+                              }
+                              className="absolute top-2 right-2 h-6 px-2 rounded text-[10px] bg-white/10 text-white/70 hover:bg-white/20 hover:text-white transition-colors opacity-0 group-hover/codeblock:opacity-100"
+                            >
+                              Copy
+                            </button>
+                          </div>
+                        );
+                      }
+                      return <code className={className}>{children}</code>;
+                    },
+                  }}
                 >
                   {message.content}
                 </ReactMarkdown>
@@ -285,6 +389,26 @@ const MessageBubble = memo(function MessageBubble({
             </div>
           ) : (
             <div>
+              {message.attachments && message.attachments.length > 0 && (
+                <div className="flex flex-col gap-1.5 mb-2">
+                  {message.attachments.map((att, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-2 px-2.5 py-2 rounded-lg border border-primary/25 bg-primary/8 text-xs"
+                    >
+                      <FileText size={13} className="shrink-0 text-primary/70" />
+                      <div className="min-w-0">
+                        <p className="font-medium truncate max-w-[200px]">
+                          {att.name}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {formatFileSize(att.size)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
               <p className="text-sm leading-relaxed whitespace-pre-wrap">
                 {message.content}
               </p>
@@ -347,6 +471,44 @@ const MessageBubble = memo(function MessageBubble({
               </button>
               <span className="pointer-events-none absolute top-full mt-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-background/95 px-2 py-0.5 text-[10px] text-foreground opacity-0 group-hover/copy:opacity-100 transition-opacity z-20">
                 {copiedId === message.id ? "Copied" : "Copy"}
+              </span>
+            </div>
+            <div className="relative group/thumbsup">
+              <button
+                onClick={() =>
+                  onRate(message.id, message.rating === "up" ? null : "up")
+                }
+                aria-label="Helpful"
+                className={cn(
+                  "inline-flex h-7 w-7 items-center justify-center rounded-md border transition-colors",
+                  message.rating === "up"
+                    ? "border-primary/50 bg-primary/10 text-primary"
+                    : "border-border hover:bg-surface-hover text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <ThumbsUp size={11} />
+              </button>
+              <span className="pointer-events-none absolute top-full mt-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-background/95 px-2 py-0.5 text-[10px] text-foreground opacity-0 group-hover/thumbsup:opacity-100 transition-opacity z-20">
+                Helpful
+              </span>
+            </div>
+            <div className="relative group/thumbsdown">
+              <button
+                onClick={() =>
+                  onRate(message.id, message.rating === "down" ? null : "down")
+                }
+                aria-label="Not helpful"
+                className={cn(
+                  "inline-flex h-7 w-7 items-center justify-center rounded-md border transition-colors",
+                  message.rating === "down"
+                    ? "border-destructive/50 bg-destructive/10 text-destructive"
+                    : "border-border hover:bg-surface-hover text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <ThumbsDown size={11} />
+              </button>
+              <span className="pointer-events-none absolute top-full mt-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-background/95 px-2 py-0.5 text-[10px] text-foreground opacity-0 group-hover/thumbsdown:opacity-100 transition-opacity z-20">
+                Not helpful
               </span>
             </div>
             {message.error ? (
@@ -431,23 +593,31 @@ const MessageBubble = memo(function MessageBubble({
                 </div>
               )}
             </div>
+            <p className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-0.5 select-none">
+              {formatMessageTime(message.createdAt)}
+            </p>
           </div>
         )}
 
         {!message.isStreaming && message.role === "user" && (
-          <div className="flex justify-end">
-            <div className="relative group/edit">
-              <button
-                onClick={() => onEditResend(message)}
-                aria-label="Edit & Resend"
-                className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border text-xs hover:bg-surface-hover transition-colors"
-              >
-                <PencilLine size={12} />
-              </button>
-              <span className="pointer-events-none absolute top-full mt-1 right-0 whitespace-nowrap rounded-md border border-border bg-background/95 px-2 py-0.5 text-[10px] text-foreground opacity-0 group-hover/edit:opacity-100 transition-opacity z-20">
-                Edit & Resend
-              </span>
+          <div className="flex justify-end flex-col items-end gap-0.5">
+            <div className="flex justify-end">
+              <div className="relative group/edit">
+                <button
+                  onClick={() => onEditResend(message)}
+                  aria-label="Edit & Resend"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border text-xs hover:bg-surface-hover transition-colors"
+                >
+                  <PencilLine size={12} />
+                </button>
+                <span className="pointer-events-none absolute top-full mt-1 right-0 whitespace-nowrap rounded-md border border-border bg-background/95 px-2 py-0.5 text-[10px] text-foreground opacity-0 group-hover/edit:opacity-100 transition-opacity z-20">
+                  Edit & Resend
+                </span>
+              </div>
             </div>
+            <p className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-0.5 select-none text-right">
+              {formatMessageTime(message.createdAt)}
+            </p>
           </div>
         )}
       </div>
@@ -482,11 +652,10 @@ export default function AITutorPage() {
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+  const [stagedFiles, setStagedFiles] = useState<StagedFile[]>([]);
   const [fileError, setFileError] = useState("");
   const [searchMode, setSearchMode] = useState<SearchMode>("disabled");
   const [isLoading, setIsLoading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showSearchMenu, setShowSearchMenu] = useState(false);
   const [showSessionSidebar, setShowSessionSidebar] = useState(false);
@@ -501,6 +670,12 @@ export default function AITutorPage() {
   const [activeSessionId, setActiveSessionId] = useState("");
   const [sessionReady, setSessionReady] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [renamingSessionId, setRenamingSessionId] = useState<string | null>(
+    null,
+  );
+  const [renameValue, setRenameValue] = useState("");
+  const [showChatSearch, setShowChatSearch] = useState(false);
+  const [chatSearchQuery, setChatSearchQuery] = useState("");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -638,7 +813,9 @@ export default function AITutorPage() {
                 messages,
                 searchMode,
                 updatedAt: Date.now(),
-                title: sessionTitleFromMessages(messages),
+                title: session.customTitle
+                  ? session.title
+                  : sessionTitleFromMessages(messages),
               }
             : session,
         )
@@ -669,14 +846,23 @@ export default function AITutorPage() {
     if (!candidate) return;
     const error = validateFile(candidate);
     if (error) {
-      setFile(null);
       setFileError(error);
       toast.error(error);
       return;
     }
     setFileError("");
-    setFile(candidate);
+    setStagedFiles((prev) => [
+      ...prev,
+      {
+        id: `staged-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        file: candidate,
+      },
+    ]);
   };
+
+  const handleRemoveStagedFile = useCallback((id: string) => {
+    setStagedFiles((prev) => prev.filter((f) => f.id !== id));
+  }, []);
 
   const handleStopGenerating = useCallback(() => {
     if (!abortControllerRef.current) return;
@@ -691,9 +877,8 @@ export default function AITutorPage() {
     setMessages(selected.messages || []);
     setSearchMode(selected.searchMode || "disabled");
     setInput("");
-    setFile(null);
+    setStagedFiles([]);
     setFileError("");
-    setUploadProgress(0);
     setShowSearchMenu(false);
     setShowSessionSidebar(false);
     setOpenActionMenuId(null);
@@ -729,9 +914,8 @@ export default function AITutorPage() {
     setMessages([]);
     setSearchMode("disabled");
     setInput("");
-    setFile(null);
+    setStagedFiles([]);
     setFileError("");
-    setUploadProgress(0);
     setShowSearchMenu(false);
     setShowSessionSidebar(false);
     setOpenActionMenuId(null);
@@ -743,6 +927,26 @@ export default function AITutorPage() {
     await navigator.clipboard.writeText(content);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+  }, []);
+
+  const commitRename = useCallback((id: string, value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      setRenamingSessionId(null);
+      return;
+    }
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === id ? { ...s, title: trimmed, customTitle: true } : s,
+      ),
+    );
+    setRenamingSessionId(null);
+  }, []);
+
+  const handleRate = useCallback((id: string, rating: "up" | "down" | null) => {
+    setMessages((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, rating } : m)),
+    );
   }, []);
 
   const streamAssistantResponse = useCallback(
@@ -764,8 +968,7 @@ export default function AITutorPage() {
 
       setIsLoading(true);
       setShowSearchMenu(false);
-      setUploadProgress(0);
-
+  
       if (includeUserMessage) {
         setMessages((prev) => [
           ...prev,
@@ -982,7 +1185,7 @@ export default function AITutorPage() {
         );
 
         if (!aborted) {
-          toast.info("Response unavailable. Use retry.");
+          // toast.info("Response unavailable. Use retry.");
         }
       } finally {
         abortControllerRef.current = null;
@@ -992,112 +1195,130 @@ export default function AITutorPage() {
     [isLoading, isOffline, searchMode],
   );
 
-  const handleFileUpload = useCallback(async () => {
-    if (!file || isLoading) return;
-    if (isOffline) {
-      toast.error("You are offline. Reconnect and try again.");
-      return;
-    }
+  const handleFilesUpload = useCallback(
+    async (userMessage: string) => {
+      if (stagedFiles.length === 0 || isLoading) return;
+      if (isOffline) {
+        toast.error("You are offline. Reconnect and try again.");
+        return;
+      }
 
-    setIsLoading(true);
-    setUploadProgress(0);
-    setShowSearchMenu(false);
+      const filesToProcess = [...stagedFiles];
+      setStagedFiles([]);
+      setInput("");
+      setIsLoading(true);
+        setShowSearchMenu(false);
 
-    const userInput =
-      input.trim() || "Please analyze this file and summarize the key points.";
-    setInput("");
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: `user-${Date.now()}`,
-        role: "user",
-        content: userInput,
-        createdAt: Date.now(),
-      },
-    ]);
-
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("message", userInput);
-
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-
-    try {
-      const res = await djangoApi.post("/chat/file/", formData, {
-        signal: controller.signal,
-        headers: { "Content-Type": "multipart/form-data" },
-        onUploadProgress: (progressEvent) => {
-          if (!progressEvent.total) return;
-          const percent = Math.min(
-            100,
-            Math.round((progressEvent.loaded * 100) / progressEvent.total),
-          );
-          setUploadProgress(percent);
-        },
-      });
-
-      const responseText =
-        res.data?.response || res.data?.message || "No response received.";
-      const sources = extractSourcesFromText(responseText);
+      const assistantId = `assistant-${Date.now()}`;
 
       setMessages((prev) => [
         ...prev,
         {
-          id: `assistant-${Date.now()}`,
-          role: "assistant",
-          content: responseText,
+          id: `user-${Date.now()}`,
+          role: "user" as const,
+          content: userMessage,
           createdAt: Date.now(),
-          prompt: userInput,
+          attachments: filesToProcess.map((sf) => ({
+            name: sf.file.name,
+            size: sf.file.size,
+          })),
+        },
+        {
+          id: assistantId,
+          role: "assistant" as const,
+          content: "",
+          isStreaming: true,
+          createdAt: Date.now(),
+          prompt: userMessage,
           mode: searchMode,
-          sources,
         },
       ]);
-    } catch (err: unknown) {
-      const maybeErr = err as { code?: string; name?: string };
-      const cancelled =
-        maybeErr?.name === "CanceledError" || maybeErr?.code === "ERR_CANCELED";
-      if (!cancelled) {
-        const offlineNow =
-          typeof navigator !== "undefined" && !navigator.onLine;
-        const message = offlineNow
-          ? "You are offline. Reconnect and retry."
-          : "Sorry, I could not process your file. Please try again.";
-        toast.error(message);
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `assistant-${Date.now()}`,
-            role: "assistant",
-            content: message,
-            createdAt: Date.now(),
-            prompt: userInput,
-            mode: searchMode,
-            error: message,
-          },
-        ]);
-      } else {
-        toast.info("Upload stopped.");
+
+      for (let i = 0; i < filesToProcess.length; i++) {
+        const sf = filesToProcess[i];
+        const msg = i === 0 ? userMessage : `Also analyze: ${sf.file.name}`;
+        const formData = new FormData();
+        formData.append("file_upload", sf.file);
+        formData.append("message", msg);
+        formData.append("search_mode", searchMode);
+
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
+        try {
+          const res = await djangoApi.post("/chat/file/", formData, {
+            signal: controller.signal,
+            timeout: 0,
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+
+          const responseText =
+            res.data?.response || res.data?.message || "No response received.";
+          const sources = extractSourcesFromText(responseText);
+
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId
+                ? { ...m, content: responseText, isStreaming: false, sources }
+                : m,
+            ),
+          );
+        } catch (err: unknown) {
+          const maybeErr = err as {
+            code?: string;
+            name?: string;
+            response?: { data?: { error?: string; detail?: string } };
+          };
+          const cancelled =
+            maybeErr?.name === "CanceledError" ||
+            maybeErr?.code === "ERR_CANCELED";
+          if (!cancelled) {
+            const offlineNow =
+              typeof navigator !== "undefined" && !navigator.onLine;
+            const backendMsg =
+              maybeErr?.response?.data?.error ||
+              maybeErr?.response?.data?.detail;
+            const errMsg = offlineNow
+              ? "You are offline. Reconnect and retry."
+              : backendMsg ||
+                "Sorry, I could not process your file. Please try again.";
+            toast.error(errMsg);
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId
+                  ? { ...m, content: errMsg, isStreaming: false, error: errMsg }
+                  : m,
+              ),
+            );
+          } else {
+            toast.info("Upload stopped.");
+            break;
+          }
+        }
       }
-    } finally {
+
       abortControllerRef.current = null;
-      setFile(null);
-      setUploadProgress(0);
-      setIsLoading(false);
-    }
-  }, [file, input, isLoading, isOffline, searchMode]);
+        setIsLoading(false);
+    },
+    [stagedFiles, isLoading, isOffline, searchMode],
+  );
 
   const handleSend = useCallback(() => {
-    if (file) {
-      void handleFileUpload();
+    const prompt = input.trim();
+    if (isLoading) return;
+
+    if (stagedFiles.length > 0) {
+      const message =
+        prompt || "Please analyze this file and summarize the key points.";
+      void handleFilesUpload(message);
       return;
     }
-    const prompt = input.trim();
-    if (!prompt || isLoading) return;
+
+    if (!prompt) return;
     setInput("");
     setEditingSourceId(null);
     void streamAssistantResponse({ prompt, includeUserMessage: true });
-  }, [file, handleFileUpload, input, isLoading, streamAssistantResponse]);
+  }, [input, stagedFiles, isLoading, handleFilesUpload, streamAssistantResponse]);
 
   const handleEditResend = useCallback((message: Message) => {
     setInput(message.content);
@@ -1187,7 +1408,7 @@ export default function AITutorPage() {
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
-      if (!isLoading && (input.trim() || file)) handleSend();
+      if (!isLoading && (input.trim() || stagedFiles.length > 0)) handleSend();
     }
   };
 
@@ -1205,6 +1426,10 @@ export default function AITutorPage() {
         setShowSearchMenu(false);
         setShowSessionSidebar(false);
         setOpenActionMenuId(null);
+        if (showChatSearch) {
+          setShowChatSearch(false);
+          setChatSearchQuery("");
+        }
         return;
       }
 
@@ -1215,7 +1440,7 @@ export default function AITutorPage() {
       }
 
       if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
-        if (!isLoading && (input.trim() || file)) {
+        if (!isLoading && (input.trim() || stagedFiles.length > 0)) {
           event.preventDefault();
           handleSend();
         }
@@ -1224,7 +1449,7 @@ export default function AITutorPage() {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [file, handleSend, input, isLoading]);
+  }, [stagedFiles, handleSend, input, isLoading, showChatSearch]);
 
   const searchModeLabels: Record<SearchMode, string> = {
     disabled: "No Search",
@@ -1245,7 +1470,22 @@ export default function AITutorPage() {
     return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
   }, [user?.email, user?.username]);
 
-  const canSend = !isLoading && (Boolean(file) || Boolean(input.trim()));
+  const activeSession = useMemo(
+    () => sessions.find((s) => s.id === activeSessionId) ?? null,
+    [sessions, activeSessionId],
+  );
+
+  const displayMessages = useMemo(() => {
+    if (!chatSearchQuery.trim()) return messages;
+    const q = chatSearchQuery.toLowerCase();
+    return messages.filter((m) => m.content.toLowerCase().includes(q));
+  }, [messages, chatSearchQuery]);
+
+  const canSend =
+    !isLoading && (stagedFiles.length > 0 || Boolean(input.trim()));
+
+  // suppress unused warning — DJANGO_API_URL is used indirectly via djangoApi
+  void DJANGO_API_URL;
 
   if (!sessionReady) {
     return (
@@ -1331,17 +1571,51 @@ export default function AITutorPage() {
                           : "border-transparent hover:border-border/70 hover:bg-surface-hover/70",
                       )}
                     >
-                      <button
-                        onClick={() => openSession(session.id)}
-                        className="w-full text-left px-3 py-2.5 pr-8"
-                      >
-                        <p className="text-sm font-medium line-clamp-2">
-                          {session.title}
-                        </p>
-                        <p className="text-[11px] text-muted-foreground mt-1">
-                          {formatSessionTime(session.updatedAt)}
-                        </p>
-                      </button>
+                      {renamingSessionId === session.id ? (
+                        <input
+                          autoFocus
+                          value={renameValue}
+                          onChange={(e) => setRenameValue(e.target.value)}
+                          onBlur={() => commitRename(session.id, renameValue)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter")
+                              commitRename(session.id, renameValue);
+                            if (e.key === "Escape") setRenamingSessionId(null);
+                          }}
+                          className="w-full px-3 py-2 text-sm bg-transparent border-none outline-none focus:ring-1 focus:ring-primary/50 rounded-lg"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      ) : (
+                        <button
+                          onDoubleClick={(e) => {
+                            e.stopPropagation();
+                            setRenamingSessionId(session.id);
+                            setRenameValue(session.title);
+                          }}
+                          onClick={() => openSession(session.id)}
+                          className="w-full text-left px-3 py-2.5 pr-16"
+                        >
+                          <p className="text-sm font-medium line-clamp-2">
+                            {session.title}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground mt-1">
+                            {formatSessionTime(session.updatedAt)}
+                          </p>
+                        </button>
+                      )}
+                      {renamingSessionId !== session.id && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRenamingSessionId(session.id);
+                            setRenameValue(session.title);
+                          }}
+                          aria-label="Rename session"
+                          className="absolute top-2 right-8 h-6 w-6 rounded-md grid place-items-center text-muted-foreground opacity-0 group-hover/session:opacity-100 hover:text-foreground hover:bg-surface-hover transition-all"
+                        >
+                          <Edit2 size={11} />
+                        </button>
+                      )}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1406,6 +1680,33 @@ export default function AITutorPage() {
                       : "Show Sessions"}
                   </button>
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setShowChatSearch((p) => !p);
+                        setChatSearchQuery("");
+                      }}
+                      title="Search in chat"
+                      className={cn(
+                        "h-10 px-3 rounded-lg border text-sm hover:bg-surface-hover transition-colors inline-flex items-center gap-2",
+                        showChatSearch
+                          ? "border-primary/55 text-primary bg-primary/10"
+                          : "border-border",
+                      )}
+                    >
+                      <Search size={15} />
+                      Search
+                    </button>
+                    <button
+                      onClick={() =>
+                        activeSession && exportSessionAsMarkdown(activeSession)
+                      }
+                      disabled={!messages.length}
+                      title="Export conversation"
+                      className="h-10 px-3 rounded-lg border border-border text-sm hover:bg-surface-hover transition-colors inline-flex items-center gap-2 disabled:opacity-40"
+                    >
+                      <Download size={15} />
+                      Export
+                    </button>
                     {!showDesktopSessionSidebar && (
                       <button
                         onClick={createNewSession}
@@ -1435,6 +1736,47 @@ export default function AITutorPage() {
                   </div>
                 </div>
               </div>
+
+              <AnimatePresence>
+                {showChatSearch && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                    className="overflow-hidden shrink-0 border-b border-border/60"
+                  >
+                    <div className="flex items-center gap-2 px-3 py-2">
+                      <Search
+                        size={13}
+                        className="text-muted-foreground shrink-0"
+                      />
+                      <input
+                        autoFocus
+                        value={chatSearchQuery}
+                        onChange={(e) => setChatSearchQuery(e.target.value)}
+                        placeholder="Search messages..."
+                        className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-muted-foreground"
+                      />
+                      {chatSearchQuery && (
+                        <span className="text-[11px] text-muted-foreground">
+                          {displayMessages.length} result
+                          {displayMessages.length !== 1 ? "s" : ""}
+                        </span>
+                      )}
+                      <button
+                        onClick={() => {
+                          setShowChatSearch(false);
+                          setChatSearchQuery("");
+                        }}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {isOffline && (
                 <div className="shrink-0 border-b border-destructive/35 bg-destructive/10 px-3 py-2 text-xs text-destructive">
@@ -1496,7 +1838,7 @@ export default function AITutorPage() {
                   </motion.div>
                 ) : (
                   <div className="space-y-5">
-                    {messages.map((message) => (
+                    {displayMessages.map((message) => (
                       <MessageBubble
                         key={message.id}
                         message={message}
@@ -1512,6 +1854,7 @@ export default function AITutorPage() {
                         onQuickAction={handleQuickAction}
                         onEditResend={handleEditResend}
                         onToggleMenu={handleToggleMenu}
+                        onRate={handleRate}
                       />
                     ))}
 
@@ -1554,43 +1897,53 @@ export default function AITutorPage() {
                   </div>
                 )}
 
-                {file && (
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-border bg-background/60 text-xs">
-                      <FolderOpen size={12} />
-                      <span className="max-w-[220px] truncate">
-                        {file.name}
-                      </span>
-                      <button
-                        onClick={() => {
-                          setFile(null);
-                          setFileError("");
-                          setUploadProgress(0);
-                        }}
-                        className="hover:text-destructive transition-colors"
+                {stagedFiles.length > 0 && (
+                  <div className="mb-2 flex flex-wrap gap-2">
+                    {stagedFiles.map((sf) => (
+                      <div
+                        key={sf.id}
+                        className={cn(
+                          "flex items-center gap-2 pl-2.5 pr-1.5 py-1.5 rounded-lg border text-xs transition-colors",
+                          isLoading
+                            ? "border-primary/40 bg-primary/8 text-primary/80"
+                            : "border-border bg-background/60 hover:border-primary/30",
+                        )}
                       >
-                        <X size={12} />
-                      </button>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground">
-                      Drag and drop another file to replace it.
-                    </p>
+                        {isLoading ? (
+                          <Loader2
+                            size={12}
+                            className="animate-spin shrink-0"
+                          />
+                        ) : (
+                          <FileText
+                            size={12}
+                            className="shrink-0 text-primary/70"
+                          />
+                        )}
+                        <div className="min-w-0">
+                          <p className="max-w-[160px] truncate font-medium leading-tight">
+                            {sf.file.name}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground leading-tight">
+                            {isLoading
+                              ? "Processing..."
+                              : `${formatFileSize(sf.file.size)} · Ready`}
+                          </p>
+                        </div>
+                        {!isLoading && (
+                          <button
+                            onClick={() => handleRemoveStagedFile(sf.id)}
+                            className="ml-0.5 h-5 w-5 rounded grid place-items-center hover:bg-destructive/10 hover:text-destructive transition-colors"
+                            aria-label={`Remove ${sf.file.name}`}
+                          >
+                            <X size={10} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
 
-                {uploadProgress > 0 && isLoading && file && (
-                  <div className="mb-2">
-                    <div className="w-full h-1.5 rounded-full bg-border overflow-hidden">
-                      <div
-                        className="h-full gradient-bg rounded-full transition-all duration-150"
-                        style={{ width: `${uploadProgress}%` }}
-                      />
-                    </div>
-                    <p className="text-[11px] text-muted-foreground mt-1">
-                      Uploading file... {uploadProgress}%
-                    </p>
-                  </div>
-                )}
 
                 {fileError && (
                   <p className="mb-2 text-xs text-destructive">{fileError}</p>
@@ -1664,8 +2017,8 @@ export default function AITutorPage() {
                       target.style.height = `${Math.min(target.scrollHeight, 170)}px`;
                     }}
                     placeholder={
-                      file
-                        ? "Add a note or leave blank to analyze the file directly..."
+                      stagedFiles.length > 0
+                        ? "Add a message or send to analyze the file..."
                         : "Ask me anything... (Shift+Enter for new line)"
                     }
                     rows={1}
@@ -1688,8 +2041,8 @@ export default function AITutorPage() {
 
                 <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
                   <span>
-                    {file
-                      ? "File mode active. Press Send to upload and analyze."
+                    {stagedFiles.length > 0
+                      ? `${stagedFiles.length} file${stagedFiles.length > 1 ? "s" : ""} staged · Send to analyze`
                       : "AI can make mistakes. Verify important details."}
                   </span>
                   <span className="hidden md:inline">
@@ -1749,17 +2102,54 @@ export default function AITutorPage() {
                               : "border-transparent hover:border-border/70 hover:bg-surface-hover/70",
                           )}
                         >
-                          <button
-                            onClick={() => openSession(session.id)}
-                            className="w-full text-left px-3 py-2.5 pr-9"
-                          >
-                            <p className="text-sm font-medium line-clamp-2">
-                              {session.title}
-                            </p>
-                            <p className="text-[11px] text-muted-foreground mt-1">
-                              {formatSessionTime(session.updatedAt)}
-                            </p>
-                          </button>
+                          {renamingSessionId === session.id ? (
+                            <input
+                              autoFocus
+                              value={renameValue}
+                              onChange={(e) => setRenameValue(e.target.value)}
+                              onBlur={() =>
+                                commitRename(session.id, renameValue)
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter")
+                                  commitRename(session.id, renameValue);
+                                if (e.key === "Escape")
+                                  setRenamingSessionId(null);
+                              }}
+                              className="w-full px-3 py-2 text-sm bg-transparent border-none outline-none focus:ring-1 focus:ring-primary/50 rounded-lg"
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          ) : (
+                            <button
+                              onDoubleClick={(e) => {
+                                e.stopPropagation();
+                                setRenamingSessionId(session.id);
+                                setRenameValue(session.title);
+                              }}
+                              onClick={() => openSession(session.id)}
+                              className="w-full text-left px-3 py-2.5 pr-16"
+                            >
+                              <p className="text-sm font-medium line-clamp-2">
+                                {session.title}
+                              </p>
+                              <p className="text-[11px] text-muted-foreground mt-1">
+                                {formatSessionTime(session.updatedAt)}
+                              </p>
+                            </button>
+                          )}
+                          {renamingSessionId !== session.id && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setRenamingSessionId(session.id);
+                                setRenameValue(session.title);
+                              }}
+                              aria-label="Rename session"
+                              className="absolute top-2 right-8 h-6 w-6 rounded-md grid place-items-center text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-colors"
+                            >
+                              <Edit2 size={11} />
+                            </button>
+                          )}
                           <button
                             onClick={(e) => {
                               e.stopPropagation();

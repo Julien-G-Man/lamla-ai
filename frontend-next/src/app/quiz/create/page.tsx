@@ -99,7 +99,7 @@ export default function CreateQuizPage() {
     fd.append('slide_file', file);
     try {
       const res = await djangoApi.post('/quiz/ajax-extract-text/', fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 0, // no timeout — AI text extraction can be slow
       });
       const extractedText = res.data.text as string;
       if (extractedText) {

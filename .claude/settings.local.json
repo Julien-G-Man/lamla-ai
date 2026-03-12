@@ -16,7 +16,9 @@
       "Bash(grep -r \"var\\(--\\\\|:root\\\\|\\\\.dark\" /c/Users/user/Code/lamla-ai/frontend-next/src --include=*.css --include=*.tsx --include=*.ts)",
       "Bash(grep -r chat/stream /c/Users/user/Code/lamla-ai/backend/fastapi_service --include=*.py)",
       "Bash(grep -rn \"prefix.*chat\\\\|router.*chat\" /c/Users/user/Code/lamla-ai/backend --include=*.py)",
-      "Bash(xargs ls:*)"
+      "Bash(xargs ls:*)",
+      "Bash(npm install:*)",
+      "Bash(grep -r \"FormData\\\\|type=file\\\\|input.*file\" /c/Users/user/Code/lamla-ai/frontend-next/src --include=*.tsx --include=*.ts)"
     ]
   }
 }
