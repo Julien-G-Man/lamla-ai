@@ -9,7 +9,6 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import Image from 'next/image';
-import axios from 'axios';
 import {
   Send,
   Paperclip,
@@ -31,9 +30,10 @@ import {
   FolderOpen,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, type Variants } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import djangoApi from '@/services/api';
 
 type SearchMode = 'disabled' | 'web_search' | 'deep_research';
 
@@ -65,7 +65,6 @@ interface ChatSession {
   messages: Message[];
 }
 
-const FASTAPI_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || '';
 const SESSIONS_STORAGE_KEY = 'lamla_ai_tutor_sessions_v1';
 const FLASHCARD_PREFILL_KEY = 'lamla_flashcards_prefill';
 const QUIZ_PREFILL_KEY = 'lamla_quiz_prefill';
@@ -79,7 +78,7 @@ const suggestedPrompts = [
   'Help me understand this formula',
 ];
 
-const welcomeVariants = {
+const welcomeVariants: Variants = {
   hidden: { opacity: 0, y: 16 },
   show: {
     opacity: 1,
@@ -88,7 +87,7 @@ const welcomeVariants = {
   },
 };
 
-const welcomeItemVariants = {
+const welcomeItemVariants: Variants = {
   hidden: { opacity: 0, y: 14 },
   show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } },
 };
@@ -438,7 +437,8 @@ export default function AITutorPage() {
 
       try {
         const token = getAuthToken();
-        const res = await fetch(`${FASTAPI_URL}/chat/stream/`, {
+        const baseUrl = (djangoApi.defaults.baseURL || '').replace(/\/+$/, '');
+        const res = await fetch(`${baseUrl}/chat/stream/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -617,12 +617,11 @@ export default function AITutorPage() {
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
-    const token = getAuthToken();
 
     try {
-      const res = await axios.post(`${FASTAPI_URL}/chat/file/`, formData, {
+      const res = await djangoApi.post('/chat/file/', formData, {
         signal: controller.signal,
-        headers: token ? { Authorization: `Token ${token}` } : undefined,
+        headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: progressEvent => {
           if (!progressEvent.total) return;
           const percent = Math.min(

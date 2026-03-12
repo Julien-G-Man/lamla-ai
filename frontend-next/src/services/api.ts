@@ -2,8 +2,8 @@ import axios from "axios";
 
 // Use fallback so the module loads during SSR/build without env vars.
 // Real requests only happen client-side where env vars are provided.
-const DJANGO_API_URL = process.env.NEXT_PUBLIC_DJANGO_API_URL || "http://localhost:8000/api";
-const FASTAPI_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || "http://localhost:8001";
+export const DJANGO_API_URL = process.env.NEXT_PUBLIC_DJANGO_API_URL || "http://localhost:8000/api";
+export const FASTAPI_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || "http://localhost:8001";
 
 const DJANGO_ROOT_URL = DJANGO_API_URL.replace(/\/api\/?$/, "");
 
