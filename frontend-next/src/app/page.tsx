@@ -1085,6 +1085,7 @@ function TestimonialsSection() {
 export default function HomePage() {
   const { isAuthenticated } = useAuth();
   const [contactStatus, setContactStatus] = useState('');
+  const [contactIsError, setContactIsError] = useState(false);
   const [isSendingContact, setIsSendingContact] = useState(false);
   const handleContactSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -1121,6 +1122,7 @@ export default function HomePage() {
         await djangoApi.post('/dashboard/contact/', payload);
       }
 
+      setContactIsError(false);
       setContactStatus('Thanks for reaching out. We will get back to you soon.');
       form.reset();
     } catch (err) {
@@ -1129,6 +1131,7 @@ export default function HomePage() {
       if (gasUrl) {
         try {
           await djangoApi.post('/dashboard/contact/', payload);
+          setContactIsError(false);
           setContactStatus('Thanks for reaching out. We will get back to you soon.');
           form.reset();
           return;
@@ -1136,6 +1139,7 @@ export default function HomePage() {
           console.error('Django fallback error:', djangoErr);
         }
       }
+      setContactIsError(true);
       setContactStatus('We could not send your message right now. Please try again.');
     } finally {
       setIsSendingContact(false);
@@ -1465,7 +1469,7 @@ export default function HomePage() {
                   {isSendingContact ? 'Sending…' : 'Send Message →'}
                 </button>
                 {contactStatus && (
-                  <p className="text-sm text-muted-foreground">{contactStatus}</p>
+                  <p className={`text-sm font-semibold ${contactIsError ? 'text-red-500' : 'text-green-500'}`}>{contactStatus}</p>
                 )}
               </form>
             </motion.div>

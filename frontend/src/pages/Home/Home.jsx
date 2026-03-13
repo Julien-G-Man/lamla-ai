@@ -7,6 +7,7 @@ import "../../App.css";
 
 const Home = ({ user }) => {
   const [contactStatus, setContactStatus] = useState("");
+  const [contactIsError, setContactIsError] = useState(false);
   const [isSendingContact, setIsSendingContact] = useState(false);
 
   const [isVisible, setIsVisible] = useState({
@@ -78,6 +79,7 @@ const Home = ({ user }) => {
         await djangoApi.post("/dashboard/contact/", payload);
       }
 
+      setContactIsError(false);
       setContactStatus("Thanks for reaching out. We will get back to you soon.");
       form.reset();
     } catch (err) {
@@ -86,6 +88,7 @@ const Home = ({ user }) => {
       if (gasUrl) {
         try {
           await djangoApi.post("/dashboard/contact/", payload);
+          setContactIsError(false);
           setContactStatus("Thanks for reaching out. We will get back to you soon.");
           form.reset();
           return;
@@ -93,6 +96,7 @@ const Home = ({ user }) => {
           console.error("Django fallback error:", djangoErr);
         }
       }
+      setContactIsError(true);
       setContactStatus(
         "We could not send your message right now. Please try again.",
       );
@@ -410,7 +414,7 @@ const Home = ({ user }) => {
                     {isSendingContact ? "Sending..." : "Send Message"}
                   </button>
                   {contactStatus && (
-                    <p className="home-contact-status">{contactStatus}</p>
+                    <p className={`home-contact-status${contactIsError ? " home-contact-status--error" : ""}`}>{contactStatus}</p>
                   )}
                 </div>
               </form>

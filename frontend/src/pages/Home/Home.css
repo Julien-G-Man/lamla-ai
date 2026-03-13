@@ -585,9 +585,13 @@
 
 .home-contact-status {
   margin: 0;
-  color: var(--primary-color);
+  color: #22c55e;
   font-size: 0.86rem;
   font-weight: 600;
+}
+
+.home-contact-status--error {
+  color: #ef4444;
 }
 
 /* Post-testimonials CTA */
