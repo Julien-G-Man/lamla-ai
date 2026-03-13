@@ -6,6 +6,8 @@ from .views import (
     MeView,
     VerifyEmailView,
     ResendVerificationEmailView,
+    RequestPasswordResetView,
+    ConfirmPasswordResetView,
     UpdateProfileView,
     ChangePasswordView,
     UploadProfileImageView,
@@ -28,6 +30,10 @@ urlpatterns = [
     # ── Email Verification ────────────────────────────────────────────────────
     path("auth/verify-email/",         VerifyEmailView.as_view(),         name="auth-verify-email"),
     path("auth/resend-verification/",  ResendVerificationEmailView.as_view(), name="auth-resend-verification"),
+
+    # ── Password Reset ────────────────────────────────────────────────────────
+    path("auth/request-password-reset/", RequestPasswordResetView.as_view(), name="auth-request-password-reset"),
+    path("auth/confirm-password-reset/", ConfirmPasswordResetView.as_view(),  name="auth-confirm-password-reset"),
 
     # ── Profile ───────────────────────────────────────────────────────────────
     path("profile/",                   ProfileView.as_view(),             name="profile"),
