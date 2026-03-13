@@ -1085,6 +1085,7 @@ function TestimonialsSection() {
 export default function HomePage() {
   const { isAuthenticated } = useAuth();
   const [contactStatus, setContactStatus] = useState('');
+  const [contactIsError, setContactIsError] = useState(false);
   const [isSendingContact, setIsSendingContact] = useState(false);
   const handleContactSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -1096,12 +1097,49 @@ export default function HomePage() {
       title: formData.get('title'),
       message: formData.get('message'),
     };
+
+    // Strip accidental surrounding quotes (e.g. Vercel dashboard sets `"https://..."`)
+    const gasUrl = (process.env.NEXT_PUBLIC_GAS_CONTACT_URL || '')
+      .replace(/^["']|["']$/g, '')
+      .trim() || null;
+
     try {
       setIsSendingContact(true);
-      await djangoApi.post('/dashboard/contact/', payload);
+
+      if (gasUrl) {
+        // Try GAS first. Use text/plain to avoid CORS preflight — GAS Web Apps
+        // don't handle OPTIONS requests, but text/plain is a "simple" request
+        // that goes through directly. The body is still JSON; GAS parses it fine.
+        const res = await fetch(gasUrl, {
+          method: 'POST',
+          body: JSON.stringify(payload),
+          headers: { 'Content-Type': 'text/plain' },
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || 'GAS error');
+      } else {
+        // GAS not configured — fall back to Django
+        await djangoApi.post('/dashboard/contact/', payload);
+      }
+
+      setContactIsError(false);
       setContactStatus('Thanks for reaching out. We will get back to you soon.');
       form.reset();
-    } catch {
+    } catch (err) {
+      console.error('Contact form error:', err);
+      // GAS failed — fall back to Django
+      if (gasUrl) {
+        try {
+          await djangoApi.post('/dashboard/contact/', payload);
+          setContactIsError(false);
+          setContactStatus('Thanks for reaching out. We will get back to you soon.');
+          form.reset();
+          return;
+        } catch (djangoErr) {
+          console.error('Django fallback error:', djangoErr);
+        }
+      }
+      setContactIsError(true);
       setContactStatus('We could not send your message right now. Please try again.');
     } finally {
       setIsSendingContact(false);
@@ -1431,7 +1469,7 @@ export default function HomePage() {
                   {isSendingContact ? 'Sending…' : 'Send Message →'}
                 </button>
                 {contactStatus && (
-                  <p className="text-sm text-muted-foreground">{contactStatus}</p>
+                  <p className={`text-sm font-semibold ${contactIsError ? 'text-red-500' : 'text-green-500'}`}>{contactStatus}</p>
                 )}
               </form>
             </motion.div>
