@@ -343,7 +343,7 @@ def send_password_reset_email(user) -> bool:
     token = _get_token(user)
 
     frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000").rstrip("/")
-    reset_link = f"{frontend_url}/reset-password?uid={uid}&token={token}"
+    reset_link = f"{frontend_url}/auth/reset-password?uid={uid}&token={token}"
     site_name = getattr(settings, "SITE_NAME", "Lamla AI")
     user_name = getattr(user, "first_name", None) or user.email
 

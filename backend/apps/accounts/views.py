@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import SimpleRateThrottle
 from rest_framework.views import APIView
 
+from .models import User
 from .serializers import (
     SignupSerializer,
     LoginSerializer,
@@ -16,9 +17,11 @@ from .serializers import (
     ResendVerificationSerializer,
     UpdateProfileSerializer,
     ChangePasswordSerializer,
+    RequestPasswordResetSerializer,
+    ConfirmPasswordResetSerializer,
     user_to_dict,
 )
-from .services import send_verification_email
+from .services import send_verification_email, send_password_reset_email
 
 logger = logging.getLogger(__name__)
 
@@ -305,6 +308,65 @@ class UploadProfileImageView(APIView):
             ContentFile(file.read())
         )
         return f"{settings.MEDIA_URL}{path}"
+
+
+class RequestPasswordResetView(APIView):
+    """
+    POST /api/auth/request-password-reset/
+    Public. Accepts an email and sends a reset link if an account exists.
+    Always returns 200 with the same message — prevents email enumeration.
+    """
+    permission_classes = [AllowAny]
+    throttle_classes = [AuthThrottle]
+
+    def post(self, request):
+        serializer = RequestPasswordResetSerializer(data=request.data)
+        # Validate email format but don't reveal anything on failure either
+        if serializer.is_valid():
+            email = serializer.validated_data["email"]
+            try:
+                user = User.objects.get(email=email)
+            except User.DoesNotExist:
+                logger.info("Password reset requested for unknown email: %s", email)
+            else:
+                sent = send_password_reset_email(user)
+                if sent:
+                    logger.info("Password reset email sent to: %s", user.email)
+                else:
+                    logger.error("Password reset email failed for: %s", user.email)
+
+        return Response(
+            {"detail": "If an account with that email exists, a reset link has been sent."},
+            status=status.HTTP_200_OK,
+        )
+
+
+class ConfirmPasswordResetView(APIView):
+    """
+    POST /api/auth/confirm-password-reset/
+    Public. Validates uid + token, sets new password, invalidates existing auth tokens.
+    """
+    permission_classes = [AllowAny]
+    throttle_classes = [AuthThrottle]
+
+    def post(self, request):
+        serializer = ConfirmPasswordResetSerializer(data=request.data)
+        if not serializer.is_valid():
+            errors = serializer.errors
+            non_field = errors.get("non_field_errors", [])
+            detail = non_field[0] if non_field else "Password reset failed."
+            return Response({"detail": detail}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = serializer.save()
+
+        # Invalidate all existing auth tokens — forces re-login with new password
+        Token.objects.filter(user=user).delete()
+
+        logger.info("Password reset confirmed for: %s", user.email)
+        return Response(
+            {"detail": "Password reset successfully. Please log in with your new password."},
+            status=status.HTTP_200_OK,
+        )
 
 
 def _get_client_ip(request) -> str | None:

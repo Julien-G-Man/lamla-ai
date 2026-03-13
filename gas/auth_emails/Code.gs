@@ -31,7 +31,9 @@ function doPost(e) {
     var data   = JSON.parse(e.postData.contents);
     var secret = cfg_secret();
 
-    if (secret && data.secret !== secret) {
+    // Secret is mandatory — reject if not configured in Script Properties or doesn't match.
+    // This closes the bypass where a missing GAS_SECRET would accept any request.
+    if (!secret || data.secret !== secret) {
       cfg_log("Unauthorized request blocked");
       return jsonResponse({ success: false, error: "Unauthorized" });
     }
@@ -45,21 +47,22 @@ function doPost(e) {
       return jsonResponse({ success: false, error: "Missing required fields" });
     }
 
+    // Validate action_link must originate from our own site — prevents link injection.
+    if (actionLink && !actionLink.startsWith(SITE_URL)) {
+      cfg_log("Blocked request with untrusted action_link: " + actionLink);
+      return jsonResponse({ success: false, error: "Untrusted action_link domain" });
+    }
+
     cfg_log("Auth email request: type=" + type + " to=" + toEmail);
 
-    if (type === "__raw__") {
-      var subject  = data.subject   || "(no subject)";
-      var htmlBody = data.html_body || "";
-      var to       = cfg_recipientEmail(toEmail);
-      GmailApp.sendEmail(to, subject, stripTags(htmlBody), { htmlBody: htmlBody });
-      cfg_log("Raw email sent to " + to);
-    } else if (type === "verification") {
+    if (type === "verification") {
       if (!actionLink) return jsonResponse({ success: false, error: "Missing required fields" });
       sendVerificationEmail(toEmail, userName, actionLink);
     } else if (type === "password_reset") {
       if (!actionLink) return jsonResponse({ success: false, error: "Missing required fields" });
       sendPasswordResetEmail(toEmail, userName, actionLink);
     } else {
+      cfg_log("Rejected unknown or disallowed email type: " + type);
       return jsonResponse({ success: false, error: "Unknown email type: " + type });
     }
 
@@ -71,9 +74,9 @@ function doPost(e) {
   }
 }
 
-// Health-check / CORS preflight
+// Health-check
 function doGet(e) {
-  return jsonResponse({ status: "ok", env: ENV, testMode: TEST_MODE });
+  return jsonResponse({ status: "ok" });
 }
 
 

@@ -167,6 +167,49 @@ class UpdateProfileSerializer(serializers.Serializer):
         return instance
 
 
+# ── Request Password Reset ────────────────────────────────────────────────────
+
+class RequestPasswordResetSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        return value.strip().lower()
+
+
+# ── Confirm Password Reset ────────────────────────────────────────────────────
+
+class ConfirmPasswordResetSerializer(serializers.Serializer):
+    uid          = serializers.CharField()
+    token        = serializers.CharField()
+    new_password = serializers.CharField(write_only=True, min_length=8)
+
+    def validate(self, data):
+        try:
+            pk   = force_str(urlsafe_base64_decode(data["uid"]))
+            user = User.objects.get(pk=pk)
+        except (User.DoesNotExist, ValueError, TypeError, OverflowError):
+            raise serializers.ValidationError("Invalid or expired reset link.")
+
+        if not default_token_generator.check_token(user, data["token"]):
+            raise serializers.ValidationError("Invalid or expired reset link.")
+
+        data["user"] = user
+        return data
+
+    def validate_new_password(self, value):
+        try:
+            password_validation.validate_password(value)
+        except ValidationError as e:
+            raise serializers.ValidationError(list(e.messages))
+        return value
+
+    def save(self):
+        user = self.validated_data["user"]
+        user.set_password(self.validated_data["new_password"])
+        user.save()
+        return user
+
+
 # ── Password change ───────────────────────────────────────────────────────────
 
 class ChangePasswordSerializer(serializers.Serializer):
