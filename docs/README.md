@@ -19,6 +19,7 @@ This folder is the maintained source of truth for architecture, setup, features,
 - `setup-configuration/AUTHENTICATION_SETUP.md` - auth integration setup (password + Google OAuth)
 - `authentication/CUSTOM_USER_MODEL.md` - user model behavior and admin flag
 - `authentication/EMAIL_VERIFICATION.md` - verification flow and API
+- `authentication/PASSWORD_RESET.md` - password reset flow, API contracts, and frontend build guide
 - `authentication/GOOGLE_OAUTH.md` - **Google OAuth 2.0 integration guide (setup, testing, security)**
 - `features/QUIZ.md` - quiz generation and quiz lifecycle
 - `features/FLASHCARDS.md` - flashcards feature and API behavior

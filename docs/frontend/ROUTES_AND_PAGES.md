@@ -9,6 +9,8 @@ Source of truth: `frontend/src/App.jsx`.
 - `/auth/login` -> Login
 - `/auth/signup` -> Signup
 - `/auth/verify-email` -> VerifyEmail
+- `/auth/forgot-password` -> ForgotPassword  *(to build — see `authentication/PASSWORD_RESET.md`)*
+- `/auth/reset-password` -> ResetPassword  *(to build — see `authentication/PASSWORD_RESET.md`)*
 
 Legacy redirects:
 
