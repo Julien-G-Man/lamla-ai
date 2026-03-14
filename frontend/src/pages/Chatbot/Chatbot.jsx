@@ -287,7 +287,7 @@ const Chatbot = ({ user }) => {
                         remarkPlugins={[remarkGfm, remarkMath]}
                         rehypePlugins={[rehypeKatex]}
                         components={{
-                            p: ({node, ...props}) => <p style={{ margin: '0.5em 0', whiteSpace: 'pre-wrap' }} {...props} />,
+                            p: ({node, ...props}) => <p style={{ margin: '0.4em 0', whiteSpace: 'pre-wrap' }} {...props} />,
                             table: ({node, ...props}) => <table className="chatbot-table" {...props} />,
                             thead: ({node, ...props}) => <thead className="chatbot-thead" {...props} />,
                             tbody: ({node, ...props}) => <tbody className="chatbot-tbody" {...props} />,

@@ -103,7 +103,6 @@
     border-radius: var(--radius-md);
     line-height: 1.6;
     word-wrap: break-word;
-    white-space: pre-wrap;
     box-shadow: var(--shadow-sm);
     animation: fadeIn 0.3s ease-in-out;
 }
@@ -168,6 +167,12 @@
 
 .message-content li {
     margin: 0.3em 0;
+}
+
+/* Prevent loose-list <p> wrappers inside list items from adding extra vertical space */
+.message-content li > p {
+    margin: 0 !important;
+    white-space: pre-wrap;
 }
 
 .message-content code {
