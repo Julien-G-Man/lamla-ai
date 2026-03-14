@@ -30,6 +30,15 @@ This folder is the maintained source of truth for architecture, setup, features,
 - `deployment-guides/VERCEL_FRONTEND_DEPLOYMENT.md` - frontend deployment specifics
 - `security-reference/SECURITY.md` - security controls and rules
 
+## Payments & Strategy
+
+- `payments-strategy/PAYMENTS_AND_SUBSCRIPTIONS.md` - Paystack integration, voluntary donations (Phase 1), freemium subscription model (Phase 2), go-live checklist, and guiding principles
+- `roadmap/OVERVIEW.md` - Intelligent edtech feature roadmap and build sequence
+- `roadmap/TIER1_LOW_COST_HIGH_IMPACT.md` - Weak areas, spaced quiz scheduling, daily plan, badges, digest emails, exam mode
+- `roadmap/TIER2_MODERATE_LLM.md` - Mistake analysis, material summariser, Socratic tutor, weekly AI patterns
+- `roadmap/TIER3_ARCHITECTURE.md` - Celery queue, LLM budget, concept tagging, content intelligence
+- `roadmap/TIER4_SOCIAL_COMMUNITY.md` - Study groups, peer challenges, material ratings, community health
+
 ## Documentation Rules
 
 - Keep docs aligned with code changes in the same PR.
