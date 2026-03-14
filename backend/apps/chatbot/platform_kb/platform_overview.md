@@ -11,6 +11,12 @@ Lamla AI is an AI-powered learning platform that helps students study smarter an
 - **Materials Library** - Share and download community study resources
 - **Progress Dashboard** - Track your learning activity and performance over time
 
+## Who Built Lamla
+Keywords: developers, team, founders, who made lamla, creators, KNUST, Ghana, computer science, information technology, student team, mission
+Lamla AI is being built by a team of Computer Science and Information Technology students from KNUST (Kwame Nkrumah University of Science and Technology), Ghana.
+
+The team's goal is to make learning more intentional, engaging, and effective by giving students practical AI tools that support better study habits, clearer understanding, and more active revision.
+
 ## Main Navigation
 Keywords: navigation, menu, navbar, where to find, how to access, main menu
 The main navigation menu is at the top of every page:

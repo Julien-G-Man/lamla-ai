@@ -9,6 +9,7 @@ These views implement the Asynchronous Proxy Pattern for chatbot endpoints:
 import json
 import logging
 import httpx
+from django.conf import settings
 from django.http import JsonResponse, StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -60,6 +61,7 @@ async def chatbot_api_async(request):
         
         # 4. Build full prompt
         full_prompt = await _build_chatbot_prompt(user_message, conversation_history, user=user)
+        max_tokens = getattr(settings, "CHATBOT_MAX_TOKENS", 1200)
         
         # 5. Forward to FastAPI using async client
         try:
@@ -67,7 +69,7 @@ async def chatbot_api_async(request):
             fastapi_resp = await call_fastapi(
                 "POST",
                 "/chatbot/",
-                json={"prompt": full_prompt, "max_tokens": 400},
+                json={"prompt": full_prompt, "max_tokens": max_tokens},
                 headers=headers,
                 timeout=60.0,
             )
@@ -282,6 +284,7 @@ async def chatbot_stream_async(request):
         
         # 4. Build full prompt
         full_prompt = await _build_chatbot_prompt(user_message, conversation_history, user=user)
+        max_tokens = getattr(settings, "CHATBOT_MAX_TOKENS", 1200)
         
         # 5. Forward to FastAPI (Note: FastAPI doesn't stream yet, so we get full response and stream it)
         try:
@@ -289,7 +292,7 @@ async def chatbot_stream_async(request):
             fastapi_resp = await call_fastapi(
                 "POST",
                 "/chatbot/",
-                json={"prompt": full_prompt, "max_tokens": 400},
+                json={"prompt": full_prompt, "max_tokens": max_tokens},
                 headers=headers,
                 timeout=60.0,
             )

@@ -9,6 +9,7 @@ These views implement the Asynchronous Proxy Pattern:
 import json
 import logging
 from typing import Optional
+from django.conf import settings
 from django.http import (
     HttpResponse, 
     StreamingHttpResponse, 
@@ -101,7 +102,10 @@ async def llm_proxy_view(request: HttpRequest):
         fastapi_resp = await _forward_to_fastapi(
             request=request,
             fastapi_path="/chatbot/",
-            json_data={"prompt": data.get("prompt", ""), "max_tokens": data.get("max_tokens", 400)},
+            json_data={
+                "prompt": data.get("prompt", ""),
+                "max_tokens": data.get("max_tokens", getattr(settings, "CHATBOT_MAX_TOKENS", 1200)),
+            },
             stream=True  # Enable streaming for LLM responses
         )
         

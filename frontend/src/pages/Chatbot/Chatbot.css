@@ -161,18 +161,29 @@
 
 .message-content ul,
 .message-content ol {
-    margin: 0.5em 0;
+    margin: 0.4em 0;
     padding-left: 1.5em;
 }
 
 .message-content li {
-    margin: 0.3em 0;
+    margin: 0;
+}
+
+.message-content li + li {
+    margin-top: 0.65em;
 }
 
 /* Prevent loose-list <p> wrappers inside list items from adding extra vertical space */
 .message-content li > p {
     margin: 0 !important;
     white-space: pre-wrap;
+}
+
+/* Nested lists should sit close to their parent item, with space reserved before the next sibling item */
+.message-content li > ul,
+.message-content li > ol {
+    margin-top: 0.2em;
+    margin-bottom: 0;
 }
 
 .message-content code {

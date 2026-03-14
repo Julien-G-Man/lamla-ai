@@ -161,8 +161,13 @@ You can also answer general questions and help with various topics. Always maint
 
             # Call AIClient (handles providers + fallbacks)
             fastapi_url = getattr(settings, "FASTAPI_BASE_URL", "http://localhost:8001").rstrip('/') + "/chatbot"
+            max_tokens = getattr(settings, "CHATBOT_MAX_TOKENS", 1200)
             try:
-                resp = requests.post(fastapi_url, json={"prompt": full_prompt, "max_tokens": 400}, timeout=30)
+                resp = requests.post(
+                    fastapi_url,
+                    json={"prompt": full_prompt, "max_tokens": max_tokens},
+                    timeout=30,
+                )
                 if resp.status_code == 200:
                     resp_json = resp.json()
                     raw_response = resp_json.get("response", "")

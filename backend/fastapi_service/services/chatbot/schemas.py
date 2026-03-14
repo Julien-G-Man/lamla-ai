@@ -3,4 +3,4 @@ from typing import Optional
 
 class PromptIn(BaseModel):
 	prompt: str
-	max_tokens: Optional[int] = 400
+	max_tokens: Optional[int] = 1200
