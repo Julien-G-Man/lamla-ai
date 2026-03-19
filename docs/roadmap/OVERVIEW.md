@@ -70,6 +70,19 @@
 
 ---
 
+### Tier 5 — Real-Time Multiplayer
+*Build after Tier 4 ships and concurrent usage is established.*
+
+- **Quiz Battle** — live competitive quiz between friends; same questions, shared timer, winner ranked in real-time
+
+The infrastructure (Django Channels + Redis channel layer) is already installed.
+This tier unlocks when friends can reliably find each other online at the same time.
+Requires 200+ MAU and an active social graph from Tier 4.
+
+→ See `TIER5_REALTIME_MULTIPLAYER.md`
+
+---
+
 ## Voluntary Support Model
 
 Before any of the above — ship a "Support Our Work" page:
@@ -112,4 +125,5 @@ Week 8      Smart material summarizer (LLM, one-time per upload)
 Week 9      Celery queue + per-user daily LLM budget
 Week 10     Socratic tutor mode toggle
 Ongoing     Concept tagging, peer challenges, study groups
+After 200 MAU  Quiz Battle (Tier 5)
 ```
