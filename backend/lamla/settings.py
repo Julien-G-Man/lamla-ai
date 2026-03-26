@@ -242,17 +242,10 @@ SERPAPI_API_KEY = os.getenv("SERPAPI_API_KEY")
 
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
 
-# Auth emails (confirmations, password resets)
-EMAIL_BACKEND_TYPE = os.getenv("EMAIL_BACKEND_TYPE")   # "smtp" or "mailjet"
-EMAIL_BACKEND_PRIORITY = os.getenv("EMAIL_BACKEND_PRIORITY")
+# Dashboard emails (contact form, newsletter) — auth emails use EmailJS on the frontend
+EMAIL_BACKEND_PRIORITY = os.getenv("EMAIL_BACKEND_PRIORITY")  # brevo, resend, smtp, console
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 BREVO_API_KEY = os.getenv("BREVO_API_KEY")
-
-# Google Apps Script email backend (gas/auth_emails.gs)
-# Set GAS_AUTH_EMAIL_URL to the deployed Web App URL
-# Set GAS_AUTH_EMAIL_SECRET to match GAS_SECRET in GAS Script Properties
-GAS_AUTH_EMAIL_URL    = os.getenv("GAS_AUTH_EMAIL_URL")
-GAS_AUTH_EMAIL_SECRET = os.getenv("GAS_AUTH_EMAIL_SECRET")
 
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
 

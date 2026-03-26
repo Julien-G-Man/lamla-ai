@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import authService from "../services/auth";
+import { sendVerificationEmail, sendPasswordResetEmail } from "../services/emailService";
 
 const AuthContext = createContext();
 
@@ -50,9 +51,18 @@ export const AuthProvider = ({ children }) => {
   const signup = async (email, password, username) => {
     setIsLoading(true);
     try {
-      const { user } = await authService.signup(email, password, username);
+      const { user, verification } = await authService.signup(email, password, username);
       setUser(user);
       setIsAuthenticated(true);
+
+      // Send verification email via EmailJS (non-fatal if it fails)
+      if (verification?.uid && verification?.token) {
+        const verifyLink = `${window.location.origin}/auth/verify-email?uid=${verification.uid}&token=${verification.token}`;
+        sendVerificationEmail({ toEmail: email, userName: username, verifyLink }).catch((err) =>
+          console.warn("[emailService] Verification email failed:", err)
+        );
+      }
+
       return { user };
     } catch (err) {
       setIsAuthenticated(false);
@@ -94,7 +104,31 @@ export const AuthProvider = ({ children }) => {
   };
 
   const resendVerificationEmail = async () => {
-    return authService.resendVerificationEmail();
+    const data = await authService.resendVerificationEmail();
+    // data = { detail, uid, token }
+    if (data?.uid && data?.token && user?.email) {
+      const verifyLink = `${window.location.origin}/auth/verify-email?uid=${data.uid}&token=${data.token}`;
+      sendVerificationEmail({
+        toEmail: user.email,
+        userName: user.username || user.email,
+        verifyLink,
+      }).catch((err) => console.warn("[emailService] Resend verification failed:", err));
+    }
+    return data;
+  };
+
+  const requestPasswordReset = async (email) => {
+    const data = await authService.requestPasswordReset(email);
+    // data = { detail, uid?, token? } — uid+token only when account exists
+    if (data?.uid && data?.token) {
+      const resetLink = `${window.location.origin}/auth/reset-password?uid=${data.uid}&token=${data.token}`;
+      sendPasswordResetEmail({
+        toEmail: email,
+        userName: email.split("@")[0],
+        resetLink,
+      }).catch((err) => console.warn("[emailService] Password reset email failed:", err));
+    }
+    return data;
   };
 
   const updateProfile = async (username, email) => {
@@ -130,6 +164,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     markEmailVerified,
     resendVerificationEmail,
+    requestPasswordReset,
     updateProfile,
     uploadProfileImage,
     changePassword,

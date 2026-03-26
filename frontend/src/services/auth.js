@@ -43,10 +43,10 @@ export const authService = {
         password,
         username: username.trim(),
       });
-      const { token, user } = response.data;
+      const { token, user, verification } = response.data;
       if (token) localStorage.setItem("auth_token", token);
       if (user) localStorage.setItem("user", JSON.stringify(user));
-      return { token, user };
+      return { token, user, verification };
     } catch (err) {
       throw parseError(err);
     }
@@ -110,7 +110,18 @@ export const authService = {
   resendVerificationEmail: async () => {
     try {
       const response = await authApi.post("/auth/resend-verification/");
-      return response.data;
+      return response.data; // { detail, uid, token }
+    } catch (err) {
+      throw parseError(err);
+    }
+  },
+
+  requestPasswordReset: async (email) => {
+    try {
+      const response = await authApi.post("/auth/request-password-reset/", {
+        email: email.trim().toLowerCase(),
+      });
+      return response.data; // { detail, uid?, token? } — uid+token only when account exists
     } catch (err) {
       throw parseError(err);
     }

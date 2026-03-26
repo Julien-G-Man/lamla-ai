@@ -12,6 +12,10 @@ Use this before every production deploy.
   - Django `GOOGLE_OAUTH_CLIENT_ID` matches frontend `REACT_APP_GOOGLE_CLIENT_ID`
   - Production domain added to Google Cloud Console authorized origins
   - Different OAuth credentials used for production vs development
+- **EmailJS (auth emails):**
+  - `REACT_APP_EMAILJS_PUBLIC_KEY`, `REACT_APP_EMAILJS_SERVICE_ID` set in frontend env
+  - `REACT_APP_EMAILJS_TEMPLATE_VERIFY` and `REACT_APP_EMAILJS_TEMPLATE_RESET` point to live templates
+  - Templates have `{{to_email}}` set as the "To Email" field in EmailJS dashboard
 
 ## Allowed Origins
 

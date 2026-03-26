@@ -1,4 +1,4 @@
-﻿# Authentication Setup
+# Authentication Setup
 
 ## Model
 
@@ -48,8 +48,10 @@ Custom Google Sign-In integration (no django-allauth dependency).
 
 ### Password & Verification
 - `POST /api/auth/change-password/` - Change password (requires old password)
-- `POST /api/auth/verify-email/` - Verify email with token
-- `POST /api/auth/resend-verification/` - Resend verification email
+- `POST /api/auth/verify-email/` - Verify email with uid + token
+- `POST /api/auth/resend-verification/` - Get fresh uid + token to resend via EmailJS
+- `POST /api/auth/request-password-reset/` - Get uid + token for password reset email
+- `POST /api/auth/confirm-password-reset/` - Set new password using uid + token
 
 ### Profile Management
 - `POST /api/profile/update-profile/` - Update username/email
@@ -57,9 +59,24 @@ Custom Google Sign-In integration (no django-allauth dependency).
 
 ## Email Verification
 
-- Users created via signup are initialized with `is_email_verified=False`
-- Verification endpoint marks user verified
-- Resend endpoint sends new verification email
+Auth emails (verification, password reset) are sent by **EmailJS on the frontend** — no backend email infrastructure required for auth.
+
+- The backend generates the token and returns `uid` + `token` in the API response.
+- The frontend constructs the link and calls `emailjs.send()`.
+- The backend validates the token when the user clicks the link — this part is unchanged.
+
+**Required frontend env vars:**
+```
+REACT_APP_EMAILJS_PUBLIC_KEY=
+REACT_APP_EMAILJS_SERVICE_ID=
+REACT_APP_EMAILJS_TEMPLATE_VERIFY=
+REACT_APP_EMAILJS_TEMPLATE_RESET=
+```
+
+See [EmailJS dashboard](https://dashboard.emailjs.com/) to set up templates.
+
+- **Signup:** `is_email_verified=False` on creation; EmailJS sends verification link immediately after signup
+- **Resend:** `POST /api/auth/resend-verification/` returns a fresh uid+token; frontend calls EmailJS
 - **Google OAuth users bypass email verification** (auto-verified)
 
 ## Admin Assignment

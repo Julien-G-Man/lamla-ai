@@ -21,7 +21,7 @@ from .serializers import (
     ConfirmPasswordResetSerializer,
     user_to_dict,
 )
-from .services import send_verification_email, send_password_reset_email
+from .services import get_uid, get_token
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class AuthThrottle(SimpleRateThrottle):
 
 
 class SignupView(APIView):
-    """POST /api/auth/signup/ - public, creates user, sends verification email, returns token + user."""
+    """POST /api/auth/signup/ - public, creates user, returns token + user + verification uid/token for EmailJS."""
     permission_classes = [AllowAny]
     throttle_classes = [AuthThrottle]
 
@@ -52,13 +52,17 @@ class SignupView(APIView):
             user = serializer.save()
             token, _ = Token.objects.get_or_create(user=user)
 
-            # Fire verification email (non-blocking - failure is logged, not raised)
-            send_verification_email(user)
-
             logger.info("New user registered: %s (admin=%s)", user.email, user.is_admin)
             print("New user registered: %s (admin=%s)", user.email, user.is_admin)
             return Response(
-                {"token": token.key, "user": user_to_dict(user)},
+                {
+                    "token": token.key,
+                    "user": user_to_dict(user),
+                    "verification": {
+                        "uid": get_uid(user),
+                        "token": get_token(user),
+                    },
+                },
                 status=status.HTTP_201_CREATED,
             )
         except Exception:
@@ -157,17 +161,13 @@ class ResendVerificationEmailView(APIView):
             return Response({"detail": detail}, status=status.HTTP_400_BAD_REQUEST)
 
         user = serializer.validated_data["user"]
-        sent = send_verification_email(user)
-        if not sent:
-            logger.error("Verification email resend failed for: %s", user.email)
-            return Response(
-                {"detail": "Verification email could not be sent right now. Please try again later."},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE,
-            )
-
-        logger.info("Verification email resent to: %s", user.email)
+        logger.info("Verification token regenerated for: %s", user.email)
         return Response(
-            {"detail": "Verification email sent. Please check your inbox."},
+            {
+                "detail": "Verification data ready.",
+                "uid": get_uid(user),
+                "token": get_token(user),
+            },
             status=status.HTTP_200_OK,
         )
 
@@ -321,7 +321,6 @@ class RequestPasswordResetView(APIView):
 
     def post(self, request):
         serializer = RequestPasswordResetSerializer(data=request.data)
-        # Validate email format but don't reveal anything on failure either
         if serializer.is_valid():
             email = serializer.validated_data["email"]
             try:
@@ -329,11 +328,15 @@ class RequestPasswordResetView(APIView):
             except User.DoesNotExist:
                 logger.info("Password reset requested for unknown email: %s", email)
             else:
-                sent = send_password_reset_email(user)
-                if sent:
-                    logger.info("Password reset email sent to: %s", user.email)
-                else:
-                    logger.error("Password reset email failed for: %s", user.email)
+                logger.info("Password reset token generated for: %s", user.email)
+                return Response(
+                    {
+                        "detail": "If an account with that email exists, a reset link has been sent.",
+                        "uid": get_uid(user),
+                        "token": get_token(user),
+                    },
+                    status=status.HTTP_200_OK,
+                )
 
         return Response(
             {"detail": "If an account with that email exists, a reset link has been sent."},
