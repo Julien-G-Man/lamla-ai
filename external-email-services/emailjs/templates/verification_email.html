@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verify your Lamla AI email</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+    background: #f4f4f4;
+    font-family: 'Roboto', Arial, Helvetica, sans-serif;
+    color: #000;
+  }
+  .container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+  .header {
+    text-align: center;
+    padding-bottom: 20px;
+  }
+  .header img {
+    max-width: 80px;
+  }
+  .divider {
+    height: 4px;
+    background: #FFD600;
+    margin: 24px 0;
+  }
+  .content h1 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+  .content p {
+    font-size: 15px;
+    line-height: 1.6;
+    margin-bottom: 16px;
+    color: #222;
+  }
+  .cta {
+    text-align: center;
+    margin: 32px 0;
+  }
+  .cta a {
+    background-color: #FFD600;
+    color: #000;
+    text-decoration: none;
+    padding: 14px 28px;
+    font-size: 15px;
+    font-weight: 700;
+    border-radius: 4px;
+    display: inline-block;
+  }
+  .fallback-box {
+    background: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 16px;
+    margin: 24px 0;
+  }
+  .fallback-box p {
+    font-size: 13px;
+    color: #555;
+    margin: 0 0 8px;
+  }
+  .fallback-box a {
+    font-size: 13px;
+    color: #444;
+    word-break: break-all;
+  }
+  .footer {
+    font-size: 12px;
+    color: #555;
+    text-align: center;
+    margin-top: 24px;
+  }
+  .socials {
+    margin: 16px 0;
+  }
+  .socials a {
+    margin: 0 6px;
+    display: inline-block;
+  }
+  .socials img {
+    width: 20px;
+    height: 20px;
+    border: 0;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Logo -->
+  <div class="header">
+    <img src="https://staticassets.netlify.app/public/logos/lamla_logo.png" alt="Lamla AI">
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Body -->
+  <div class="content">
+    <h1>Hello {{user_name}},</h1>
+    <p>Welcome to <strong>Lamla AI</strong>! We're excited to have you on board.</p>
+    <p>
+      To activate your account and start generating quizzes, building flashcard decks,
+      and chatting with your personal AI tutor, please verify your email address by
+      clicking the button below.
+    </p>
+
+    <div class="cta">
+      <a href="{{verify_link}}">Verify My Email</a>
+    </div>
+
+    <p>This link expires in <strong>24 hours</strong>. If you didn't create a Lamla AI account, you can safely ignore this email.</p>
+
+    <!-- Fallback -->
+    <div class="fallback-box">
+      <p>Button not working? Copy and paste this link into your browser:</p>
+      <a href="{{verify_link}}">{{verify_link}}</a>
+    </div>
+
+    <p>
+      Best regards,<br><br>
+      <strong>The Lamla AI Team</strong>
+    </p>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="socials">
+      <a href="https://x.com/lamla_io" target="_blank">
+        <img src="https://staticassets.netlify.app/public/icons/social/twitter.png" alt="X">
+      </a>
+      <a href="https://www.facebook.com/share/16pmyhCiUM/" target="_blank">
+        <img src="https://staticassets.netlify.app/public/icons/social/facebook.png" alt="Facebook">
+      </a>
+      <a href="https://linkedin.com/company/lamla-ai" target="_blank">
+        <img src="https://staticassets.netlify.app/public/icons/social/linkedin.png" alt="LinkedIn">
+      </a>
+      <a href="https://instagram.com/lamla.io" target="_blank">
+        <img src="https://staticassets.netlify.app/public/icons/social/instagram.png" alt="Instagram">
+      </a>
+      <a href="mailto:lamlaaiteam@gmail.com">
+        <img src="https://staticassets.netlify.app/public/icons/social/gmail.png" alt="Email">
+      </a>
+    </div>
+    <div>
+      Study smarter, Perform better..<br><br>
+      © 2025 Lamla AI. All Rights Reserved.
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

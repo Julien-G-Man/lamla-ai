@@ -141,18 +141,6 @@ if DEBUG:
         }
     }
     
-# DB_SSL_REQUIRE = os.getenv("DB_SSL_REQUIRE", "false").lower() == "true"
-
-# # Force SSL in production
-# if not DEBUG:
-#     DB_SSL_REQUIRE = True
-
-# # Inject the SSL setting into the OPTIONS dictionary where Django expects it
-# if DB_SSL_REQUIRE and not DEBUG:
-#     DATABASES['default'].setdefault('OPTIONS', {})
-#     DATABASES['default']['OPTIONS']['sslmode'] = 'require'
-
-
 # Add Token authentication to REST framework
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
