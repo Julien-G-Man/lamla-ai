@@ -36,6 +36,10 @@ Frontend (`frontend/.env`):
 - `REACT_APP_DJANGO_API_URL`
 - `REACT_APP_FASTAPI_URL`
 - `REACT_APP_GOOGLE_CLIENT_ID` - **Google OAuth client ID (must match backend)**
+- `REACT_APP_EMAILJS_PUBLIC_KEY` - EmailJS account public key
+- `REACT_APP_EMAILJS_SERVICE_ID` - EmailJS email service ID
+- `REACT_APP_EMAILJS_TEMPLATE_VERIFY` - EmailJS template ID for verification emails
+- `REACT_APP_EMAILJS_TEMPLATE_RESET` - EmailJS template ID for password reset emails
 
 ## High-Use APIs
 

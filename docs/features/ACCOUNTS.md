@@ -62,20 +62,26 @@ Create a new user account.
 **Response (201 Created):**
 ```json
 {
-  "message": "Signup successful. Please check your email to verify your account.",
+  "token": "abc123defg456...",
   "user": {
     "id": 1,
     "email": "user@example.com",
     "username": "john_doe",
     "is_email_verified": false
+  },
+  "verification": {
+    "uid": "MQ",
+    "token": "abc123-xyz"
   }
 }
 ```
 
+The frontend uses `verification.uid` and `verification.token` to send the verification email via EmailJS.
+
 **Security:**
 - Rate-limited to 5 requests per hour per IP address.
 - Password complexity is enforced.
-- Verification email is sent asynchronously.
+- Verification email is sent by EmailJS on the frontend (non-fatal if delivery fails).
 
 ---
 
@@ -369,46 +375,44 @@ REST_FRAMEWORK = {
 
 ## Email Delivery
 
-### Email Providers
+### Auth Emails (Verification & Password Reset)
 
-The system attempts email delivery via multiple providers in order:
+Auth emails are sent by **EmailJS on the frontend** — the backend generates the token and returns it in the API response; the browser calls EmailJS directly.
 
-1. **Brevo** (Sendinblue)
-2. **Resend**
-3. **Django SMTP** (`EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend`)
-4. **Console** (development only; logs to console instead of sending)
+**Required frontend env vars:**
+```bash
+REACT_APP_EMAILJS_PUBLIC_KEY=
+REACT_APP_EMAILJS_SERVICE_ID=
+REACT_APP_EMAILJS_TEMPLATE_VERIFY=
+REACT_APP_EMAILJS_TEMPLATE_RESET=
+```
 
-The first successful provider is used. Configuration is environment-based.
+Templates are managed in the [EmailJS dashboard](https://dashboard.emailjs.com/).
 
-### Environment Variables
+### Dashboard Emails (Contact Form, Newsletter)
+
+Dashboard emails (contact form, newsletter) use a backend delivery chain via Brevo → Resend → SMTP. Configuration is environment-based.
 
 ```bash
-# Brevo
+EMAIL_BACKEND_PRIORITY=brevo,resend,smtp   # order of preference
+
+# Brevo (300 emails/day free, no custom domain required)
 BREVO_API_KEY=...
 
-# Resend
+# Resend (requires verified custom domain)
 RESEND_API_KEY=...
 
-# SMTP
-EMAIL_HOST=smtp.example.com
-EMAIL_PORT=587
-EMAIL_HOST_USER=...
-EMAIL_HOST_PASSWORD=...
-EMAIL_FROM_ADDRESS=noreply@example.com
-
-# Console (development)
-EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+# SMTP (blocked on Render free tier — use for local dev or paid hosting)
+AUTH_EMAIL_HOST_USER=...
+AUTH_EMAIL_HOST_PASSWORD=...
 ```
 
-### Verification Email
+### Verification Email Flow
 
-Sent immediately after signup. Contains a link with a time-limited token:
-
-```
-https://your-frontend.com/auth/verify-email?token=<verification_token>
-```
-
-Users click the link; frontend POSTs the token to `/api/auth/verify-email/`.
+1. User signs up → backend returns `{ verification: { uid, token } }`
+2. Frontend constructs: `{origin}/auth/verify-email?uid={uid}&token={token}`
+3. Frontend calls EmailJS → user receives email
+4. User clicks link → frontend POSTs `{ uid, token }` to `/api/auth/verify-email/`
 
 ---
 
