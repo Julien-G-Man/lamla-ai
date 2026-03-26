@@ -127,6 +127,19 @@ export const authService = {
     }
   },
 
+  confirmPasswordReset: async (uid, token, newPassword) => {
+    try {
+      const response = await authApi.post("/auth/confirm-password-reset/", {
+        uid,
+        token,
+        new_password: newPassword,
+      });
+      return response.data;
+    } catch (err) {
+      throw parseError(err);
+    }
+  },
+
   // ── Profile / Password ───────────────────────────────────────────────────
   updateProfile: async (username, email) => {
     try {

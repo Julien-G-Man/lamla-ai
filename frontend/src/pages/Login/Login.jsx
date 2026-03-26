@@ -147,7 +147,17 @@ const Login = () => {
 
             {/* Password */}
             <div className="auth-field">
-              <label htmlFor="login-password">Password</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <label htmlFor="login-password">Password</label>
+                <Link
+                  to="/auth/forgot-password"
+                  className="auth-link-muted"
+                  style={{ fontSize: '0.8rem', textTransform: 'none', letterSpacing: 0 }}
+                  tabIndex={-1}
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <div className="auth-input-wrap">
                 <FontAwesomeIcon icon={faLock} className="auth-input-icon" />
                 <input
