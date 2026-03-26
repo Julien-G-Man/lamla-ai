@@ -9,6 +9,8 @@ import Home from "./pages/Home/Home";
 import Login from "./pages/Login/Login";
 import Signup from "./pages/Signup/Signup";
 import VerifyEmail from "./pages/Auth/VerifyEmail";
+import ForgotPassword from "./pages/Auth/ForgotPassword";
+import ResetPassword from "./pages/Auth/ResetPassword";
 import Dashboard from "./pages/Dashboards/Dashboard";
 import AdminDashboard from "./pages/Dashboards/AdminDashboard";
 import AdminUserDetails from "./pages/Dashboards/AdminUserDetails";
@@ -56,6 +58,8 @@ function App() {
             <Route path="/auth/login" element={<Login />} />
             <Route path="/auth/signup" element={<Signup />} />
             <Route path="/auth/verify-email" element={<VerifyEmail />} />
+            <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+            <Route path="/auth/reset-password" element={<ResetPassword />} />
 
             <Route path="/auth" element={<Navigate to="/auth/login" replace />} />
             <Route path="/login" element={<Navigate to="/auth/login" replace />} />
