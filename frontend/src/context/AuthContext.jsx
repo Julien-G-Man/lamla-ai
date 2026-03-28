@@ -75,12 +75,12 @@ export const AuthProvider = ({ children }) => {
   const googleAuth = async (googleToken) => {
     setIsLoading(true);
     try {
-      const { user } = await authService.googleAuth(googleToken);
+      const { user, created } = await authService.googleAuth(googleToken);
       setUser(user);
       setIsAuthenticated(true);
 
-      // Send a welcome email — Google users skip email verification so this is their first email
-      if (user?.email) {
+      // Send a welcome email only on first signup — returning users don't need it
+      if (created && user?.email) {
         sendWelcomeEmail({ toEmail: user.email, userName: user.username || user.email }).catch((err) =>
           console.warn("[emailService] Welcome email failed:", err)
         );
