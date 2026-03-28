@@ -43,7 +43,7 @@ const VerifyEmail = () => {
         setStatus('success');
       })
       .catch((err) => {
-        const detail = err.detail || 'Verification failed. The link may have expired.';
+        const detail = typeof err === 'string' ? err : (err?.detail || 'Verification failed. The link may have expired.');
         if (detail.toLowerCase().includes('already')) {
           setStatus('already_verified');
         } else {
