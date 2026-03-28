@@ -87,11 +87,16 @@ Templates live in the [EmailJS dashboard](https://dashboard.emailjs.com/).
 - To Email: `{{to_email}}`
 - Variables used in body: `{{user_name}}`, `{{verify_link}}`
 
+**Template: `welcome_email`** (Google OAuth new users only)
+- To Email: `{{to_email}}`
+- Variables used in body: `{{user_name}}`
+
 **Required frontend env vars:**
 ```
 REACT_APP_EMAILJS_PUBLIC_KEY=
 REACT_APP_EMAILJS_SERVICE_ID=
 REACT_APP_EMAILJS_TEMPLATE_VERIFY=
+REACT_APP_EMAILJS_TEMPLATE_WELCOME=
 ```
 
 ---
@@ -107,5 +112,5 @@ REACT_APP_EMAILJS_TEMPLATE_VERIFY=
 
 - Token generation uses Django's `default_token_generator` — tied to password hash + last login, auto-invalidates on password change.
 - EmailJS failures are **non-fatal**: signup still succeeds; user can hit "Resend" to get a fresh link.
-- Google OAuth users bypass email verification entirely (`is_email_verified=True` is set automatically).
+- Google OAuth users bypass email verification entirely (`is_email_verified=True` is set automatically). A welcome email is sent instead on first signup (uses `REACT_APP_EMAILJS_TEMPLATE_WELCOME`). Returning Google logins do not trigger any email.
 - Rate limiting: 5 requests/hour per IP on `/api/auth/resend-verification/`.

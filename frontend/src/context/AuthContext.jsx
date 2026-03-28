@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import authService from "../services/auth";
-import { sendVerificationEmail, sendPasswordResetEmail } from "../services/emailService";
+import { sendVerificationEmail, sendPasswordResetEmail, sendWelcomeEmail } from "../services/emailService";
 
 const AuthContext = createContext();
 
@@ -75,9 +75,17 @@ export const AuthProvider = ({ children }) => {
   const googleAuth = async (googleToken) => {
     setIsLoading(true);
     try {
-      const { user } = await authService.googleAuth(googleToken);
+      const { user, created } = await authService.googleAuth(googleToken);
       setUser(user);
       setIsAuthenticated(true);
+
+      // Send a welcome email only on first signup — returning users don't need it
+      if (created && user?.email) {
+        sendWelcomeEmail({ toEmail: user.email, userName: user.username || user.email }).catch((err) =>
+          console.warn("[emailService] Welcome email failed:", err)
+        );
+      }
+
       return { user };
     } catch (err) {
       setIsAuthenticated(false);

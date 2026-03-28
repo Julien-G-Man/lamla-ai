@@ -7,7 +7,7 @@ Lamla AI is a modular learning platform with Django + FastAPI backend services a
 - Django (API gateway + persistence)
 - FastAPI (LLM worker)
 - React (web app)
-- PostgreSQL (recommended for local/prod)
+- PostgreSQL (local) / Neon PostgreSQL (production)
 
 ## Start Here
 
@@ -25,7 +25,7 @@ Lamla AI is a modular learning platform with Django + FastAPI backend services a
 cd backend
 pip install -r requirements.txt
 python manage.py migrate
-python run_django.py --port 8000 --reload
+python run.py --port 8000 --reload
 ```
 
 2. FastAPI worker

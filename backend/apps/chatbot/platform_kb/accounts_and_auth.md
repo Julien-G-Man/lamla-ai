@@ -13,6 +13,13 @@ Keywords: signup, sign up, login, account, username, email, password, register, 
 4. Click the **Sign Up** button
 5. You'll be redirected to verify your email
 
+**Alternatively, sign up with Google:**
+1. Click **Continue with Google** on the signup page
+2. Select your Google account
+3. Your account is created instantly — no email verification needed
+4. Check your inbox for a welcome email from Lamla AI
+5. You'll be redirected to your dashboard immediately
+
 **To log in:**
 1. Click **Login** in the top navigation menu
 2. You'll go to the login page at `/auth/login`

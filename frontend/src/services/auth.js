@@ -79,10 +79,10 @@ export const authService = {
       const response = await authApi.post("/auth/google/", {
         token: googleToken,
       });
-      const { token, user } = response.data;
+      const { token, user, created } = response.data;
       if (token) localStorage.setItem("auth_token", token);
       if (user) localStorage.setItem("user", JSON.stringify(user));
-      return { token, user };
+      return { token, user, created };
     } catch (err) {
       throw parseError(err);
     }

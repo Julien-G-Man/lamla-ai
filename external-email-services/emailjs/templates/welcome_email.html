@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Welcome to Lamla AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+    background: #f4f4f4;
+    font-family: 'Roboto', Arial, Helvetica, sans-serif;
+    color: #000;
+  }
+  .container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+  .header {
+    text-align: center;
+    padding-bottom: 20px;
+  }
+  .header img {
+    max-width: 80px;
+  }
+  .divider {
+    height: 4px;
+    background: #FFD600;
+    margin: 24px 0;
+  }
+  .content h1 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+  .content p {
+    font-size: 15px;
+    line-height: 1.6;
+    margin-bottom: 16px;
+    color: #222;
+  }
+  /* ── Dual CTA ── */
+  .cta-row {
+    text-align: center;
+    margin: 32px 0;
+  }
+  .cta-row a.btn-primary {
+    background-color: #FFD600;
+    color: #000;
+    text-decoration: none;
+    padding: 13px 26px;
+    font-size: 15px;
+    font-weight: 700;
+    border-radius: 4px;
+    display: inline-block;
+    margin: 6px 8px;
+  }
+  .cta-row a.btn-secondary {
+    background-color: #fff;
+    color: #000;
+    text-decoration: none;
+    padding: 12px 26px;
+    font-size: 15px;
+    font-weight: 700;
+    border-radius: 4px;
+    border: 2px solid #000;
+    display: inline-block;
+    margin: 6px 8px;
+  }
+  /* ── Features section ── */
+  .features {
+    margin: 28px 0 8px;
+    border-top: 1px solid #e0e0e0;
+    padding-top: 24px;
+  }
+  .features p.label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #888;
+    margin: 0 0 20px;
+  }
+  .feature-card {
+    background: #fff;
+    border-left: 4px solid #FFD600;
+    border-radius: 0 6px 6px 0;
+    padding: 16px 18px;
+    margin-bottom: 14px;
+  }
+  .feature-card p.feature-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin: 0 0 6px;
+    color: #000;
+  }
+  .feature-card p.feature-desc {
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 0 0 10px;
+    color: #444;
+  }
+  .feature-card a.try-link {
+    font-size: 13px;
+    font-weight: 700;
+    color: #000;
+    text-decoration: none;
+    border-bottom: 2px solid #FFD600;
+    padding-bottom: 1px;
+  }
+  /* ── Footer ── */
+  .footer {
+    font-size: 12px;
+    color: #555;
+    text-align: center;
+    margin-top: 24px;
+  }
+  .socials {
+    margin: 16px 0;
+  }
+  .socials a {
+    margin: 0 6px;
+    display: inline-block;
+  }
+  .socials img {
+    width: 20px;
+    height: 20px;
+    border: 0;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Logo -->
+  <div class="header">
+    <img src="https://staticassets.netlify.app/public/logos/lamla_logo.png" alt="Lamla AI">
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Body -->
+  <div class="content">
+    <h1>You're in, {{user_name}} 🎉</h1>
+    <p>
+      Welcome to <strong>Lamla AI</strong> — your personal study powerhouse. You signed in with
+      Google, so your account is fully activated and ready to go. No extra steps needed.
+    </p>
+    <p>
+      Here's a quick look at what you can do. Dive straight into your dashboard or
+      explore a feature that catches your eye.
+    </p>
+
+    <!-- Dual CTA -->
+    <div class="cta-row">
+      <a href="https://lamla-ai.vercel.app/dashboard" class="btn-primary">Go to Dashboard</a>
+      <a href="https://lamla-ai.vercel.app/quiz/create" class="btn-secondary">Explore Features</a>
+    </div>
+
+    <!-- Feature cards -->
+    <div class="features">
+      <p class="label">What you can do on Lamla AI</p>
+
+      <div class="feature-card">
+        <p class="feature-title">⚡ AI Quiz Generator</p>
+        <p class="feature-desc">
+          Upload a PDF, paste your notes, or drop in a topic — Lamla AI generates a full
+          multiple-choice quiz in seconds. Customise the number of questions, difficulty,
+          and focus area, then play it directly in your browser or share it with classmates.
+        </p>
+        <a href="https://lamla-ai.vercel.app/quiz/create" class="try-link">Try the Quiz Generator →</a>
+      </div>
+
+      <div class="feature-card">
+        <p class="feature-title">🃏 Smart Flashcards</p>
+        <p class="feature-desc">
+          Turn any material into a flashcard deck automatically. Study with a spaced-repetition
+          review mode that surfaces the cards you struggle with most, so every session is
+          time well spent. Your decks are saved and accessible anytime.
+        </p>
+        <a href="https://lamla-ai.vercel.app/flashcards" class="try-link">Create a Flashcard Deck →</a>
+      </div>
+
+      <div class="feature-card">
+        <p class="feature-title">🤖 AI Tutor</p>
+        <p class="feature-desc">
+          Have a concept you can't crack? Upload your file or paste text, then ask the AI
+          tutor anything about it. It reads your material and gives focused, contextual
+          explanations — like having a study partner available 24/7.
+        </p>
+        <a href="https://lamla-ai.vercel.app/ai-tutor" class="try-link">Chat with the AI Tutor →</a>
+      </div>
+
+      <div class="feature-card">
+        <p class="feature-title">📊 Progress Analytics</p>
+        <p class="feature-desc">
+          Your dashboard tracks every quiz you take — scores, trends, and which subjects
+          need more attention. Use the history tab to review past attempts and measure
+          how much you've improved over time.
+        </p>
+        <a href="https://lamla-ai.vercel.app/dashboard" class="try-link">View Your Dashboard →</a>
+      </div>
+
+    </div>
+
+    <p>
+      If you ever have questions or feedback, just reply to this email — we read every one.<br><br>
+      Happy studying,<br><br>
+      <strong>The Lamla AI Team</strong>
+    </p>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="socials">
+      <a href="https://x.com/lamla_io" target="_blank">
+        <img src="https://staticassets.netlify.app/public/icons/social/twitter.png" alt="X">
+      </a>
+      <a href="https://www.facebook.com/share/16pmyhCiUM/" target="_blank">
+        <img src="https://staticassets.netlify.app/public/icons/social/facebook.png" alt="Facebook">
+      </a>
+      <a href="https://linkedin.com/company/lamla-ai" target="_blank">
+        <img src="https://staticassets.netlify.app/public/icons/social/linkedin.png" alt="LinkedIn">
+      </a>
+      <a href="https://instagram.com/lamla.io" target="_blank">
+        <img src="https://staticassets.netlify.app/public/icons/social/instagram.png" alt="Instagram">
+      </a>
+      <a href="mailto:lamlaaiteam@gmail.com">
+        <img src="https://staticassets.netlify.app/public/icons/social/gmail.png" alt="Email">
+      </a>
+    </div>
+    <div>
+      Study smarter, Perform better.<br><br>
+      © 2025 Lamla AI. All Rights Reserved.
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
