@@ -163,7 +163,14 @@ Add to `frontend/.env`:
 ```bash
 # Must match backend GOOGLE_OAUTH_CLIENT_ID
 REACT_APP_GOOGLE_CLIENT_ID=react-client-id-here
+
+# EmailJS — welcome email sent to new Google signup users
+REACT_APP_EMAILJS_PUBLIC_KEY=
+REACT_APP_EMAILJS_SERVICE_ID=
+REACT_APP_EMAILJS_TEMPLATE_WELCOME=
 ```
+
+Template variables for `welcome_email`: `{{to_email}}`, `{{user_name}}`
 
 **App.jsx configuration:**
 ```jsx
@@ -276,7 +283,8 @@ echo "GOOGLE_OAUTH_CLIENT_ID=your-client-id" >> backend/.env
    - Username = email prefix
    - `is_email_verified=True` (no verification needed)
    - Profile image from Google (if available)
-4. Redirected to dashboard immediately
+4. **Welcome email sent via EmailJS** (`REACT_APP_EMAILJS_TEMPLATE_WELCOME`) — replaces the verification email that email/password users receive
+5. Redirected to dashboard immediately
 
 ### Returning Users (Login)
 

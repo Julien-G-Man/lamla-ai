@@ -71,13 +71,14 @@ REACT_APP_EMAILJS_PUBLIC_KEY=
 REACT_APP_EMAILJS_SERVICE_ID=
 REACT_APP_EMAILJS_TEMPLATE_VERIFY=
 REACT_APP_EMAILJS_TEMPLATE_RESET=
+REACT_APP_EMAILJS_TEMPLATE_WELCOME=
 ```
 
 See [EmailJS dashboard](https://dashboard.emailjs.com/) to set up templates.
 
 - **Signup:** `is_email_verified=False` on creation; EmailJS sends verification link immediately after signup
 - **Resend:** `POST /api/auth/resend-verification/` returns a fresh uid+token; frontend calls EmailJS
-- **Google OAuth users bypass email verification** (auto-verified)
+- **Google OAuth users bypass email verification** (auto-verified). A welcome email is sent on first signup via `REACT_APP_EMAILJS_TEMPLATE_WELCOME` instead.
 
 ## Admin Assignment
 

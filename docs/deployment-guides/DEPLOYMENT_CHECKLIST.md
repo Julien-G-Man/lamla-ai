@@ -14,7 +14,7 @@ Use this before every production deploy.
   - Different OAuth credentials used for production vs development
 - **EmailJS (auth emails):**
   - `REACT_APP_EMAILJS_PUBLIC_KEY`, `REACT_APP_EMAILJS_SERVICE_ID` set in frontend env
-  - `REACT_APP_EMAILJS_TEMPLATE_VERIFY` and `REACT_APP_EMAILJS_TEMPLATE_RESET` point to live templates
+  - `REACT_APP_EMAILJS_TEMPLATE_VERIFY`, `REACT_APP_EMAILJS_TEMPLATE_RESET`, and `REACT_APP_EMAILJS_TEMPLATE_WELCOME` point to live templates
   - Templates have `{{to_email}}` set as the "To Email" field in EmailJS dashboard
 
 ## Allowed Origins
