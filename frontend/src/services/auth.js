@@ -25,13 +25,18 @@ authApi.interceptors.request.use((config) => {
 // Centralized error parser
 const parseError = (error) => {
   if (!error) return "An unknown error occurred.";
-  return (
-    error.response?.data?.detail ||
-    error.response?.data?.non_field_errors?.[0] ||
-    error.response?.data?.message ||
-    error.message ||
-    "An unexpected error occurred."
-  );
+  const data = error.response?.data;
+  if (data && typeof data === "object") {
+    if (data.detail) return data.detail;
+    if (data.non_field_errors?.[0]) return data.non_field_errors[0];
+    if (data.message) return data.message;
+    // Handle field-level validation errors (e.g. {email: [...], password: [...]})
+    for (const msgs of Object.values(data)) {
+      const msg = Array.isArray(msgs) ? msgs[0] : msgs;
+      if (msg && typeof msg === "string") return msg;
+    }
+  }
+  return error.message || "An unexpected error occurred.";
 };
 
 export const authService = {

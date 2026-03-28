@@ -114,13 +114,7 @@ const Signup = () => {
       await signup(formData.email, formData.password, formData.username);
       navigate('/dashboard');
     } catch (err) {
-      const message =
-        err?.email?.[0]    ||
-        err?.username?.[0] ||
-        err?.detail        ||
-        err?.message       ||
-        'Signup failed. Please try again.';
-      setError(message);
+      setError(typeof err === 'string' ? err : err?.message || 'Signup failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
