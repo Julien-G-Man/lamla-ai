@@ -41,24 +41,39 @@
     margin-bottom: 16px;
     color: #222;
   }
-  .cta {
+  /* ── Dual CTA ── */
+  .cta-row {
     text-align: center;
     margin: 32px 0;
   }
-  .cta a {
+  .cta-row a.btn-primary {
     background-color: #FFD600;
     color: #000;
     text-decoration: none;
-    padding: 14px 28px;
+    padding: 13px 26px;
     font-size: 15px;
     font-weight: 700;
     border-radius: 4px;
     display: inline-block;
+    margin: 6px 8px;
   }
+  .cta-row a.btn-secondary {
+    background-color: #fff;
+    color: #000;
+    text-decoration: none;
+    padding: 12px 26px;
+    font-size: 15px;
+    font-weight: 700;
+    border-radius: 4px;
+    border: 2px solid #000;
+    display: inline-block;
+    margin: 6px 8px;
+  }
+  /* ── Features section ── */
   .features {
-    margin: 28px 0;
+    margin: 28px 0 8px;
     border-top: 1px solid #e0e0e0;
-    padding-top: 20px;
+    padding-top: 24px;
   }
   .features p.label {
     font-size: 12px;
@@ -66,28 +81,36 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: #888;
-    margin: 0 0 14px;
+    margin: 0 0 20px;
   }
-  .feature-item {
-    display: flex;
-    align-items: flex-start;
-    margin-bottom: 12px;
+  .feature-card {
+    background: #fff;
+    border-left: 4px solid #FFD600;
+    border-radius: 0 6px 6px 0;
+    padding: 16px 18px;
+    margin-bottom: 14px;
   }
-  .feature-dot {
-    width: 8px;
-    height: 8px;
-    background: #FFD600;
-    border-radius: 50%;
-    flex-shrink: 0;
-    margin-top: 6px;
-    margin-right: 12px;
+  .feature-card p.feature-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin: 0 0 6px;
+    color: #000;
   }
-  .feature-item p {
-    font-size: 14px;
-    line-height: 1.5;
-    margin: 0;
-    color: #333;
+  .feature-card p.feature-desc {
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 0 0 10px;
+    color: #444;
   }
+  .feature-card a.try-link {
+    font-size: 13px;
+    font-weight: 700;
+    color: #000;
+    text-decoration: none;
+    border-bottom: 2px solid #FFD600;
+    padding-bottom: 1px;
+  }
+  /* ── Footer ── */
   .footer {
     font-size: 12px;
     color: #555;
@@ -122,41 +145,68 @@
   <div class="content">
     <h1>You're in, {{user_name}} 🎉</h1>
     <p>
-      Welcome to <strong>Lamla AI</strong> — your personal study powerhouse. Your account is
-      all set and ready to go.
+      Welcome to <strong>Lamla AI</strong> — your personal study powerhouse. You signed in with
+      Google, so your account is fully activated and ready to go. No extra steps needed.
     </p>
     <p>
-      You signed in with Google, so everything is verified and activated. No extra steps needed.
+      Here's a quick look at what you can do. Dive straight into your dashboard or
+      explore a feature that catches your eye.
     </p>
 
-    <div class="cta">
-      <a href="https://lamla-ai.vercel.app/dashboard">Go to My Dashboard</a>
+    <!-- Dual CTA -->
+    <div class="cta-row">
+      <a href="https://lamla-ai.vercel.app/dashboard" class="btn-primary">Go to Dashboard</a>
+      <a href="https://lamla-ai.vercel.app/quiz/create" class="btn-secondary">Explore Features</a>
     </div>
 
-    <!-- What you can do -->
+    <!-- Feature cards -->
     <div class="features">
-      <p class="label">Here's what's waiting for you</p>
+      <p class="label">What you can do on Lamla AI</p>
 
-      <div class="feature-item">
-        <div class="feature-dot"></div>
-        <p><strong>AI Quiz Generator</strong> — Upload any document or paste text and get a ready-to-go quiz in seconds.</p>
+      <div class="feature-card">
+        <p class="feature-title">⚡ AI Quiz Generator</p>
+        <p class="feature-desc">
+          Upload a PDF, paste your notes, or drop in a topic — Lamla AI generates a full
+          multiple-choice quiz in seconds. Customise the number of questions, difficulty,
+          and focus area, then play it directly in your browser or share it with classmates.
+        </p>
+        <a href="https://lamla-ai.vercel.app/quiz/create" class="try-link">Try the Quiz Generator →</a>
       </div>
-      <div class="feature-item">
-        <div class="feature-dot"></div>
-        <p><strong>Smart Flashcards</strong> — Build decks from your own content and study with spaced repetition.</p>
+
+      <div class="feature-card">
+        <p class="feature-title">🃏 Smart Flashcards</p>
+        <p class="feature-desc">
+          Turn any material into a flashcard deck automatically. Study with a spaced-repetition
+          review mode that surfaces the cards you struggle with most, so every session is
+          time well spent. Your decks are saved and accessible anytime.
+        </p>
+        <a href="https://lamla-ai.vercel.app/flashcards" class="try-link">Create a Flashcard Deck →</a>
       </div>
-      <div class="feature-item">
-        <div class="feature-dot"></div>
-        <p><strong>AI Tutor</strong> — Ask anything about your material and get clear, instant explanations.</p>
+
+      <div class="feature-card">
+        <p class="feature-title">🤖 AI Tutor</p>
+        <p class="feature-desc">
+          Have a concept you can't crack? Upload your file or paste text, then ask the AI
+          tutor anything about it. It reads your material and gives focused, contextual
+          explanations — like having a study partner available 24/7.
+        </p>
+        <a href="https://lamla-ai.vercel.app/ai-tutor" class="try-link">Chat with the AI Tutor →</a>
       </div>
-      <div class="feature-item">
-        <div class="feature-dot"></div>
-        <p><strong>Progress Analytics</strong> — Track your performance over time and see where to focus.</p>
+
+      <div class="feature-card">
+        <p class="feature-title">📊 Progress Analytics</p>
+        <p class="feature-desc">
+          Your dashboard tracks every quiz you take — scores, trends, and which subjects
+          need more attention. Use the history tab to review past attempts and measure
+          how much you've improved over time.
+        </p>
+        <a href="https://lamla-ai.vercel.app/dashboard" class="try-link">View Your Dashboard →</a>
       </div>
+
     </div>
 
     <p>
-      If you ever need help, just reply to this email — we're happy to assist.<br><br>
+      If you ever have questions or feedback, just reply to this email — we read every one.<br><br>
       Happy studying,<br><br>
       <strong>The Lamla AI Team</strong>
     </p>
