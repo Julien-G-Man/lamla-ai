@@ -24,3 +24,77 @@
   min-width: 60px;
   text-align: right;
 }
+
+/* ── Materials rows ─────────────────────────────────────────── */
+.db-materials-list {
+  display: grid;
+  gap: 12px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.db-material-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.db-material-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.db-material-info h3 {
+  margin: 0 0 4px;
+  color: var(--text-primary);
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+.db-material-info p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.db-material-meta {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.db-material-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 214, 0, 0.35);
+  color: var(--primary-color, #FFD600);
+  font-weight: 700;
+  background: rgba(255, 214, 0, 0.08);
+}
+
+@media (max-width: 760px) {
+  .db-material-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .db-material-meta {
+    justify-items: start;
+    text-align: left;
+    white-space: normal;
+  }
+}

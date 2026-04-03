@@ -241,14 +241,21 @@ const Quiz = () => {
                     )}
                 </section>
 
-                <button className="quiz-float-toggle" onClick={() => setIsPanelOpen(true)} aria-label="Open question navigator">
+                <button
+                    className="quiz-float-toggle"
+                    onClick={() => setIsPanelOpen((prev) => !prev)}
+                    aria-label={isPanelOpen ? 'Close question navigator' : 'Open question navigator'}
+                    aria-expanded={isPanelOpen}
+                >
                     List
                 </button>
 
                 <aside className={`quiz-navigator ${isPanelOpen ? 'open' : ''}`}>
                     <div className="quiz-navigator-head">
                         <h3>Questions</h3>
-                        <button type="button" onClick={() => setIsPanelOpen(false)} aria-label="Close navigator">X</button>
+                        <button type="button" className="quiz-navigator-close" onClick={() => setIsPanelOpen(false)} aria-label="Close navigator">
+                            ×
+                        </button>
                     </div>
 
                     <div className="quiz-navigator-grid">
@@ -270,6 +277,12 @@ const Quiz = () => {
                                 {i + 1}
                             </button>
                         ))}
+                    </div>
+
+                    <div className="quiz-navigator-footer">
+                        <button type="button" className="quiz-navigator-close-btn" onClick={() => setIsPanelOpen(false)}>
+                            Close sidebar
+                        </button>
                     </div>
                 </aside>
             </div>

@@ -28,6 +28,7 @@ const Dashboard = () => {
   const [stats, setStats]                 = useState({ totalQuizzes: 0, averageScore: 0, studyStreak: 0, totalFlashcards: 0 });
   const [quizHistory, setQuizHistory]     = useState([]);
   const [recentActivity, setRecentActivity] = useState([]);
+  const [materials, setMaterials]         = useState([]);
   const [loadingStats, setLoadingStats]   = useState(true);
 
   useEffect(() => {
@@ -53,6 +54,7 @@ const Dashboard = () => {
           totalFlashcards: statsData.total_flashcard_sets,
         });
         setQuizHistory(quizzes || []);
+        setMaterials(materials || []);
 
         // Merge quizzes + flashcard decks + materials into a single activity feed
         const quizActivity = (quizzes || []).map(q => ({
@@ -248,10 +250,35 @@ const Dashboard = () => {
                 </button>
               </div>
               <div className="db-card">
-                <div className="db-empty">
-                  <div className="db-empty-icon">📁</div>
-                  <p>No materials uploaded yet. Upload a PDF to share with the community.</p>
-                </div>
+                {loadingStats ? (
+                  <div className="db-empty">
+                    <p>Loading your materials…</p>
+                  </div>
+                ) : materials.length === 0 ? (
+                  <div className="db-empty">
+                    <div className="db-empty-icon">📁</div>
+                    <p>No materials uploaded yet. Upload a PDF to get started.</p>
+                  </div>
+                ) : (
+                  <div className="db-materials-list">
+                    {materials.map((material) => (
+                      <div className="db-material-row" key={material.id}>
+                        <div className="db-material-info">
+                          <h3>{material.title || material.original_filename || 'Untitled material'}</h3>
+                          <p>
+                            {material.subject_label || material.subject || 'General'}
+                            {material.file_size_display ? ` · ${material.file_size_display}` : ''}
+                            {typeof material.download_count === 'number' ? ` · ${material.download_count} downloads` : ''}
+                          </p>
+                        </div>
+                        <div className="db-material-meta">
+                          <span className="db-material-badge">{material.subject_label || material.subject || 'General'}</span>
+                          <span>{material.created_at ? new Date(material.created_at).toLocaleDateString() : ''}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}

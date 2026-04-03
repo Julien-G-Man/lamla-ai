@@ -23,8 +23,8 @@ const downloadAsText = (results) => {
 
     details.forEach((detail, idx) => {
         content += `Q${idx + 1}. ${detail.question}\n`;
-        content += `Your Answer: ${detail.user_answer || '(Unanswered)'}\n`;
-        content += `Correct Answer: ${detail.correct_answer}\n`;
+        content += `Your Answer: ${detail.user_answer_display || detail.user_answer || '(Unanswered)'}\n`;
+        content += `Correct Answer: ${detail.correct_answer_display || detail.correct_answer}\n`;
         content += `Status: ${detail.is_correct ? 'CORRECT' : 'INCORRECT'}\n`;
         if (detail.reasoning) content += `Evaluation: ${detail.reasoning}\n`;
         if (detail.explanation) content += `Explanation: ${detail.explanation}\n`;
@@ -213,13 +213,18 @@ const QuizResults = ({ user }) => {
                                 <div className="results-answer-rows">
                                     <div className="results-answer-row">
                                         <span className="label">Your answer</span>
-                                        <span className="value"><MathRenderer text={detail.user_answer || '(Unanswered)'} /></span>
+                                        <span className="value">
+                                            <MathRenderer text={detail.user_answer_display || detail.user_answer || '(Unanswered)'} />
+                                        </span>
                                     </div>
                                     <div className="results-answer-row">
                                         <span className="label">Correct answer</span>
                                         <span className="value with-action">
-                                            <MathRenderer text={detail.correct_answer} />
-                                            <button className="results-inline-btn" onClick={(e) => handleCopy(detail.correct_answer, e)}>
+                                            <MathRenderer text={detail.correct_answer_display || detail.correct_answer} />
+                                            <button
+                                                className="results-inline-btn"
+                                                onClick={(e) => handleCopy(detail.correct_answer_display || detail.correct_answer, e)}
+                                            >
                                                 Copy
                                             </button>
                                         </span>
