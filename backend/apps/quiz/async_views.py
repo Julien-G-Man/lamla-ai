@@ -74,7 +74,7 @@ async def generate_quiz_api_async(request):
         except (TypeError, ValueError):
             num_mcq = 7
         
-        num_mcq = max(1, min(num_mcq, 20))
+        num_mcq = max(1, min(num_mcq, 30))
         num_short = max(0, min(int(num_short or 0), 10))
         
         # Validate study text

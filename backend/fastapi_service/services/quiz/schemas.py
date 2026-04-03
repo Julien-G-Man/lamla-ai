@@ -12,7 +12,7 @@ class QuizQuestion(BaseModel):
 class QuizRequest(BaseModel):
     subject: str
     study_text: str
-    num_mcq: int = Field(7, ge=0, le=20)
+    num_mcq: int = Field(7, ge=0, le=30)
     num_short: int = Field(3, ge=0, le=10)
     difficulty: str = Field("medium", description="easy | medium | hard")
 

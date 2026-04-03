@@ -113,7 +113,7 @@ const CreateQuiz = ({ user }) => {
             if (!fileInputRef.current?.files.length) errors.push('Please upload a file');
         }
         if (numMcq <= 0 && numShort <= 0) errors.push('Select at least one question type');
-        if (numMcq > 20)  errors.push('Maximum MCQ is 20');
+        if (numMcq > 30)  errors.push('Maximum MCQ is 30');
         if (numShort > 10) errors.push('Maximum Short Answer is 10');
         setErrorMessages(errors);
         return errors.length === 0;
@@ -295,7 +295,7 @@ const CreateQuiz = ({ user }) => {
                         <div className="options-row">
                             <div className="option-group">
                                 <span><FontAwesomeIcon icon={faListUl} /> MCQ Questions</span>
-                                <input type="number" value={numMcq} onChange={e => setNumMcq(e.target.value)} min="0" max="20" className="number-input" />
+                                <input type="number" value={numMcq} onChange={e => setNumMcq(e.target.value)} min="0" max="30" className="number-input" />
                             </div>
                             <div className="option-group">
                                 <span><FontAwesomeIcon icon={faPen} /> Short Answer</span>
