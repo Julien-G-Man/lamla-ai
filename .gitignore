@@ -5,3 +5,5 @@ docker-compose.yml
 
 .env.google-oauth-template
 client_secret.json
+.claude/
+.claude/**

@@ -178,8 +178,33 @@ async def submit_quiz_api_async(request):
         for idx, question in enumerate(all_questions):
             user_answer = user_answers.get(str(idx), "").strip()
             correct_answer = question.get("answer", "").strip()
+            options = question.get("options", []) or []
             is_correct = False
             reasoning = ""
+
+            def _format_mcq_answer(answer_value: str) -> str:
+                if not answer_value:
+                    return ""
+
+                normalized = answer_value.strip()
+                if not options:
+                    return normalized
+
+                letter = normalized.upper()[0]
+                option_index = ord(letter) - ord("A")
+                if 0 <= option_index < len(options):
+                    option_text = str(options[option_index]).strip()
+                    return f"{letter}. {option_text}"
+
+                for option_index, option_text in enumerate(options):
+                    option_text = str(option_text).strip()
+                    if normalized.lower() == option_text.lower():
+                        return f"{chr(ord('A') + option_index)}. {option_text}"
+
+                return normalized
+
+            user_answer_display = _format_mcq_answer(user_answer) if (question.get("type") == "mcq" or options) else user_answer
+            correct_answer_display = _format_mcq_answer(correct_answer) if (question.get("type") == "mcq" or options) else correct_answer
             
             # For MCQ, compare answer letter (A, B, C, D)
             if question.get("type") == "mcq" or question.get("options"):
@@ -201,8 +226,11 @@ async def submit_quiz_api_async(request):
             details.append({
                 "question_index": idx,
                 "question": question.get("question", ""),
+                "options": options,
                 "user_answer": user_answer,
                 "correct_answer": correct_answer,
+                "user_answer_display": user_answer_display,
+                "correct_answer_display": correct_answer_display,
                 "is_correct": is_correct,
                 "explanation": question.get("explanation", ""),
                 "reasoning": reasoning
