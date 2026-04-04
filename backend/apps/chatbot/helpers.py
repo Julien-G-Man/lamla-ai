@@ -114,9 +114,8 @@ async def _get_conversation_history(session_obj, limit: int = 10):
 
 async def _build_chatbot_prompt(user_message: str, conversation_history=None, context_document=None, user=None, tutor_mode: str = "direct"):
     """Build full tutor prompt with optional user/document context."""
-    platform_context, platform_sources, retrieval_mode = await sync_to_async(
-        chatbot_service.get_platform_context
-    )(user_message)
+    from .text_knowledge_store import knowledge_store
+    platform_context = await sync_to_async(knowledge_store.get_all_context)()
 
     current_date_and_time = datetime.now()
     document_context = ""
@@ -176,17 +175,40 @@ Never lecture unprompted. Always converse. The student's thinking is the materia
 you are working with — your questions are the tools.
 """
 
+    static_platform_facts = """LAMLA AI — CORE PLATFORM FACTS (always accurate, never contradict these):
+Website: https://lamla-ai.vercel.app
+Purpose: AI-powered learning platform that helps students study smarter and ace exams
+Built by: Computer Science and IT students from KNUST (Ghana)
+Main features: AI Tutor (Chat), Quiz Generator, Flashcard Creator, Materials Library, Progress Dashboard
+
+Page URLs (full links):
+  Home:           https://lamla-ai.vercel.app/
+  AI Tutor:       https://lamla-ai.vercel.app/ai-tutor
+  Create Quiz:    https://lamla-ai.vercel.app/quiz/create
+  Flashcards:     https://lamla-ai.vercel.app/flashcards
+  Materials:      https://lamla-ai.vercel.app/materials
+  Dashboard:      https://lamla-ai.vercel.app/dashboard
+  Profile:        https://lamla-ai.vercel.app/profile
+  Login:          https://lamla-ai.vercel.app/auth/login
+  Signup:         https://lamla-ai.vercel.app/auth/signup
+
+Support:
+  Email:    lamlaaiteam@gmail.com
+  WhatsApp: +233509341251"""
+
     system_prompt = f"""You are Lamla, an AI tutor built specifically to help students learn deeply — not just get answers.
 You are part of the Lamla AI platform: a study companion that generates quizzes, flashcards, and
 explanations tailored to each student. You care about whether students actually understand,
 not just whether they got the right answer.
+
+{static_platform_facts}
 
 {document_context}
 {user_context}
 
 Current date and time: {current_date_and_time}
 
-About this platform:
+PLATFORM KNOWLEDGE BASE (complete — use this to answer any platform question accurately):
 {platform_context}
 {socratic_mode_instructions}
 
@@ -208,6 +230,7 @@ If a question is outside your knowledge, say: "I am not certain about this —
 here is what I do know, and here is what you should verify."
 
 Explain the why, not just the what.
+Use analogies and practical examples to make concepts more relatable and memorable
 A student who understands why Le Chatelier's Principle works will remember it.
 A student who memorised a definition will forget it the night after the exam.
 Whenever possible, explain the underlying reasoning.
@@ -232,10 +255,7 @@ FORMATTING:
 - Use line breaks to separate distinct ideas.
 - Keep responses scannable — a student reading on a phone should be able to follow easily.
 
-PLATFORM CONTEXT (use only when relevant):
-Context sources: {', '.join(platform_sources) if platform_sources else 'none'}
-Retrieval mode: {retrieval_mode}
-If a student asks about platform features not covered in the context above, say clearly
+If a student asks about platform features not covered in the knowledge base above, say clearly
 that you do not have that information and suggest they check the platform or contact support."""
 
     history_text = ""

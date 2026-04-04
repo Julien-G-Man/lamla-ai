@@ -3,7 +3,12 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import MathRenderer from '../../components/MathRenderer';
 import './Quiz.css';
-import djangoApi from '../../services/api';
+import djangoApi, { DJANGO_HEALTH_ENDPOINT, FASTAPI_HEALTH_ENDPOINT } from '../../services/api';
+
+const pingServers = () => {
+    fetch(DJANGO_HEALTH_ENDPOINT).catch(() => {});
+    fetch(FASTAPI_HEALTH_ENDPOINT).catch(() => {});
+};
 
 const Quiz = () => {
     const location = useLocation();
@@ -155,7 +160,7 @@ const Quiz = () => {
     return (
         <>
             <Navbar brandOnly />
-            <div className="quiz-page">
+            <div className="quiz-page" onClick={pingServers}>
                 <header className="quiz-page-header">
                     <div>
                         <h1>{quizData.subject || 'Quiz'}</h1>

@@ -56,13 +56,16 @@ Keywords: getting started, how to start, first steps, begin, sign up and start
 5. Navigate using the top menu to access different tools
 
 ## Quick Access URLs
-Keywords: urls, web addresses, links, page urls, direct links
-- Homepage: `/`
-- Login: `/auth/login` or `/login`
-- Signup: `/auth/signup` or `/signup`
-- AI Tutor: `/ai-tutor` (also `/chat` or `/chatbot`)
-- Create Quiz: `/quiz/create`
-- Flashcards: `/flashcards`
-- Materials: `/materials`
-- Dashboard: `/dashboard`
-- Profile: `/profile`
+Keywords: urls, web addresses, links, page urls, direct links, website, site, homepage, url, address, lamla url, platform url, where is, find lamla, open lamla, access lamla
+The Lamla AI platform is live at: https://lamla-ai.vercel.app
+
+Full page URLs:
+- Homepage: https://lamla-ai.vercel.app
+- Login: https://lamla-ai.vercel.app/auth/login
+- Signup: https://lamla-ai.vercel.app/auth/signup
+- AI Tutor: https://lamla-ai.vercel.app/ai-tutor
+- Create Quiz: https://lamla-ai.vercel.app/quiz/create
+- Flashcards: https://lamla-ai.vercel.app/flashcards
+- Materials Library: https://lamla-ai.vercel.app/materials
+- Dashboard: https://lamla-ai.vercel.app/dashboard
+- Profile: https://lamla-ai.vercel.app/profile

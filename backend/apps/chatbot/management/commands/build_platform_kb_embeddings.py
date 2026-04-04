@@ -3,7 +3,7 @@ from apps.chatbot.platform_retrieval import PlatformKnowledgeRetriever
 
 
 class Command(BaseCommand):
-    help = "Build embeddings for chatbot platform_kb markdown files"
+    help = "Build vector embeddings for chatbot platform_kb and save to platform_kb/vector_embeddings.json"
 
     def handle(self, *args, **options):
         retriever = PlatformKnowledgeRetriever()

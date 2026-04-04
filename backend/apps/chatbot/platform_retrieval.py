@@ -38,7 +38,7 @@ class PlatformKnowledgeRetriever:
 
     def __init__(self) -> None:
         self.kb_dir = Path(__file__).resolve().parent / "platform_kb"
-        self.embeddings_file = self.kb_dir / "embeddings.json"
+        self.embeddings_file = self.kb_dir / "vector_embeddings.json"
 
         self.mode = getattr(settings, "CHATBOT_RETRIEVAL_MODE", "keyword").lower().strip()
         self.max_chunks = int(getattr(settings, "CHATBOT_RETRIEVAL_MAX_CHUNKS", 4))
@@ -59,6 +59,20 @@ class PlatformKnowledgeRetriever:
         self._last_snapshot: Dict[str, float] = {}
 
         self._load_corpus(force=True)
+
+    def get_full_context(self) -> str:
+        """
+        Return ALL platform KB content concatenated.
+        Use this when you want the AI to always have complete platform knowledge
+        rather than relying on query-dependent retrieval.
+        """
+        self._load_corpus_if_stale()
+        if not self._chunks:
+            return ""
+        parts = []
+        for chunk in self._chunks:
+            parts.append(f"[{chunk.source_file} > {chunk.heading}]\n{chunk.text.strip()}")
+        return "\n\n".join(parts)
 
     def retrieve_context(self, query: str) -> Tuple[str, List[str], str]:
         """
