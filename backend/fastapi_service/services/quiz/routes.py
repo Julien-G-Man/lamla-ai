@@ -162,10 +162,13 @@ async def quiz_endpoint(payload: QuizRequest):
     prompt = _build_quiz_prompt(prompt_payload)
 
     try:
+        # Scale max_tokens with quiz size: each MCQ needs ~120 tokens, short ~80.
+        # Add 512 overhead for JSON structure. Floor at 2048, cap at 8192.
+        estimated_tokens = max(2048, min(8192, (payload.num_mcq * 120) + (payload.num_short * 80) + 512))
+
         data = None
-        async with httpx.AsyncClient(timeout=45) as client:
-            # Increase max_tokens for quiz generation (need more tokens for multiple questions)
-            raw = await ai_service.generate_content(client, prompt, max_tokens=2048, timeout=30)
+        async with httpx.AsyncClient(timeout=90) as client:
+            raw = await ai_service.generate_content(client, prompt, max_tokens=estimated_tokens, timeout=60)
 
             logger.debug("Quiz provider returned type: %s", type(raw).__name__)
 
@@ -178,18 +181,21 @@ async def quiz_endpoint(payload: QuizRequest):
                         data = _parse_json_safe(content_str, provider_hint="Azure")
                         if data is None:
                             # One-shot repair attempt for malformed/truncated JSON-like output.
-                            repair_raw = await ai_service.generate_content(
-                                client,
-                                _build_repair_prompt(content_str[:6000]),
-                                max_tokens=2048,
-                                timeout=30
-                            )
-                            repair_text = (
-                                repair_raw.get("choices", [{}])[0].get("message", {}).get("content", "")
-                                if isinstance(repair_raw, dict)
-                                else str(repair_raw)
-                            )
-                            data = _parse_json_safe(repair_text, provider_hint="Azure-repair")
+                            try:
+                                repair_raw = await ai_service.generate_content(
+                                    client,
+                                    _build_repair_prompt(content_str[:6000]),
+                                    max_tokens=estimated_tokens,
+                                    timeout=60,
+                                )
+                                repair_text = (
+                                    repair_raw.get("choices", [{}])[0].get("message", {}).get("content", "")
+                                    if isinstance(repair_raw, dict)
+                                    else str(repair_raw)
+                                )
+                                data = _parse_json_safe(repair_text, provider_hint="Azure-repair")
+                            except Exception as repair_exc:
+                                logger.warning("Azure repair attempt failed: %s", repair_exc)
                         if data is None:
                             raise HTTPException(status_code=502, detail="Failed to parse Azure response")
                     except (KeyError, IndexError) as e:
@@ -203,17 +209,21 @@ async def quiz_endpoint(payload: QuizRequest):
                 raw_text = str(raw)
                 data = _parse_json_safe(raw_text)
                 if data is None:
-                    repair_raw = await ai_service.generate_content(
-                        client,
-                        _build_repair_prompt(raw_text[:6000]),
-                        max_tokens=2048,
-                    )
-                    repair_text = (
-                        repair_raw.get("choices", [{}])[0].get("message", {}).get("content", "")
-                        if isinstance(repair_raw, dict)
-                        else str(repair_raw)
-                    )
-                    data = _parse_json_safe(repair_text, provider_hint="repair")
+                    try:
+                        repair_raw = await ai_service.generate_content(
+                            client,
+                            _build_repair_prompt(raw_text[:6000]),
+                            max_tokens=estimated_tokens,
+                            timeout=60,
+                        )
+                        repair_text = (
+                            repair_raw.get("choices", [{}])[0].get("message", {}).get("content", "")
+                            if isinstance(repair_raw, dict)
+                            else str(repair_raw)
+                        )
+                        data = _parse_json_safe(repair_text, provider_hint="repair")
+                    except Exception as repair_exc:
+                        logger.warning("Repair attempt failed: %s", repair_exc)
                 if data is None:
                     raise HTTPException(status_code=502, detail="Invalid quiz format from AI provider")
 

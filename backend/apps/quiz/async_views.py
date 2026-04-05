@@ -101,7 +101,7 @@ async def generate_quiz_api_async(request):
             "/quiz/",
             json=payload,
             headers=headers,
-            timeout=60.0,
+            timeout=120.0,
         )
         
         if fastapi_resp.status_code != 200:
