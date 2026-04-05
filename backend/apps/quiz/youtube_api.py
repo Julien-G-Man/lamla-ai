@@ -37,10 +37,13 @@ def _fetch_transcript_sync(video_id: str) -> str:
     try:
         from youtube_transcript_api import YouTubeTranscriptApi
     except ImportError:
+        logger.error("YouTube transcript dependency missing for video_id=%s", video_id)
         raise ValueError(
             "youtube-transcript-api is not installed. "
             "Add it to requirements.txt and redeploy."
         )
+
+    logger.info("Fetching YouTube transcript video_id=%s", video_id)
 
     try:
         # --- API >= 0.6: instance-based fetch() ---
@@ -58,17 +61,18 @@ def _fetch_transcript_sync(video_id: str) -> str:
             segments = YouTubeTranscriptApi.get_transcript(video_id)  # type: ignore[attr-defined]
             return " ".join(seg["text"] for seg in segments).strip()
         except Exception as exc:
-            logger.warning("Transcript fetch failed for %s: %s", video_id, exc)
+            logger.warning("YouTube transcript fetch failed video_id=%s reason=%s", video_id, exc)
             raise ValueError(f"Could not retrieve transcript: {exc}")
 
     except Exception as exc:
         msg = str(exc).lower()
         if "disabled" in msg or "could not retrieve" in msg:
+            logger.warning("YouTube captions unavailable video_id=%s reason=%s", video_id, exc)
             raise ValueError(
                 "Captions are disabled or unavailable for this video. "
                 "Try a video with auto-generated or manual captions enabled."
             )
-        logger.warning("Transcript fetch failed for %s: %s", video_id, exc)
+        logger.warning("YouTube transcript fetch failed video_id=%s reason=%s", video_id, exc)
         raise ValueError(f"Could not retrieve transcript: {exc}")
 
 
@@ -87,7 +91,7 @@ async def _fetch_video_title(video_id: str) -> str:
             if resp.status_code == 200:
                 return resp.json().get("title", "")
     except Exception:
-        pass
+        logger.debug("YouTube title lookup failed video_id=%s", video_id, exc_info=True)
     return ""
 
 
@@ -110,6 +114,7 @@ async def fetch_youtube_quiz_content(url: str) -> dict:
     """
     video_id = extract_video_id(url)
     if not video_id:
+        logger.info("YouTube URL missing video_id url=%s", url)
         raise ValueError(
             "Could not find a YouTube video ID in the URL. "
             "Accepted formats: youtube.com/watch?v=…, youtu.be/…, youtube.com/shorts/…"
@@ -123,6 +128,7 @@ async def fetch_youtube_quiz_content(url: str) -> dict:
     )
 
     if isinstance(transcript_result, Exception):
+        logger.warning("YouTube transcript extraction failed video_id=%s", video_id)
         raise ValueError(str(transcript_result))
 
     if isinstance(title_result, Exception):
@@ -132,14 +138,12 @@ async def fetch_youtube_quiz_content(url: str) -> dict:
     title: str = title_result or f"YouTube ({video_id})"
 
     if len(transcript) < 50:
+        logger.warning("YouTube transcript too short video_id=%s chars=%d", video_id, len(transcript))
         raise ValueError(
             "The transcript for this video is too short to generate a useful quiz."
         )
 
-    logger.info(
-        "YouTube transcript fetched: video_id=%s title=%r chars=%d",
-        video_id, title, len(transcript),
-    )
+    logger.info("YouTube transcript fetched video_id=%s title=%r chars=%d", video_id, title, len(transcript))
 
     return {
         "text": transcript,

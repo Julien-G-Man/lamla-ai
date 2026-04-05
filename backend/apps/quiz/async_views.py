@@ -61,11 +61,19 @@ async def extract_youtube_transcript(request):
         data = json.loads(request.body) if request.body else {}
         url = (data.get("url") or "").strip()
         if not url:
+            logger.info("YouTube extract request rejected reason=missing_url")
             return JsonResponse({"error": "YouTube URL is required"}, status=400)
 
         from .youtube_api import fetch_youtube_quiz_content
+        logger.info("YouTube extract request started")
         result = await fetch_youtube_quiz_content(url)
 
+        logger.info(
+            "YouTube extract request succeeded video_id=%s title=%r chars=%d",
+            result["video_id"],
+            result["title"],
+            len(result["text"]),
+        )
         return JsonResponse({
             "text": result["text"],
             "title": result["title"],
@@ -73,9 +81,10 @@ async def extract_youtube_transcript(request):
         })
 
     except ValueError as exc:
+        logger.warning("YouTube extract request failed reason=%s", exc)
         return JsonResponse({"error": str(exc)}, status=400)
     except Exception as exc:
-        logger.error("YouTube transcript extraction failed: %s", exc, exc_info=True)
+        logger.error("YouTube extract request failed unexpectedly reason=%s", exc, exc_info=True)
         return JsonResponse({"error": "Failed to fetch transcript from YouTube"}, status=500)
 
 
