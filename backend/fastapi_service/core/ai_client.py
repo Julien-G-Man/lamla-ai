@@ -1,9 +1,9 @@
-import os
 import json
 import logging
 from typing import List, Optional, Union
 import httpx
 import anthropic
+from core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -60,47 +60,41 @@ class AIClient:
 
     def _refresh_keys(self):
         # --- NVIDIA DeepSeek (OpenAI-compatible chat completions) ---
-        self.nvidia_deepseek_key = os.getenv("NVIDIA_DEEPSEEK_API_KEY")
-        self.nvidia_deepseek_url = os.getenv(
-            "NVIDIA_DEEPSEEK_API_URL",
-            "https://integrate.api.nvidia.com/v1/chat/completions",
-        )
-        self.nvidia_deepseek_model = os.getenv("NVIDIA_DEEPSEEK_MODEL", "deepseek-ai/deepseek-v3.2")
-        self.nvidia_deepseek_thinking = os.getenv("NVIDIA_DEEPSEEK_THINKING", "true").lower() == "true"
+        self.nvidia_deepseek_key = settings.NVIDIA_DEEPSEEK_API_KEY
+        self.nvidia_deepseek_url = settings.NVIDIA_DEEPSEEK_API_URL
+        self.nvidia_deepseek_model = settings.NVIDIA_DEEPSEEK_MODEL
+        self.nvidia_deepseek_thinking = settings.NVIDIA_DEEPSEEK_THINKING
 
         # --- Claude (Anthropic) ---
-        self.claude_key = os.getenv("CLAUDE_API_KEY")
-        self.claude_model = os.getenv("CLAUDE_MODEL", "claude-opus-4-6")
+        self.claude_key = settings.CLAUDE_API_KEY
+        self.claude_model = settings.CLAUDE_MODEL
         self._anthropic_client: Optional[anthropic.AsyncAnthropic] = (
             anthropic.AsyncAnthropic(api_key=self.claude_key)
             if self.claude_key else None
         )
 
         # --- NVIDIA OpenAI-compatible ---
-        self.nvidia_openai_key = os.getenv("NVIDIA_OPENAI_API_KEY")
-        self.nvidia_openai_url = os.getenv(
-            "NVIDIA_OPENAI_API_URL",
-            "https://integrate.api.nvidia.com/v1/chat/completions",
-        )
-        self.nvidia_openai_model = os.getenv("NVIDIA_OPENAI_MODEL", "openai/gpt-oss-20b")
+        self.nvidia_openai_key = settings.NVIDIA_OPENAI_API_KEY
+        self.nvidia_openai_url = settings.NVIDIA_OPENAI_API_URL
+        self.nvidia_openai_model = settings.NVIDIA_OPENAI_MODEL
 
         # --- Azure OpenAI ---
-        self.azure_key = os.environ.get("AZURE_OPENAI_API_KEY")
-        self.azure_endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
-        self.azure_deployment = os.environ.get("AZURE_OPENAI_DEPLOYMENT")
-        self.azure_api_version = os.environ.get("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
+        self.azure_key = settings.AZURE_OPENAI_API_KEY
+        self.azure_endpoint = settings.AZURE_OPENAI_ENDPOINT
+        self.azure_deployment = settings.AZURE_OPENAI_DEPLOYMENT
+        self.azure_api_version = settings.AZURE_OPENAI_API_VERSION
 
         # --- DeepSeek ---
-        self.deepseek_key = os.environ.get("DEEPSEEK_API_KEY")
-        self.deepseek_url = os.environ.get("DEEPSEEK_API_URL", "https://api.deepseek.com/v1/chat/completions")
+        self.deepseek_key = settings.DEEPSEEK_API_KEY
+        self.deepseek_url = settings.DEEPSEEK_API_URL
 
         # --- Gemini ---
-        self.gemini_key = os.environ.get("GEMINI_API_KEY")
-        self.gemini_url = os.environ.get("GEMINI_API_URL", "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent")
+        self.gemini_key = settings.GEMINI_API_KEY
+        self.gemini_url = settings.GEMINI_API_URL
 
         # --- HuggingFace ---
-        self.hf_token = os.environ.get("HUGGING_FACE_API_TOKEN")
-        self.hf_url_template = os.environ.get("HUGGING_FACE_API_URL_TEMPLATE", "https://api-inference.huggingface.co/models/{model}")
+        self.hf_token = settings.HUGGING_FACE_API_TOKEN
+        self.hf_url_template = settings.HUGGING_FACE_API_URL_TEMPLATE
 
     async def generate_content(
         self,
@@ -376,7 +370,7 @@ class AIClient:
     async def _call_huggingface(self, client: httpx.AsyncClient, prompt: str, max_tokens: int, timeout: int = DEFAULT_TIMEOUT) -> str:
         if not self.hf_token:
             raise APIIntegrationError("HuggingFace token not configured")
-        model = os.environ.get("HUGGING_FACE_MODEL", "gpt2")
+        model = settings.HUGGING_FACE_MODEL
         url = self.hf_url_template.format(model=model)
         headers = {"Authorization": f"Bearer {self.hf_token}"}
         payload = {"inputs": prompt, "parameters": {"max_new_tokens": max_tokens}}
@@ -391,10 +385,4 @@ class AIClient:
 # ------------------------------------------------------------------ #
 #  Global singleton                                                    #
 # ------------------------------------------------------------------ #
-provider_order_env = os.environ.get("AI_PROVIDER_ORDER")
-if provider_order_env:
-    provider_order = [p.strip().lower() for p in provider_order_env.split(",") if p.strip()]
-else:
-    provider_order = DEFAULT_PROVIDER_ORDER
-
-ai_service = AIClient(provider_priority=provider_order)
+ai_service = AIClient(provider_priority=settings.provider_list or DEFAULT_PROVIDER_ORDER)

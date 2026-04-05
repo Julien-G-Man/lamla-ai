@@ -3,21 +3,13 @@ FastAPI Middleware for Internal Request Authentication
 
 Verifies that requests from Django include the correct secret header.
 """
-import os
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 import logging
+from core.config import settings
 
 logger = logging.getLogger(__name__)
-
-# Get secret from environment
-FASTAPI_SECRET = os.getenv("FASTAPI_SECRET")
-FASTAPI_ALLOWED_ORIGINS = {
-    origin.strip()
-    for origin in os.getenv("FASTAPI_ALLOWED_ORIGINS", "").split(",")
-    if origin.strip()
-}
 
 
 class InternalAuthMiddleware(BaseHTTPMiddleware):
@@ -37,7 +29,8 @@ class InternalAuthMiddleware(BaseHTTPMiddleware):
 
         # If this is a browser-originated request, enforce strict origin allowlist.
         origin = request.headers.get("origin")
-        if origin and FASTAPI_ALLOWED_ORIGINS and origin not in FASTAPI_ALLOWED_ORIGINS:
+        allowed = settings.allowed_origins_set
+        if origin and allowed and origin not in allowed:
             logger.warning(
                 "Request to %s blocked due to disallowed Origin: %s",
                 request.url.path,
@@ -57,7 +50,7 @@ class InternalAuthMiddleware(BaseHTTPMiddleware):
                 content={"detail": "Missing internal authentication header"},
             )
 
-        if not FASTAPI_SECRET or internal_secret != FASTAPI_SECRET:
+        if not settings.FASTAPI_SECRET or internal_secret != settings.FASTAPI_SECRET:
             logger.warning("Request to %s has invalid internal secret", request.url.path)
             return JSONResponse(
                 status_code=403,

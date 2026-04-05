@@ -1,12 +1,33 @@
 from .schemas import QuizRequest
 
+_SOURCE_CONTEXT = {
+    "youtube": (
+        "The study material is a transcript from a YouTube video titled {title!r}. "
+        "It may contain spoken-language patterns, filler words, and informal phrasing — "
+        "focus on the factual and conceptual content. "
+        "Prefer questions about ideas, explanations, and examples discussed in the video."
+    ),
+    "file": (
+        "The study material was extracted from an uploaded document ({title}). "
+        "It may contain OCR/PDF artifacts (broken spacing, ligatures, odd symbols) — "
+        "infer the intended meaning naturally."
+    ),
+    "text": (
+        "The study material was typed or pasted directly by the student."
+    ),
+}
+
 def _build_quiz_prompt(payload: QuizRequest) -> str:
+    source_type = (payload.source_type or "text").lower()
+    title = payload.source_title or ""
+    source_note = _SOURCE_CONTEXT.get(source_type, _SOURCE_CONTEXT["text"]).format(title=title)
+
     return (
         f"You are Lamla AI Tutor. Generate a quiz based on this study material:\n\n"
         f"{payload.study_text}\n\n"
         f"Subject: {payload.subject}\n"
         f"Difficulty Level: {payload.difficulty}\n"
-        f"Note: The study text may contain OCR/PDF artifacts (weird symbols, broken spacing, ligatures). Infer intended meaning naturally.\n"
+        f"Source context: {source_note}\n"
         f"Requirements:\n"
         f"- Generate exactly {payload.num_mcq} multiple-choice questions (MCQs)\n"
         f"- Generate exactly {payload.num_short} short-answer questions\n"

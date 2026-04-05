@@ -1,69 +1,20 @@
+import json
+import re
+import asyncio
+import logging
 from fastapi import APIRouter, HTTPException
 from core.ai_client import ai_service, APIIntegrationError
 from core.http import get_async_client
+from core.config import settings
+from .prompts import DIFFICULTY_PROMPTS
 from .schemas import FlashcardRequest, FlashcardExplainRequest
-import json
-import re
-import os
-import asyncio
-import logging
 
 flashcards_router = APIRouter()
 logger = logging.getLogger(__name__)
 
-def _env_int(name: str, default: int) -> int:
-    value = os.getenv(name)
-    if value is None:
-        return default
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return default
-
-
-def _env_float(name: str, default: float) -> float:
-    value = os.getenv(name)
-    if value is None:
-        return default
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return default
-
-
-AI_MAX_CONCURRENT = max(20, _env_int("FLASHCARDS_AI_MAX_CONCURRENT", 250))
-AI_SEMAPHORE_WAIT_SECONDS = _env_float("FLASHCARDS_AI_SEMAPHORE_WAIT_SECONDS", 0.35)
+AI_MAX_CONCURRENT = max(20, settings.FLASHCARDS_AI_MAX_CONCURRENT)
+AI_SEMAPHORE_WAIT_SECONDS = settings.FLASHCARDS_AI_SEMAPHORE_WAIT_SECONDS
 _ai_semaphore = asyncio.Semaphore(AI_MAX_CONCURRENT)
-
-DIFFICULTY_PROMPTS = {
-
-    "beginner": """
-Create simple flashcards for beginners.
-
-Rules:
-- Use simple language
-- Short answers
-- Focus on definitions and basic understanding
-""",
-
-    "intermediate": """
-Create moderate difficulty flashcards.
-
-Rules:
-- Include conceptual understanding
-- Test relationships between ideas
-- Medium complexity
-""",
-
-    "exam": """
-Create exam-level flashcards.
-
-Rules:
-- Challenging conceptual questions
-- Focus on problem solving and application
-- Similar to university exam questions
-"""
-}
 
 
 def _normalize_cards(raw):

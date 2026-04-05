@@ -1,27 +1,18 @@
-import os
 import logging
 from fastapi import FastAPI
-from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 from services.chatbot.routes import chatbot_router
 from services.quiz.routes import quiz_router
 from services.flashcards.routes import flashcards_router
 from core.middleware import InternalAuthMiddleware
+from core.config import settings
 
 app = FastAPI(title="Lamla AI Engine")
-
-load_dotenv()
 logger = logging.getLogger(__name__)
-
-origins_env = os.getenv(
-    "FASTAPI_ALLOWED_ORIGINS",
-    "http://127.0.0.1:8000, http://localhost:3000, https://lamla-api.onrender.com, https://lamla-ai.vercel.app, https://lamla-fastapi.onrender.com",
-)
-origins = [o.strip() for o in origins_env.split(",") if o.strip()]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=settings.allowed_origins_list,
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
@@ -34,7 +25,7 @@ app.include_router(chatbot_router, prefix="/chatbot")
 app.include_router(quiz_router, prefix="/quiz")
 app.include_router(flashcards_router, prefix="/flashcards")
 
-logger.info("FastAPI CORS allowed origins: %s", origins)
+logger.info("FastAPI CORS allowed origins: %s", settings.allowed_origins_list)
 
 
 @app.get("/")

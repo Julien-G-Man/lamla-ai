@@ -15,6 +15,8 @@ class QuizRequest(BaseModel):
     num_mcq: int = Field(7, ge=0, le=30)
     num_short: int = Field(3, ge=0, le=10)
     difficulty: str = Field("medium", description="easy | medium | hard")
+    source_type: str = Field("text", description="text | file | youtube")
+    source_title: Optional[str] = Field(None, description="Video title or filename")
 
 
 class QuizResponse(BaseModel):

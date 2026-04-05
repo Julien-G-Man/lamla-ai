@@ -3,11 +3,11 @@ FastAPI Uvicorn entry point for high-concurrency async task handling.
 
 This service is designed to be independent from the Django backend:
 - It runs as its own process / deployment.
-- It reads configuration only from its own environment (and optional local .env).
+- It reads configuration only from its own environment (and local .env).
 
 Configured via environment variables:
   FASTAPI_HOST    (default: 0.0.0.0)
-  FASTAPI_PORT    (default: 8001)
+  FASTAPI_PORT    (default: 8002)
   FASTAPI_WORKERS (default: 4) - CPU cores recommended
   FASTAPI_RELOAD  (default: false) - Enable code reload in development
 """
@@ -38,28 +38,24 @@ def _load_env_file() -> None:
 
 
 if __name__ == "__main__":
-    # Load local .env before reading any environment variables
+    # Load local .env before settings are read
     _load_env_file()
 
-    # Environment-based configuration
-    host = os.getenv("FASTAPI_HOST", "0.0.0.0")
-    port = int(os.getenv("FASTAPI_PORT", 8001))
-    workers = int(os.getenv("FASTAPI_WORKERS", 4))
-    reload = os.getenv("FASTAPI_RELOAD", "false").lower() == "true"
+    from core.config import settings
 
     # Development mode: single worker, reload enabled
-    if reload:
-        workers = 1
+    workers = 1 if settings.FASTAPI_RELOAD else settings.FASTAPI_WORKERS
 
-    print(f"Starting FastAPI on {host}:{port} (workers={workers}, reload={reload})")
+    print(
+        f"Starting FastAPI on {settings.FASTAPI_HOST}:{settings.FASTAPI_PORT} "
+        f"(workers={workers}, reload={settings.FASTAPI_RELOAD})"
+    )
 
-    # When run from inside the fastapi_service package, importing "main:app"
-    # keeps this worker self-contained and decoupled from the Django backend.
     uvicorn.run(
         "main:app",
-        host=host,
-        port=port,
-        reload=reload,
-        workers=1 if reload else workers,  # Only 1 worker in reload mode
+        host=settings.FASTAPI_HOST,
+        port=settings.FASTAPI_PORT,
+        reload=settings.FASTAPI_RELOAD,
+        workers=workers,
         log_level="info",
     )
