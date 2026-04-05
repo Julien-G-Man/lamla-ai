@@ -58,12 +58,12 @@ Located in `backend/apps/chatbot/platform_kb/`:
 
 | File | Content |
 |---|---|
-| `text_embeddings.json` | All platform knowledge — manually indexed, 37 chunks across all topics. Primary source used by `TextKnowledgeStore`. |
+| `text_embeddings.json` | All platform knowledge — manually indexed chunks across all topics. Primary source used by `TextKnowledgeStore`. Regenerate after editing any `.md` file below. |
 | `vector_embeddings.json` | Reserved for future neural vector embeddings. Used by `PlatformKnowledgeRetriever` when populated. |
 | `platform_overview.md` | Platform overview, navigation, URLs, getting started |
-| `learning_tools.md` | Quiz Generator, Flashcards, AI Tutor Chat, Materials Library, Dashboard |
+| `learning_tools.md` | Quiz Generator (including YouTube tab), Flashcards, AI Tutor Chat, Materials Library, Dashboard |
 | `accounts_and_auth.md` | Signup, login, email verification, profile, logout |
-| `files_and_limits.md` | File types, size limits, text limits, errors, browser support |
+| `files_and_limits.md` | File types, YouTube input, size limits, text limits, errors, browser support |
 | `support_and_policies.md` | Contact info, what support covers, response tips |
 | `models_and_capabilities.md` | AI model routing, providers, fallback behavior |
 

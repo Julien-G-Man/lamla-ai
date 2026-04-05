@@ -1,4 +1,4 @@
-﻿# Quiz Feature
+# Quiz Feature
 
 ## Frontend Pages
 
@@ -10,11 +10,12 @@
 
 From `backend/apps/quiz/urls.py`:
 
-- `POST /api/quiz/ajax-extract-text/`
-- `POST /api/quiz/generate/`
-- `POST /api/quiz/submit/`
-- `POST /api/quiz/download/`
-- `GET /api/quiz/history/`
+- `POST /api/quiz/ajax-extract-text/` — extract text from uploaded file
+- `POST /api/quiz/extract-youtube/` — extract transcript from YouTube URL
+- `POST /api/quiz/generate/` — generate quiz via FastAPI
+- `POST /api/quiz/submit/` — evaluate and store quiz results
+- `POST /api/quiz/download/` — download quiz as PDF/DOCX
+- `GET /api/quiz/history/` — authenticated user's past sessions
 
 ## FastAPI Endpoint
 
@@ -26,22 +27,51 @@ Primary persisted object:
 
 - `QuizSession` with subject, scores, duration, question payload, user answers.
 
+## Input Sources
+
+The quiz creator (`/quiz/create`) supports three input tabs:
+
+| Tab | How it works |
+|---|---|
+| **File** | Upload PDF, DOCX, PPTX, or TXT. Django extracts text via `ajax-extract-text`, populates the text field. |
+| **YouTube** | Paste any YouTube URL. Django calls `extract-youtube/`, which fetches the video transcript via `youtube-transcript-api` and the title via YouTube oEmbed. Requires captions to be enabled on the video. |
+| **Text** | Paste or type study material directly. |
+
+All three paths converge at the same `generate/` endpoint once `extractedText` is populated.
+
 ## Generation Flow
 
-1. User enters text or uploads file.
-2. Django extracts text (if file route used).
-3. Django async view forwards normalized payload to FastAPI `/quiz/`.
-4. FastAPI orchestrates provider call and returns normalized quiz JSON.
-5. Frontend starts play session at `/quiz/play`.
+1. User picks an input tab and loads content (file, YouTube URL, or direct text).
+2. Django's async view forwards a normalized payload to FastAPI `POST /quiz/`:
+   - `subject`, `study_text`, `num_mcq`, `num_short`, `difficulty`
+   - `source_type` — `"file"` | `"youtube"` | `"text"`
+   - `source_title` — filename or video title (used in prompt context)
+3. FastAPI normalizes text (Unicode cleanup, truncation to 16,000 chars), scales `max_tokens` dynamically based on question count (2,048–8,192), and calls the AI provider.
+4. The prompt tells the LLM the source type so it can adjust tone (e.g., spoken-language transcript vs. academic document).
+5. FastAPI validates the JSON response, normalizes questions, and returns `QuizResponse`.
+6. Django adds metadata (`id`, `time_limit`, `source_filename`) and returns to the frontend.
+7. Frontend navigates to `/quiz/play`.
 
 ## Submission Flow
 
 1. Frontend submits `quiz_data` + `user_answers` to `/api/quiz/submit/`.
-2. Django evaluates MCQ directly.
-3. Short answers are LLM-evaluated via FastAPI chatbot route (with fallback matching).
-4. Result payload returned and saved in history where applicable.
+2. Django evaluates MCQ by letter comparison.
+3. Short answers are LLM-evaluated via the FastAPI chatbot route (with fallback string matching).
+4. Result payload returned and saved as `QuizSession` for authenticated users.
+
+## Quiz Settings
+
+| Setting | Range | Default |
+|---|---|---|
+| MCQ questions | 0–30 | 7 |
+| Short answer questions | 0–10 | 3 |
+| Quiz time | 1–120 min | 10 |
+| Difficulty | easy / medium / hard / random | random |
 
 ## Reliability Notes
 
-- If FastAPI provider fails, Django returns service-unavailable style errors for generate.
-- Frontend should keep user on page and allow retry.
+- Token budget scales with question count so large quizzes don't produce truncated JSON.
+- If the AI returns malformed JSON, FastAPI makes one repair attempt before returning 502.
+- If FastAPI returns a non-200 response, Django returns 503 to the frontend.
+- YouTube extraction fails gracefully with a user-facing message if captions are disabled or the URL is invalid.
+- Frontend should keep the user on the page and allow retry on any generation error.

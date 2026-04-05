@@ -15,6 +15,8 @@ import {
     faExclamationCircle,
     faInfoCircle,
     faFilePdf,
+    faLink,
+    faPlay,
 } from '@fortawesome/free-solid-svg-icons';
 
 const CreateQuiz = ({ user }) => {
@@ -35,6 +37,9 @@ const CreateQuiz = ({ user }) => {
     const [quizTime, setQuizTime]       = useState(10);
     const [difficulty, setDifficulty]   = useState('random');
 
+    const [youtubeUrl, setYoutubeUrl]   = useState('');
+    const [youtubeLoaded, setYoutubeLoaded] = useState(null); // { title, video_id }
+
     const [isExtracting, setIsExtracting] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
     const [fileNameDisplay, setFileNameDisplay] = useState('');
@@ -43,7 +48,7 @@ const CreateQuiz = ({ user }) => {
     const [toast, setToast] = useState({ message: '', type: '', visible: false });
     const isProcessing = isExtracting || isGenerating;
     const processingMessage = isExtracting
-        ? 'Extracting text from file...'
+        ? (activeTab === 'youtubeContent' ? 'Fetching YouTube transcript...' : 'Extracting text from file...')
         : 'Generating your quiz with AI...';
 
     const fileInputRef = useRef(null);
@@ -72,6 +77,27 @@ const CreateQuiz = ({ user }) => {
         const val = e.target.value;
         setSubject(val);
         setIsOtherSelected(val === 'Other');
+    };
+
+    const handleYoutubeLoad = async () => {
+        if (!youtubeUrl.trim()) {
+            showToast('Paste a YouTube URL first', 'error');
+            return;
+        }
+        setIsExtracting(true);
+        setYoutubeLoaded(null);
+        try {
+            const response = await djangoApi.post('/quiz/extract-youtube/', { url: youtubeUrl.trim() });
+            const { text, title, video_id } = response.data;
+            setStudyText(text);
+            setSourceFilename(title);
+            setYoutubeLoaded({ title, video_id });
+            showToast(`Transcript loaded: "${title}"`, 'success');
+        } catch (err) {
+            showToast(err.response?.data?.error || 'Failed to load transcript', 'error');
+        } finally {
+            setIsExtracting(false);
+        }
     };
 
     const handleFileChange = async (e) => {
@@ -106,8 +132,12 @@ const CreateQuiz = ({ user }) => {
         const errors = [];
         const finalSubject = isOtherSelected ? customSubject.trim() : subject;
         if (!finalSubject) errors.push('Please select or enter a subject');
-        if (activeTab === 'textContent') {
-            if (studyText.trim().length < 30) errors.push('Please enter at least 30 characters of text');
+        if (activeTab === 'textContent' || activeTab === 'youtubeContent') {
+            if (studyText.trim().length < 30) errors.push(
+                activeTab === 'youtubeContent'
+                    ? 'Please load a YouTube transcript first'
+                    : 'Please enter at least 30 characters of text'
+            );
             if (studyText.length > 50000) errors.push('Text is too long (max 50,000)');
         } else {
             if (!fileInputRef.current?.files.length) errors.push('Please upload a file');
@@ -131,6 +161,10 @@ const CreateQuiz = ({ user }) => {
             // Always use the current in-memory filename to avoid stale session values.
             const currentSourceFilename = sourceFilename || prefill.sourceTitle || '';
             
+            const sourceType = activeTab === 'youtubeContent' ? 'youtube'
+                : activeTab === 'fileContent' ? 'file'
+                : 'text';
+
             const response = await djangoApi.post('/quiz/generate/', {
                 subject: finalSubject,
                 extractedText: studyText,
@@ -139,6 +173,7 @@ const CreateQuiz = ({ user }) => {
                 quiz_time: quizTime,
                 difficulty,
                 source_filename: currentSourceFilename,
+                source_type: sourceType,
             });
             
             navigate('/quiz/play', { state: { quizData: response.data } });
@@ -153,6 +188,7 @@ const CreateQuiz = ({ user }) => {
             setSubject(''); setCustomSubject(''); setIsOtherSelected(false);
             setStudyText(''); setFileNameDisplay('');
             setSourceFilename('');
+            setYoutubeUrl(''); setYoutubeLoaded(null);
             setNumMcq(7); setNumShort(3); setQuizTime(10);
             setErrorMessages([]);
             if (fileInputRef.current) fileInputRef.current.value = '';
@@ -175,7 +211,7 @@ const CreateQuiz = ({ user }) => {
                 <div className="quiz-card-container">
                     <h1 className="main-page-title">Quiz Mode</h1>
                     <p className="main-page-description">
-                        Upload your study materials or paste content to create customised quiz questions with AI.
+                        Upload your study material, enter a YouTube video link, or paste text content to create customised quiz questions with AI.
                     </p>
 
                     {/* Banner when pre-filled from a material */}
@@ -237,14 +273,21 @@ const CreateQuiz = ({ user }) => {
                                 className={`tab${activeTab === 'fileContent' ? ' active' : ''}`}
                                 onClick={() => setActiveTab('fileContent')}
                             >
-                                <FontAwesomeIcon icon={faCloudUploadAlt} /> Upload File
+                                <FontAwesomeIcon icon={faCloudUploadAlt} /> File
+                            </button>
+                            <button
+                                type="button"
+                                className={`tab${activeTab === 'youtubeContent' ? ' active' : ''}`}
+                                onClick={() => setActiveTab('youtubeContent')}
+                            >
+                                <FontAwesomeIcon icon={faPlay} /> YouTube
                             </button>
                             <button
                                 type="button"
                                 className={`tab${activeTab === 'textContent' ? ' active' : ''}`}
                                 onClick={() => setActiveTab('textContent')}
                             >
-                                <FontAwesomeIcon icon={faKeyboard} /> Enter Text
+                                <FontAwesomeIcon icon={faKeyboard} /> Text
                             </button>
                         </div>
 
@@ -288,6 +331,57 @@ const CreateQuiz = ({ user }) => {
                                 <div className="character-count">
                                     <span>{studyText.length}</span> / 50000 characters
                                 </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'youtubeContent' && (
+                            <div className="tab-content active slide-in">
+                                <div className="yt-input-row">
+                                    <FontAwesomeIcon icon={faLink} className="yt-link-icon" />
+                                    <input
+                                        type="url"
+                                        className="yt-url-input"
+                                        placeholder="https://www.youtube.com/watch?v=..."
+                                        value={youtubeUrl}
+                                        onChange={e => { setYoutubeUrl(e.target.value); setYoutubeLoaded(null); }}
+                                        onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleYoutubeLoad())}
+                                        disabled={isExtracting}
+                                    />
+                                    <button
+                                        type="button"
+                                        className="yt-load-btn"
+                                        onClick={handleYoutubeLoad}
+                                        disabled={isExtracting || !youtubeUrl.trim()}
+                                    >
+                                        {isExtracting
+                                            ? <><FontAwesomeIcon icon={faSpinner} spin /> Loading…</>
+                                            : 'Load Transcript'}
+                                    </button>
+                                </div>
+                                {youtubeLoaded && (
+                                    <div className="yt-preview">
+                                        <div className="yt-embed-wrapper">
+                                            <iframe
+                                                className="yt-embed"
+                                                src={`https://www.youtube.com/embed/${youtubeLoaded.video_id}`}
+                                                title={youtubeLoaded.title}
+                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                allowFullScreen
+                                            />
+                                        </div>
+                                        <div className="yt-preview-meta">
+                                            <span className="yt-preview-title">{youtubeLoaded.title}</span>
+                                            <span className="yt-preview-chars">
+                                                {studyText.length.toLocaleString()} chars extracted
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+                                {!youtubeLoaded && (
+                                    <p className="yt-hint">
+                                        Paste any YouTube URL with captions enabled. The transcript will be extracted and used as study material.
+                                    </p>
+                                )}
                             </div>
                         )}
 

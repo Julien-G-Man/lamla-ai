@@ -48,6 +48,38 @@ async def _get_authenticated_user_async(request):
 
     return user, None
 
+
+@csrf_exempt
+@require_http_methods(["POST"])
+async def extract_youtube_transcript(request):
+    """
+    Extract transcript text from a YouTube URL.
+    Returns the same shape as ajax-extract-text so the frontend feeds it
+    straight into the existing quiz generation flow.
+    """
+    try:
+        data = json.loads(request.body) if request.body else {}
+        url = (data.get("url") or "").strip()
+        if not url:
+            return JsonResponse({"error": "YouTube URL is required"}, status=400)
+
+        from .youtube_api import fetch_youtube_quiz_content
+        result = await fetch_youtube_quiz_content(url)
+
+        return JsonResponse({
+            "text": result["text"],
+            "title": result["title"],
+            "video_id": result["video_id"],
+        })
+
+    except ValueError as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
+    except Exception as exc:
+        logger.error("YouTube transcript extraction failed: %s", exc, exc_info=True)
+        return JsonResponse({"error": "Failed to fetch transcript from YouTube"}, status=500)
+
+
+
 @csrf_exempt
 @require_http_methods(["POST"])
 async def generate_quiz_api_async(request):
@@ -65,6 +97,8 @@ async def generate_quiz_api_async(request):
         num_mcq = data.get("num_mcq") or 7
         num_short = data.get("num_short") or 0
         difficulty = (data.get("difficulty") or "medium").strip().lower()
+        source_type = (data.get("source_type") or "text").strip().lower()
+        source_title = (data.get("source_filename") or "").strip()
         
         if not subject:
             return JsonResponse({"error": "Subject is required"}, status=400)
@@ -91,6 +125,8 @@ async def generate_quiz_api_async(request):
             "num_mcq": int(num_mcq),
             "num_short": int(num_short),
             "difficulty": difficulty,
+            "source_type": source_type,
+            "source_title": source_title,
         }
         
         # Forward to FastAPI using async client
