@@ -130,8 +130,6 @@ Platform context (retrieved on-demand):
 Platform context sources: {', '.join(platform_sources) if platform_sources else 'none'}
 Retrieval mode used: {retrieval_mode}
 
-Key Information about Lamla AI:
-
 IMPORTANT RESPONSE GUIDELINES:
 1. Be warm, friendly, and encouraging in your tone
 2. Use proper formatting for lists with clear indentation and bullet points
@@ -241,13 +239,15 @@ What would you like to learn about?"""
 
 🎯 Study Tools:
     • Custom Quiz creator
+    • Flashcard creator for active recall
     • Exam Analyzer
     • Progress dashboard
+    • Materials library supported by our students community
     • Feedback system
 
 Would you like me to explain any specific feature in detail?"""
 
-        elif any(word in user_message_lower for word in ['contact', 'support', 'email']):
+        elif any(word in user_message_lower for word in ['contact', 'support', 'email', 'help']):
             return """Need help? I'm here for you! 💪
 
 Contact Information:
