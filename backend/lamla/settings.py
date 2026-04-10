@@ -209,6 +209,7 @@ AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION")
 
 
 CHATBOT_USE_MCP = os.getenv("CHATBOT_USE_MCP", "False") == "True"
+CHATBOT_MCP_MAX_ITERATIONS = int(os.getenv("CHATBOT_MCP_MAX_ITERATIONS", "5"))
 
 # Chatbot retrieval configuration (keyword-first, embeddings-ready)
 CHATBOT_RETRIEVAL_MODE = os.getenv("CHATBOT_RETRIEVAL_MODE", "hybrid")

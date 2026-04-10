@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
+import rehypeRaw from 'rehype-raw';
 import 'katex/dist/katex.min.css';
 import './Chatbot.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -285,7 +286,7 @@ const Chatbot = ({ user }) => {
                 <div className="message-content">
                     <ReactMarkdown
                         remarkPlugins={[remarkGfm, remarkMath]}
-                        rehypePlugins={[rehypeKatex]}
+                        rehypePlugins={[rehypeRaw, rehypeKatex]}
                         components={{
                             p: ({node, ...props}) => <p className="md-p" {...props} />,
                             strong: ({node, ...props}) => <strong className="md-strong" {...props} />,
@@ -293,17 +294,17 @@ const Chatbot = ({ user }) => {
                             ul: ({node, ...props}) => <ul className="md-ul" {...props} />,
                             ol: ({node, ...props}) => <ol className="md-ol" {...props} />,
                             li: ({node, ...props}) => <li className="md-li" {...props} />,
-                            h1: ({node, ...props}) => <h1 className="md-h1" {...props} />,
-                            h2: ({node, ...props}) => <h2 className="md-h2" {...props} />,
-                            h3: ({node, ...props}) => <h3 className="md-h3" {...props} />,
-                            h4: ({node, ...props}) => <h4 className="md-h4" {...props} />,
+                            h1: ({node, children, ...props}) => <h1 className="md-h1" {...props}>{children}</h1>,
+                            h2: ({node, children, ...props}) => <h2 className="md-h2" {...props}>{children}</h2>,
+                            h3: ({node, children, ...props}) => <h3 className="md-h3" {...props}>{children}</h3>,
+                            h4: ({node, children, ...props}) => <h4 className="md-h4" {...props}>{children}</h4>,
                             blockquote: ({node, ...props}) => <blockquote className="md-blockquote" {...props} />,
                             code: ({node, inline, ...props}) =>
                                 inline
                                     ? <code className="md-code-inline" {...props} />
                                     : <code className="md-code-block" {...props} />,
                             pre: ({node, ...props}) => <pre className="md-pre" {...props} />,
-                            a: ({node, ...props}) => <a className="md-a" target="_blank" rel="noopener noreferrer" {...props} />,
+                            a: ({node, children, ...props}) => <a className="md-a" target="_blank" rel="noopener noreferrer" {...props}>{children}</a>,
                             hr: ({node, ...props}) => <hr className="md-hr" {...props} />,
                             table: ({node, ...props}) => <table className="chatbot-table" {...props} />,
                             thead: ({node, ...props}) => <thead className="chatbot-thead" {...props} />,
