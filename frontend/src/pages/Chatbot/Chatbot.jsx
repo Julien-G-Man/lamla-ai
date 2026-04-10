@@ -34,7 +34,7 @@ const Chatbot = ({ user }) => {
     const [currentSearchMode, setCurrentSearchMode] = useState('disabled');
     const [isProcessing, setIsProcessing] = useState(false); 
     const [history, setHistory] = useState([
-        { id: messageIdCounter++, text: "👋 Hello! I'm your AI study assistant. Ask me anything about your study materials or exams. Let’s study smarter together!", type: 'ai', sender: 'AI Tutor' }
+        { id: messageIdCounter++, text: "👋 Hello! I'm AI Tutor, your AI study assistant. Ask me anything about your study materials or exams. Let’s study smarter together!", type: 'ai', sender: 'AI Tutor' }
     ]);
     
     // --- Ref Variables ---
@@ -287,7 +287,24 @@ const Chatbot = ({ user }) => {
                         remarkPlugins={[remarkGfm, remarkMath]}
                         rehypePlugins={[rehypeKatex]}
                         components={{
-                            p: ({node, ...props}) => <p style={{ margin: '0.4em 0', whiteSpace: 'pre-wrap' }} {...props} />,
+                            p: ({node, ...props}) => <p className="md-p" {...props} />,
+                            strong: ({node, ...props}) => <strong className="md-strong" {...props} />,
+                            em: ({node, ...props}) => <em className="md-em" {...props} />,
+                            ul: ({node, ...props}) => <ul className="md-ul" {...props} />,
+                            ol: ({node, ...props}) => <ol className="md-ol" {...props} />,
+                            li: ({node, ...props}) => <li className="md-li" {...props} />,
+                            h1: ({node, ...props}) => <h1 className="md-h1" {...props} />,
+                            h2: ({node, ...props}) => <h2 className="md-h2" {...props} />,
+                            h3: ({node, ...props}) => <h3 className="md-h3" {...props} />,
+                            h4: ({node, ...props}) => <h4 className="md-h4" {...props} />,
+                            blockquote: ({node, ...props}) => <blockquote className="md-blockquote" {...props} />,
+                            code: ({node, inline, ...props}) =>
+                                inline
+                                    ? <code className="md-code-inline" {...props} />
+                                    : <code className="md-code-block" {...props} />,
+                            pre: ({node, ...props}) => <pre className="md-pre" {...props} />,
+                            a: ({node, ...props}) => <a className="md-a" target="_blank" rel="noopener noreferrer" {...props} />,
+                            hr: ({node, ...props}) => <hr className="md-hr" {...props} />,
                             table: ({node, ...props}) => <table className="chatbot-table" {...props} />,
                             thead: ({node, ...props}) => <thead className="chatbot-thead" {...props} />,
                             tbody: ({node, ...props}) => <tbody className="chatbot-tbody" {...props} />,

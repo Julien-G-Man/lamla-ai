@@ -1,6 +1,6 @@
 from django.test import TestCase
 
-from .platform_retrieval import PlatformKnowledgeRetriever
+from chatbot.platform_retrieval import PlatformKnowledgeRetriever
 
 
 class PlatformKnowledgeRetrieverTests(TestCase):

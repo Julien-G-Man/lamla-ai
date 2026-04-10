@@ -4,7 +4,7 @@
 
 - Frontend: React (`frontend/src`)
 - API gateway + persistence: Django (`backend/apps/*`)
-- Async AI worker: FastAPI (`backend/fastapi_service/*`)
+- Async AI worker: FastAPI (`ai_service/*`)
 
 ## Core Pattern
 
@@ -17,7 +17,7 @@
 ## Why This Split
 
 - Django owns business logic, auth token checks, and models.
-- FastAPI stays stateless and focused on async AI provider calls.
+- FastAPI stays stateless and focused on async AI tasks
 - Internal shared-secret protection keeps worker endpoints private by default.
 
 ## Service Communication

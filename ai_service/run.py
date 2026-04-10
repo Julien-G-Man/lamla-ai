@@ -24,7 +24,7 @@ def _load_env_file() -> None:
     """
     Load environment variables from a local .env file located next to this script.
 
-    This allows fastapi_service to be hosted separately with its own configuration,
+    This allows ai_service to be hosted separately with its own configuration,
     without importing anything from the Django backend.
     """
     if load_dotenv is None:

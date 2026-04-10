@@ -49,7 +49,17 @@ def _extract_json_substring(text: str):
 class AIClient:
     """
     Async AI provider orchestrator.
-    Use generate_content(client=async_httpx_client, prompt=...) from FastAPI services.
+
+    Two public methods:
+      generate_content(client, prompt, ...)
+          One-shot text generation. Used by all existing service routes.
+
+      generate_with_tools(messages, tools, ...)
+          MCP orchestration step. Sends a messages list + tool definitions to
+          the AI. Returns either a final text response or a list of tool calls.
+          Primary: Claude (Anthropic native tool use).
+          Fallback: OpenAI-compatible providers (NVIDIA, Azure).
+          Last resort: text-mode (embed schemas in prompt, parse JSON).
 
     Provider priority (default): nvidia_deepseek → nvidia_openai → claude
     """
@@ -183,6 +193,219 @@ class AIClient:
         if raise_on_error:
             raise APIIntegrationError(f"All AI providers failed: {err_msg}")
         return ""
+
+    # ------------------------------------------------------------------ #
+    #  MCP: generate_with_tools                                          #
+    # ------------------------------------------------------------------ #
+
+    async def generate_with_tools(
+        self,
+        messages: list[dict],
+        tools: list[dict],          # Anthropic-format tool definitions
+        max_tokens: int = 1024,
+        system: str = "",
+        timeout: int = 60,
+    ) -> dict:
+        """
+        Send a messages list + tool definitions to the AI.
+
+        Returns:
+            {
+                "stop_reason": "tool_use" | "end_turn",
+                "tool_calls":  [{"id": str, "name": str, "input": dict}],
+                "text":        str | None,
+                "raw_content": list,   # raw content blocks for history reconstruction
+            }
+
+        Provider cascade:
+          1. Claude  — native Anthropic tool use (most reliable)
+          2. NVIDIA OpenAI / Azure — OpenAI-format tool use
+          3. Text-mode fallback — embed schemas in system prompt, parse JSON
+        """
+        # 1. Try Claude native tool use
+        if self.claude_key and self._anthropic_client:
+            try:
+                return await self._claude_with_tools(messages, tools, max_tokens, system, timeout)
+            except Exception as exc:
+                logger.warning("[mcp:ai_client] Claude tool use failed: %s — trying next", exc)
+
+        # 2. Try NVIDIA OpenAI-compatible tool use
+        if self.nvidia_openai_key:
+            try:
+                return await self._openai_compat_with_tools(
+                    self.nvidia_openai_url, self.nvidia_openai_model, self.nvidia_openai_key,
+                    messages, tools, max_tokens, system, timeout,
+                )
+            except Exception as exc:
+                logger.warning("[mcp:ai_client] NVIDIA OpenAI tool use failed: %s — trying Azure", exc)
+
+        # 3. Try Azure OpenAI tool use
+        if self.azure_key and self.azure_endpoint:
+            try:
+                return await self._openai_compat_with_tools(
+                    self._azure_chat_url(), None, self.azure_key,
+                    messages, tools, max_tokens, system, timeout, is_azure=True,
+                )
+            except Exception as exc:
+                logger.warning("[mcp:ai_client] Azure tool use failed: %s — text-mode fallback", exc)
+
+        # 4. Last resort: text-mode fallback
+        logger.info("[mcp:ai_client] using text-mode tool fallback")
+        return await self._text_mode_tool_fallback(messages, tools, max_tokens, system, timeout)
+
+    async def _claude_with_tools(
+        self, messages: list[dict], tools: list[dict],
+        max_tokens: int, system: str, timeout: int,
+    ) -> dict:
+        """Claude native tool use via Anthropic SDK."""
+        kwargs: dict = dict(model=self.claude_model, max_tokens=max_tokens,
+                            tools=tools, messages=messages, timeout=timeout)
+        if system:
+            kwargs["system"] = system
+
+        resp = await self._anthropic_client.messages.create(**kwargs)
+
+        tool_calls, text_parts, raw_content = [], [], []
+        for block in resp.content:
+            raw_content.append(block)
+            if block.type == "tool_use":
+                tool_calls.append({"id": block.id, "name": block.name, "input": block.input})
+            elif block.type == "text":
+                text_parts.append(block.text)
+
+        stop_reason = "tool_use" if tool_calls else "end_turn"
+        logger.debug("[mcp:ai_client] claude stop_reason=%s calls=%d", stop_reason, len(tool_calls))
+        return {
+            "stop_reason": stop_reason,
+            "tool_calls": tool_calls,
+            "text": " ".join(text_parts).strip() or None,
+            "raw_content": raw_content,
+        }
+
+    def _azure_chat_url(self) -> str:
+        base = self.azure_endpoint.rstrip("/")
+        if "/openai/deployments/" in base.lower():
+            return f"{base}/chat/completions?api-version={self.azure_api_version}"
+        return (f"{base}/openai/deployments/{self.azure_deployment}"
+                f"/chat/completions?api-version={self.azure_api_version}")
+
+    async def _openai_compat_with_tools(
+        self, url: str, model: str | None, api_key: str,
+        messages: list[dict], tools: list[dict],
+        max_tokens: int, system: str, timeout: int,
+        is_azure: bool = False,
+    ) -> dict:
+        """OpenAI-compatible tool use (NVIDIA, Azure)."""
+        import json as _json
+
+        openai_tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": t["name"],
+                    "description": t.get("description", ""),
+                    "parameters": t.get("input_schema", {"type": "object", "properties": {}}),
+                },
+            }
+            for t in tools
+        ]
+
+        all_messages = ([{"role": "system", "content": system}] if system else []) + list(messages)
+        payload: dict = {"messages": all_messages, "tools": openai_tools,
+                         "tool_choice": "auto", "max_tokens": max_tokens}
+        if model:
+            payload["model"] = model
+
+        headers = ({"Content-Type": "application/json", "api-key": api_key} if is_azure
+                   else {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"})
+
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            resp = await client.post(url, headers=headers, json=payload)
+            resp.raise_for_status()
+            data = resp.json()
+
+        choice = data["choices"][0]
+        msg = choice.get("message", {})
+        tool_calls = []
+        if choice.get("finish_reason") == "tool_calls":
+            for tc in msg.get("tool_calls", []):
+                raw_args = tc["function"].get("arguments", "{}")
+                try:
+                    args = _json.loads(raw_args) if isinstance(raw_args, str) else raw_args
+                except Exception:
+                    args = {}
+                tool_calls.append({"id": tc.get("id", ""), "name": tc["function"]["name"], "input": args})
+
+        stop_reason = "tool_use" if tool_calls else "end_turn"
+        logger.debug("[mcp:ai_client] openai-compat stop_reason=%s calls=%d", stop_reason, len(tool_calls))
+        return {
+            "stop_reason": stop_reason,
+            "tool_calls": tool_calls,
+            "text": msg.get("content") or None,
+            "raw_content": [msg],
+        }
+
+    async def _text_mode_tool_fallback(
+        self, messages: list[dict], tools: list[dict],
+        max_tokens: int, system: str, timeout: int,
+    ) -> dict:
+        """
+        Embed tool schemas in the system prompt and ask the AI to output a
+        JSON action block when it wants to call a tool. Works on all providers
+        but is less reliable than native tool use.
+        """
+        import json as _json
+
+        tool_descs = "\n\n".join(
+            f"Tool: {t['name']}\nDescription: {t.get('description', '')}\n"
+            f"Input: {_json.dumps(t.get('input_schema', {}))}"
+            for t in tools
+        )
+        tool_system = (
+            f"{system}\n\nAvailable tools:\n\n{tool_descs}\n\n"
+            f"To call a tool reply ONLY with this JSON (no other text):\n"
+            f'{{"action":"tool_call","name":"<name>","input":{{...}}}}\n'
+            f"If no tool is needed, reply normally."
+        )
+        history = ""
+        for m in messages:
+            role = m.get("role", "user").capitalize()
+            content = m.get("content", "")
+            if isinstance(content, list):
+                content = " ".join(
+                    c.get("text", "") if isinstance(c, dict) else str(c) for c in content
+                )
+            history += f"{role}: {content}\n"
+
+        full_prompt = f"{tool_system}\n\n{history}\nAssistant:"
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            raw = await self.generate_content(client=client, prompt=full_prompt,
+                                               max_tokens=max_tokens, timeout=timeout)
+
+        text = raw if isinstance(raw, str) else _json.dumps(raw)
+        text = text.strip()
+
+        try:
+            cleaned = text.lstrip("```json").lstrip("```").rstrip("```").strip()
+            parsed = _json.loads(cleaned)
+            if isinstance(parsed, dict) and parsed.get("action") == "tool_call":
+                tc_id = f"textmode_{parsed['name']}_{id(parsed)}"
+                logger.debug("[mcp:ai_client] text-mode detected tool_call name=%s", parsed["name"])
+                return {
+                    "stop_reason": "tool_use",
+                    "tool_calls": [{"id": tc_id, "name": parsed["name"], "input": parsed.get("input", {})}],
+                    "text": None,
+                    "raw_content": [{"role": "assistant", "content": text}],
+                }
+        except Exception:
+            pass
+
+        return {
+            "stop_reason": "end_turn",
+            "tool_calls": [],
+            "text": text,
+            "raw_content": [{"role": "assistant", "content": text}],
+        }
 
     # ------------------------------------------------------------------ #
     #  Provider implementations                                            #

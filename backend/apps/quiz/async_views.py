@@ -320,88 +320,51 @@ async def submit_quiz_api_async(request):
 
 async def _evaluate_short_answer(question_text: str, correct_answer: str, user_answer: str) -> dict:
     """
-    Use LLM to evaluate if a short answer is correct.
-    
+    Evaluate a short answer via the MCP evaluate_answer tool.
+
     Returns:
-        {
-            "is_correct": bool,
-            "reasoning": str,
-            "score": float (0.0-1.0)
-        }
+        {"is_correct": bool, "reasoning": str, "score": float}
     """
     if not user_answer.strip():
         return {"is_correct": False, "reasoning": "No answer provided", "score": 0.0}
-    
-    evaluation_prompt = f"""You are an expert quiz evaluator. Evaluate the following student answer to a quiz question.
-
-Question: {question_text}
-
-Expected/Model Answer: {correct_answer}
-
-Student's Answer: {user_answer}
-
-Evaluate if the student's answer is correct. Consider:
-1. Factual accuracy
-2. Completeness (does it cover key points?)
-3. Clarity and relevance
-
-Respond in JSON format ONLY:
-{{
-  "is_correct": true/false,
-  "reasoning": "brief explanation (1-2 sentences)",
-  "score": 0.0-1.0
-}}
-
-IMPORTANT: Return ONLY the JSON object, nothing else. No markdown formatting, no code blocks, only the JSON object"""
 
     try:
         headers = build_fastapi_headers()
         response = await call_fastapi(
             "POST",
-            "/chatbot/",
-            json={"message": evaluation_prompt},
+            "/mcp/call",
+            json={
+                "tool_use_id": "quiz_eval",
+                "name": "evaluate_answer",
+                "input": {
+                    "question": question_text,
+                    "correct_answer": correct_answer,
+                    "user_answer": user_answer,
+                },
+            },
             headers=headers,
             timeout=30.0,
         )
-        
+
         if response.status_code != 200:
-            logger.warning(f"LLM evaluation failed: {response.status_code}")
-            # Fallback to string matching if LLM fails
-            is_correct = user_answer.lower().strip() == correct_answer.lower().strip()
-            return {
-                "is_correct": is_correct,
-                "reasoning": "String match" if is_correct else "Does not match expected answer",
-                "score": 1.0 if is_correct else 0.0
-            }
-        
-        response_data = response.json()
-        response_text = response_data.get("response", "")
-        
-        # Extract JSON from response
-        try:
-            evaluation = json.loads(response_text)
-            return {
-                "is_correct": evaluation.get("is_correct", False),
-                "reasoning": evaluation.get("reasoning", "Evaluation complete"),
-                "score": evaluation.get("score", 0.0)
-            }
-        except json.JSONDecodeError:
-            logger.warning(f"Failed to parse LLM evaluation response: {response_text[:200]}")
-            # Fallback to basic comparison
-            is_correct = user_answer.lower().strip() == correct_answer.lower().strip()
-            return {
-                "is_correct": is_correct,
-                "reasoning": "Automatic evaluation",
-                "score": 1.0 if is_correct else 0.0
-            }
-    except Exception as e:
-        logger.error(f"Error evaluating short answer: {e}")
-        # Fallback to basic string matching
-        is_correct = user_answer.lower().strip() == correct_answer.lower().strip()
+            logger.warning("MCP evaluate_answer returned %s", response.status_code)
+            raise ValueError(f"MCP call failed: {response.status_code}")
+
+        data = response.json()
+        output = data.get("output", {})
+        return {
+            "is_correct": bool(output.get("is_correct", False)),
+            "reasoning": str(output.get("reasoning", "Evaluation complete")),
+            "score": float(output.get("score", 0.0)),
+        }
+
+    except Exception as exc:
+        logger.warning("Short-answer evaluation via MCP failed: %s — falling back to string match", exc)
+        is_correct = user_answer.strip().lower() == correct_answer.strip().lower()
         return {
             "is_correct": is_correct,
-            "reasoning": "Fallback evaluation",
-            "score": 1.0 if is_correct else 0.0
+            "reasoning": "String match fallback.",
+            "score": 1.0 if is_correct else 0.0,
         }
 
 class QuizHistoryView(APIView):

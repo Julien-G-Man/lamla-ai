@@ -48,11 +48,11 @@ python run_django.py --port 8000 --reload
 ## 2) FastAPI install/run
 
 ```bash
-cd backend\fastapi_service
+cd ai_service
 python run.py
 ```
 
-Set shared env values for FastAPI process (or `fastapi_service/.env`):
+Set shared env values for FastAPI process (or `ai_service/.env`):
 
 ```bash
 FASTAPI_SECRET=change-me-shared-secret

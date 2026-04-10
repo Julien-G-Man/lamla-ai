@@ -31,7 +31,7 @@ python run.py --port 8000 --reload
 2. FastAPI worker
 
 ```bash
-cd backend/fastapi_service
+cd ai_service
 python run.py
 ```
 

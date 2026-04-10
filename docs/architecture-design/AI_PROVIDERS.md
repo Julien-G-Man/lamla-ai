@@ -59,7 +59,7 @@ Do **not** append date suffixes (e.g. `claude-opus-4-6-20250514`) — that will 
 
 ### Minimal local setup
 
-Add to `backend/fastapi_service/.env`:
+Add to `ai_service/.env`:
 
 ```bash
 CLAUDE_API_KEY=sk-ant-...
