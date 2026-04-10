@@ -16,13 +16,14 @@ from django.views.decorators.http import require_http_methods
 from asgiref.sync import sync_to_async
 from .file_extractor import extract_text_from_file, FileExtractionError
 from apps.core.async_client import call_fastapi, build_fastapi_headers
-from .chatbot_service import chatbot_service
 from .helpers import (
     _get_or_create_session,
     _save_user_message,
     _save_ai_message,
     _get_conversation_history,
     _build_chatbot_prompt,
+    _build_mcp_context,
+    fallback_response,
 )
 
 logger = logging.getLogger(__name__)
@@ -59,60 +60,130 @@ async def chatbot_api_async(request):
         # 3. Get conversation history (last 10 conversations = 20 messages)
         conversation_history = await _get_conversation_history(session_obj, limit=20)
         
-        # 4. Build full prompt
-        full_prompt = await _build_chatbot_prompt(user_message, conversation_history, user=user)
         max_tokens = getattr(settings, "CHATBOT_MAX_TOKENS", 1200)
-        
-        # 5. Forward to FastAPI using async client
+        use_mcp = getattr(settings, "CHATBOT_USE_MCP", False)
+
+        # 4 & 5. Build prompt / messages, forward to FastAPI
         try:
             headers = build_fastapi_headers()
-            fastapi_resp = await call_fastapi(
-                "POST",
-                "/chatbot/",
-                json={"prompt": full_prompt, "max_tokens": max_tokens},
-                headers=headers,
-                timeout=60.0,
-            )
-            
-            if fastapi_resp.status_code != 200:
-                logger.warning(f"FastAPI responded {fastapi_resp.status_code}: {fastapi_resp.text}")
-                return JsonResponse(
-                    {"error": "AI service temporarily unavailable"}, 
-                    status=503
+
+            if use_mcp:
+                # ── MCP path: AI-driven tool loop ──────────────────────────
+                # Build system prompt + Anthropic messages list separately
+                system_prompt, messages = await _build_mcp_context(
+                    user_message, conversation_history, user=user
                 )
-            
-            # Parse response with better error handling
-            try:
-                resp_json = fastapi_resp.json()
-                ai_response = resp_json.get("response", "")
-                
-                # If response is empty or None, try to extract from choices (Azure format)
-                if not ai_response and "choices" in resp_json:
-                    choices = resp_json.get("choices", [])
-                    if choices and len(choices) > 0:
-                        choice = choices[0]
-                        if isinstance(choice, dict):
-                            message = choice.get("message", {})
-                            if isinstance(message, dict):
-                                ai_response = message.get("content", "")
-                
-                if not ai_response:
-                    logger.warning(f"FastAPI returned empty response. Full response: {resp_json}")
-                    ai_response = chatbot_service._get_fallback_response(user_message)
-            except (json.JSONDecodeError, KeyError, TypeError) as e:
-                logger.error(f"Failed to parse FastAPI response: {e}. Response text: {fastapi_resp.text[:200]}")
-                ai_response = chatbot_service._get_fallback_response(user_message)
+                # Restrict to chatbot-appropriate tools (no quiz/flashcard page tools)
+                mcp_tools = getattr(
+                    settings,
+                    "CHATBOT_MCP_TOOLS",
+                    None,  # None = all registered tools
+                )
+                logger.info(
+                    "[chatbot:mcp] orchestrate start session=%s tools=%s",
+                    getattr(session_obj, "session_id", "?"), mcp_tools,
+                )
+                fastapi_resp = await call_fastapi(
+                    "POST",
+                    "/mcp/orchestrate",
+                    json={
+                        "messages": messages,
+                        "system_prompt": system_prompt,
+                        "tools": mcp_tools,
+                        "max_tokens": max_tokens,
+                        "max_iterations": getattr(settings, "CHATBOT_MCP_MAX_ITERATIONS", 5),
+                    },
+                    headers=headers,
+                    timeout=120.0,  # tool loops take longer than single-shot calls
+                )
+
+                if fastapi_resp.status_code != 200:
+                    logger.warning(
+                        "[chatbot:mcp] orchestrate returned %d: %s",
+                        fastapi_resp.status_code, fastapi_resp.text[:200],
+                    )
+                    # Fall through to one-shot fallback below
+                    use_mcp = False
+
+                if use_mcp:
+                    try:
+                        resp_json = fastapi_resp.json()
+                        ai_response = resp_json.get("response", "")
+                        tool_calls_made = resp_json.get("tool_calls_made", [])
+                        iterations = resp_json.get("iterations", 0)
+                        mcp_error = resp_json.get("error")
+
+                        if mcp_error:
+                            logger.warning(
+                                "[chatbot:mcp] orchestrate error: %s (calls=%s iter=%d)",
+                                mcp_error, tool_calls_made, iterations,
+                            )
+
+                        logger.info(
+                            "[chatbot:mcp] done session=%s calls=%s iter=%d response_len=%d",
+                            getattr(session_obj, "session_id", "?"),
+                            tool_calls_made, iterations, len(ai_response),
+                        )
+
+                        if not ai_response:
+                            logger.warning("[chatbot:mcp] empty response — falling back to one-shot")
+                            use_mcp = False  # fall through to one-shot below
+                    except (json.JSONDecodeError, KeyError, TypeError) as e:
+                        logger.error("[chatbot:mcp] failed to parse orchestrate response: %s", e)
+                        use_mcp = False
+
+            if not use_mcp:
+                # ── Original one-shot path (fallback or default) ───────────
+                full_prompt = await _build_chatbot_prompt(user_message, conversation_history, user=user)
+                fastapi_resp = await call_fastapi(
+                    "POST",
+                    "/chatbot/",
+                    json={"prompt": full_prompt, "max_tokens": max_tokens},
+                    headers=headers,
+                    timeout=60.0,
+                )
+
+                if fastapi_resp.status_code != 200:
+                    logger.warning(
+                        "[chatbot] FastAPI responded %d: %s",
+                        fastapi_resp.status_code, fastapi_resp.text[:200],
+                    )
+                    return JsonResponse({"error": "AI service temporarily unavailable"}, status=503)
+
+                try:
+                    resp_json = fastapi_resp.json()
+                    ai_response = resp_json.get("response", "")
+
+                    # Azure format fallback
+                    if not ai_response and "choices" in resp_json:
+                        choices = resp_json.get("choices", [])
+                        if choices:
+                            choice = choices[0]
+                            if isinstance(choice, dict):
+                                message = choice.get("message", {})
+                                if isinstance(message, dict):
+                                    ai_response = message.get("content", "")
+
+                    if not ai_response:
+                        logger.warning("[chatbot] empty response from FastAPI: %s", resp_json)
+                        ai_response = fallback_response(user_message)
+                except (json.JSONDecodeError, KeyError, TypeError) as e:
+                    logger.error("[chatbot] failed to parse FastAPI response: %s", e)
+                    ai_response = fallback_response(user_message)
+
         except RuntimeError as e:
             if "Event loop is closed" in str(e):
-                logger.error("Event loop is closed. Django must run with ASGI server (uvicorn/daphne), not WSGI (runserver).")
+                logger.error(
+                    "Event loop is closed. Django must run with ASGI (uvicorn/daphne), not WSGI."
+                )
                 return JsonResponse(
-                    {"error": "Server configuration error. Please contact administrator."}, 
-                    status=500
+                    {"error": "Server configuration error. Please contact administrator."},
+                    status=500,
                 )
             raise
         
         # Clean markdown
-        cleaned_response = chatbot_service.clean_markdown(ai_response.strip())
+        cleaned_response = ai_response.strip()
         
         # 6. Save AI message
         try:
@@ -152,8 +223,7 @@ async def chatbot_file_api_async(request):
     Extracts text in Django, then proxies the prompt to FastAPI with full context.
     """
     session_obj = None
-    user_msg_obj = None
-    
+
     try:
         if 'file_upload' not in request.FILES:
             return JsonResponse({'error': 'No file uploaded.'}, status=400)
@@ -179,7 +249,7 @@ async def chatbot_file_api_async(request):
         
         # 3. Save user message with file reference
         display_message = f"{user_message} (File: {filename})"
-        user_msg_obj = await _save_user_message(session_obj, display_message)
+        await _save_user_message(session_obj, display_message)
         
         # 4. Get History & Build Prompt with FILE CONTEXT
         history = await _get_conversation_history(session_obj)
@@ -242,7 +312,7 @@ async def chatbot_file_api_async(request):
             ai_response = "Failed to parse AI response. Please try again."
 
         # 6. Clean and Save
-        cleaned_response = chatbot_service.clean_markdown(ai_response.strip())
+        cleaned_response = ai_response.strip()
         await _save_ai_message(session_obj, cleaned_response)
         
         logger.info(f"Successfully processed file {filename} with {len(cleaned_response)} char response")
@@ -325,10 +395,10 @@ async def chatbot_stream_async(request):
                         ai_response = resp_json
                     else:
                         logger.warning(f"FastAPI returned empty response. Full response: {resp_json}")
-                        ai_response = chatbot_service._get_fallback_response(user_message)
+                        ai_response = fallback_response(user_message)
             except (json.JSONDecodeError, KeyError, TypeError) as e:
                 logger.error(f"Failed to parse FastAPI response: {e}. Response text: {fastapi_resp.text[:200]}")
-                ai_response = chatbot_service._get_fallback_response(user_message)
+                ai_response = fallback_response(user_message)
         except RuntimeError as e:
             if "Event loop is closed" in str(e):
                 logger.error("Event loop is closed. Django must run with ASGI server (uvicorn/daphne), not WSGI (runserver).")
@@ -339,7 +409,7 @@ async def chatbot_stream_async(request):
             raise
         
         # Clean markdown
-        cleaned_response = chatbot_service.clean_markdown(ai_response.strip())
+        cleaned_response = ai_response.strip()
         
         # Stream the response in chunks to simulate streaming
         async def stream_generator():

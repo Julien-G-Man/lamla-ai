@@ -19,10 +19,10 @@ except Exception:
 		import os, sys, importlib.util
 		try:
 			this_dir = os.path.dirname(os.path.abspath(__file__))
-			package_root = os.path.dirname(this_dir)  # fastapi_service/
+			package_root = os.path.dirname(this_dir)  # ai_service/
 			core_path = os.path.join(package_root, 'core', 'ai_client.py')
 			if os.path.exists(core_path):
-				spec = importlib.util.spec_from_file_location('fastapi_service.core.ai_client', core_path)
+				spec = importlib.util.spec_from_file_location('ai_service.core.ai_client', core_path)
 				mod = importlib.util.module_from_spec(spec)
 				spec.loader.exec_module(mod)
 				ai_service = getattr(mod, 'ai_service', None)
@@ -30,7 +30,7 @@ except Exception:
 				# As a last resort, try adding package_root parent to sys.path
 				sys.path.insert(0, package_root)
 				try:
-					from fastapi_service.core.ai_client import ai_service
+					from ai_service.core.ai_client import ai_service
 				except Exception as e:
 					logger.exception("Could not import FastAPI ai_service: %s", e)
 					ai_service = None

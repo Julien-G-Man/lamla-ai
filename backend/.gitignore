@@ -1,14 +1,13 @@
 __pycache__/
 venv/
-fastapi_service/fastenv/
+ai_service/fastenv/
 .env
 .cache_ggshield
 db.sqlite3
 
 # Legacy setup files 
-fastapi_service/nvidia_openai.py
+ai_service/nvidia_openai.py
 nvidia_openai.py
-tests/
 setup_postgres.sql
 setup_postgres.bat
 test_chatbot_fixes.py

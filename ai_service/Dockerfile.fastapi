@@ -15,11 +15,11 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy FastAPI service
-COPY fastapi_service/ fastapi_service/
+COPY ai_service/ ai_service/
 COPY .env .env
 
 # Expose FastAPI port
 EXPOSE 8001
 
 # Run FastAPI with Uvicorn
-CMD ["python", "fastapi_service/run.py"]
+CMD ["python", "ai_service/run.py"]

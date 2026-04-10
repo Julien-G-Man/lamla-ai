@@ -16,7 +16,7 @@ Django (`backend/.env`):
 - `STORAGE_BACKEND` (`local` or `cloudinary`)
 - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` (if Cloudinary is enabled)
 
-FastAPI (`backend/fastapi_service/.env` or process env):
+FastAPI (`ai_service/.env` or process env):
 
 - `FASTAPI_SECRET`
 - `FASTAPI_ALLOWED_ORIGINS`

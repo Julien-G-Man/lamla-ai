@@ -5,7 +5,7 @@ This project deploys Django and FastAPI as separate Render services.
 ## Service Layout
 
 - Service 1: Django API (`backend`)
-- Service 2: FastAPI worker (`backend/fastapi_service`)
+- Service 2: FastAPI worker (`ai_service`)
 - Frontend runs separately (Vercel)
 
 ## Django Service
