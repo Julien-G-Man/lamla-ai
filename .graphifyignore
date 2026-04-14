@@ -1,0 +1,6 @@
+# Graphify ignore patterns
+vendor/
+node_modules/
+dist/
+*.generated.py
+
