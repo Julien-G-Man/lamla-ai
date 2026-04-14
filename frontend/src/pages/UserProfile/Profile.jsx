@@ -82,6 +82,7 @@ const Profile = () => {
   
   const handleNavigate = (id) => {
     if (id === 'profile') return; // already here
+    if (id === 'history') { navigate('/quiz'); return; }
     const dashboardRoute = isAdmin ? '/admin-dashboard' : '/dashboard';
     navigate(dashboardRoute, { state: { tab: id } });
   };

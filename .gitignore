@@ -8,6 +8,7 @@ client_secret.json
 CLAUDE.md
 .claude/**
 __pycache__/
+context.txt
 
 # Graphify generated artifacts (local analysis output)
 graphify-out/

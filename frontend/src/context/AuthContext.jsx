@@ -39,6 +39,7 @@ export const AuthProvider = ({ children }) => {
       const { user } = await authService.login(identifier, password);
       setUser(user);
       setIsAuthenticated(true);
+      localStorage.removeItem('lamla_guest_quiz_used');
       return { user };
     } catch (err) {
       setIsAuthenticated(false);
@@ -54,6 +55,7 @@ export const AuthProvider = ({ children }) => {
       const { user, verification } = await authService.signup(email, password, username);
       setUser(user);
       setIsAuthenticated(true);
+      localStorage.removeItem('lamla_guest_quiz_used');
 
       // Send verification email via EmailJS (non-fatal if it fails)
       if (verification?.uid && verification?.token) {
@@ -78,6 +80,7 @@ export const AuthProvider = ({ children }) => {
       const { user, created } = await authService.googleAuth(googleToken);
       setUser(user);
       setIsAuthenticated(true);
+      localStorage.removeItem('lamla_guest_quiz_used');
 
       // Send a welcome email only on first signup — returning users don't need it
       if (created && user?.email) {

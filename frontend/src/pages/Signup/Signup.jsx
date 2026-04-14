@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { GoogleLogin } from '@react-oauth/google';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -25,6 +25,8 @@ const FEATURES = [
 
 // ── Component ─────────────────────────────────────────────────────────────────
 const Signup = () => {
+  const location = useLocation();
+  const fromGuest = location.state?.fromGuest === true;
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -159,6 +161,14 @@ const Signup = () => {
             <h1>Create your account</h1>
             <p>Join thousands of students studying smarter with Lamla AI.</p>
           </div>
+
+          {/* Guest upsell banner */}
+          {fromGuest && !error && (
+            <div className="auth-error-banner" role="status" style={{ background: 'rgba(255,214,0,0.1)', borderColor: '#FFD600', color: 'inherit' }}>
+              <span>🎓</span>
+              <span>You've used your free quiz — create an account to keep going!</span>
+            </div>
+          )}
 
           {/* Error banner */}
           {error && (

@@ -72,7 +72,7 @@ const Navbar = ({ user, brandOnly = false }) => {
                       <Link to="/" onClick={handleHomeClick}>Home</Link>
                     </li>
                     <li><Link to="/ai-tutor">AI Tutor</Link></li>
-                    <li><Link to="/quiz/create">Quiz</Link></li>
+                    <li><Link to={isAuthenticated ? "/quiz" : "/quiz/create"}>Quiz</Link></li>
                     <li><Link to="/flashcards">Flashcards</Link></li>
                     <li><Link to="/dashboard">Dashboard</Link></li>
                     {isAuthenticated || user ? (
@@ -122,7 +122,7 @@ const Navbar = ({ user, brandOnly = false }) => {
               <Link to="/" onClick={handleHomeClick}>Home</Link>
             </li>
             <li><Link to="/ai-tutor" onClick={closeMenu}>AI Tutor</Link></li>
-            <li><Link to="/quiz/create" onClick={closeMenu}>Quiz</Link></li>
+            <li><Link to={isAuthenticated ? "/quiz" : "/quiz/create"} onClick={closeMenu}>Quiz</Link></li>
             <li><Link to="/flashcards" onClick={closeMenu}>Flashcards</Link></li>
             {isAuthenticated || user ? (
               <>

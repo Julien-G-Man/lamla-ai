@@ -19,6 +19,7 @@ import AdminRatings from "./pages/Dashboards/AdminRatings";
 import CreateQuiz from "./pages/Quiz/CreateQuiz";
 import Quiz from "./pages/Quiz/Quiz";
 import QuizResults from "./pages/Quiz/QuizResults";
+import QuizHistory from "./pages/Quiz/QuizHistory";
 import FlashcardDecks from "./pages/Flashcards/FlashcardDecks";
 import FlashcardCreate from "./pages/Flashcards/FlashcardCreate";
 import FlashcardDeck from "./pages/Flashcards/FlashcardDeck";
@@ -73,10 +74,10 @@ function App() {
             <Route path="/admin-dashboard/ratings" element={<AdminRatings />} />
             <Route path="/profile" element={<Profile />} />
 
+            <Route path="/quiz" element={<QuizHistory />} />
             <Route path="/quiz/create" element={<CreateQuiz />} />
             <Route path="/quiz/play" element={<Quiz />} />
             <Route path="/quiz/results" element={<QuizResults />} />
-            <Route path="/quiz" element={<Navigate to="/quiz/create" replace />} />
 
             <Route path="/flashcards" element={<FlashcardDecks />} />
             <Route path="/flashcards/create" element={<FlashcardCreate />} />

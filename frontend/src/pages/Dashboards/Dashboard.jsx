@@ -5,7 +5,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faHome, faHistory, faCloudUploadAlt, faUser,
+  faHome, faCloudUploadAlt, faUser,
   faBook, faTrophy, faCalendar, faLayerGroup, faRobot,
 } from '@fortawesome/free-solid-svg-icons';
 import './Dashboard.css';
@@ -14,7 +14,7 @@ import { materialsService } from '../../services/materials';
 
 const NAV_ITEMS = [
   { id: 'overview', icon: faHome,          label: 'Dashboard'    },
-  { id: 'history',  icon: faHistory,        label: 'Past Quizzes' },
+  { id: 'history',  icon: faBook,        label: 'Quizzes' },
   { id: 'uploads',  icon: faCloudUploadAlt, label: 'Materials'    },
   { id: 'profile',  icon: faUser,           label: 'Profile'      },
 ];
@@ -24,9 +24,9 @@ const Dashboard = () => {
   const location  = useLocation();
   const { user, isAuthenticated, isLoading, logout, getUserRole } = useAuth();
 
-  const [activeTab, setActiveTab]         = useState(location.state?.tab || 'overview');
+  const initialTab = location.state?.tab;
+  const [activeTab, setActiveTab]         = useState(initialTab === 'history' ? 'overview' : (initialTab || 'overview'));
   const [stats, setStats]                 = useState({ totalQuizzes: 0, averageScore: 0, studyStreak: 0, totalFlashcards: 0 });
-  const [quizHistory, setQuizHistory]     = useState([]);
   const [recentActivity, setRecentActivity] = useState([]);
   const [materials, setMaterials]         = useState([]);
   const [loadingStats, setLoadingStats]   = useState(true);
@@ -53,7 +53,6 @@ const Dashboard = () => {
           studyStreak:     statsData.study_streak,
           totalFlashcards: statsData.total_flashcard_sets,
         });
-        setQuizHistory(quizzes || []);
         setMaterials(materials || []);
 
         // Merge quizzes + flashcard decks + materials into a single activity feed
@@ -94,6 +93,7 @@ const Dashboard = () => {
   const handleLogout   = async () => { await logout(); navigate('/'); };
   const handleNavigate = (id) => {
     if (id === 'profile') { navigate('/profile'); return; }
+    if (id === 'history') { navigate('/quiz'); return; }
     setActiveTab(id);
   };
 
@@ -105,7 +105,7 @@ const Dashboard = () => {
   ];
 
   const quickActions = [
-    { icon: faBook,       title: 'Create Quiz',  desc: 'Generate a quiz from your notes', path: '/quiz/create' },
+    { icon: faBook,       title: 'Quiz',  desc: 'Generate a quiz from your notes', path: '/quiz' },
     { icon: faLayerGroup, title: 'Flashcards',   desc: 'Create smart flashcard sets',     path: '/flashcards'  },
     { icon: faRobot,      title: 'AI Tutor',     desc: 'Get instant personalised help',   path: '/ai-tutor'    },
   ];
@@ -197,38 +197,6 @@ const Dashboard = () => {
                       </div>
                     ))}
                   </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ── History ── */}
-          {activeTab === 'history' && (
-            <div className="db-tab">
-              <div className="db-page-header">
-                <h1>Past Quizzes</h1>
-                <p>Review your performance history.</p>
-              </div>
-              <div className="db-card" style={{ padding: 0, overflow: 'hidden' }}>
-                {quizHistory.length === 0 ? (
-                  <div className="db-empty">
-                    <div className="db-empty-icon">📋</div>
-                    <p>No quiz history yet.</p>
-                    <button className="db-btn db-btn-primary" onClick={() => navigate('/quiz/create')}>
-                      Take a Quiz
-                    </button>
-                  </div>
-                ) : (
-                  quizHistory.map((q) => (
-                    <div className="db-quiz-row" key={q.id}>
-                      <div className="db-quiz-info">
-                        <h3>{q.subject}</h3>
-                        <p>{q.total_questions} questions · {new Date(q.created_at).toLocaleDateString()}</p>
-                      </div>
-                      <div className="db-quiz-score">{q.score_percent}%</div>
-                      <button className="db-btn db-btn-ghost db-btn-sm">Review</button>
-                    </div>
-                  ))
                 )}
               </div>
             </div>
