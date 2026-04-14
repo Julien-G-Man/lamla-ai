@@ -35,10 +35,16 @@ class ChatSession(models.Model):
         blank=True,
     )
     session_id = models.CharField(max_length=100, unique=True)
+    title = models.CharField(max_length=120, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=["user", "-created_at"], name="chat_session_user_created_idx"),
+        ]
+
     def __str__(self):
-        return self.session_id
+        return self.title or self.session_id
 
 
 class ChatMessage(models.Model):
@@ -56,6 +62,9 @@ class ChatMessage(models.Model):
 
     class Meta:
         ordering = ["created_at"]
+        indexes = [
+            models.Index(fields=["session", "created_at"], name="chat_msg_session_created_idx"),
+        ]
 
     def __str__(self):
         return f"{self.sender}: {self.content[:40]}"

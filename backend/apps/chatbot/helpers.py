@@ -1,4 +1,5 @@
 import logging
+import time
 from datetime import datetime
 from asgiref.sync import sync_to_async
 from rest_framework.authentication import TokenAuthentication
@@ -13,6 +14,35 @@ from .prompts import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _derive_session_title(user_message: str) -> str:
+    text = (user_message or "").strip().replace("\n", " ")
+    if not text:
+        return "New chat"
+
+    sentence_end = len(text)
+    for separator in (". ", "? ", "! ", ".", "?", "!"):
+        index = text.find(separator)
+        if index != -1:
+            sentence_end = min(sentence_end, index + (0 if separator in {'.', '?', '!'} else 1))
+
+    title = text[:sentence_end].strip().strip('"\'')
+    if len(title) > 120:
+        title = title[:117].rstrip() + "..."
+    return title or "New chat"
+
+
+def _prune_old_chat_sessions_sync(user, keep: int = 10, preserve_session_pk=None):
+    """Keep only the newest `keep` sessions for a user, deleting older ones."""
+    sessions_qs = ChatSession.objects.filter(user=user).order_by("-created_at", "-id")
+    keep_ids = list(sessions_qs.values_list("id", flat=True)[:keep])
+
+    if preserve_session_pk is not None:
+        keep_ids.append(preserve_session_pk)
+
+    deleted_count, _ = ChatSession.objects.filter(user=user).exclude(id__in=set(keep_ids)).delete()
+    return deleted_count
 
 
 async def _resolve_authenticated_user(request):
@@ -44,24 +74,47 @@ async def _resolve_authenticated_user(request):
     return user if user and user.is_active else None
 
 
-async def _get_or_create_session(request):
+async def _get_or_create_session(request, session_id=None):
     """
-    Get/create deterministic chat session for authenticated users only.
-    Anonymous users are handled in-memory per request and are not persisted.
+    Get/create chat session for authenticated users.
+
+    If session_id is provided, use that session (allows multiple sessions per user).
+    If session_id is None, create a new session.
     """
     user = await _resolve_authenticated_user(request)
 
     if user:
-        # Deterministic per-user session id guarantees stable memory continuity.
-        deterministic_session_id = f"user-{user.id}"
-        session_obj, _ = await sync_to_async(ChatSession.objects.get_or_create)(
-            session_id=deterministic_session_id,
+        if session_id is None:
+            # No session specified - shouldn't happen, but create new one
+            session_id = f"chat-{user.id}-{int(time.time())}"
+
+        # Get or create session with the provided session_id
+        session_obj, created = await sync_to_async(ChatSession.objects.get_or_create)(
+            session_id=session_id,
             defaults={"user": user},
         )
-        # Self-heal legacy rows where session exists but is not linked to user.
+
+        # Self-heal: ensure session is linked to user
         if session_obj.user_id != user.id:
             session_obj.user = user
             await sync_to_async(session_obj.save, thread_sensitive=True)(update_fields=["user"])
+
+        if created:
+            logger.debug(f"Created new session {session_id} for user {user.id}")
+
+        # Enforce retention policy: keep only 10 newest sessions per user.
+        deleted_count = await sync_to_async(_prune_old_chat_sessions_sync, thread_sensitive=True)(
+            user,
+            keep=10,
+            preserve_session_pk=session_obj.id,
+        )
+        if deleted_count:
+            logger.info(
+                "Pruned %s old chat session(s) for user %s",
+                deleted_count,
+                user.id,
+            )
+
         return user, session_obj
 
     return None, None
@@ -79,6 +132,11 @@ async def _save_user_message(session_obj, user_message: str):
         )
         logger.debug("Saved user message ID %s to session %s",
                      msg_obj.id, session_obj.id)
+
+        if not getattr(session_obj, "title", ""):
+            session_obj.title = _derive_session_title(user_message)
+            await sync_to_async(session_obj.save, thread_sensitive=True)(update_fields=["title"])
+
         return msg_obj
     except Exception as exc:
         logger.error("Failed to save user message: %s", exc, exc_info=True)

@@ -12,6 +12,7 @@ This folder is the maintained source of truth for architecture, setup, features,
 ## Core Docs
 
 - `architecture-design/ARCHITECTURE.md` - system components and request flow
+- `architecture-design/GRAPHIFY.md` - generated repo graph snapshot and Mermaid system map
 - `architecture-design/AI_PROVIDERS.md` - multi-provider AI orchestrator, Claude integration, and all env vars
 - `architecture-design/FRONTEND_INTEGRATION.md` - React to Django/FastAPI contracts
 - `setup-configuration/GETTING_STARTED.md` - local environment setup

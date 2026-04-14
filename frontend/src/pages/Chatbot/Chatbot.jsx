@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Navbar from '../../components/Navbar';
+import Sidebar from './Sidebar';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -8,15 +9,17 @@ import rehypeRaw from 'rehype-raw';
 import 'katex/dist/katex.min.css';
 import './Chatbot.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-    faSpinner, 
-    faTimesCircle, 
-    faFolder, 
-    faGlobe, 
+import {
+    faSpinner,
+    faTimesCircle,
+    faFolder,
+    faGlobe,
     faPaperPlane,
-    faCopy
+    faCopy,
+    faAngleDoubleLeft
 } from '@fortawesome/free-solid-svg-icons';
 import djangoApi from '../../services/api'; 
+import { useAuth } from '../../context/AuthContext';
 
 // Global counter for generating unique message IDs
 let messageIdCounter = Date.now();
@@ -27,16 +30,38 @@ const formatFileSize = (size) => {
     return `${(size / 1024 / 1024).toFixed(2)} MB`;
 };
 
-const Chatbot = ({ user }) => {
+const getWelcomeMessage = () => ({
+    id: messageIdCounter++,
+    text: "👋 Hello! I'm AI Tutor, your AI study assistant. Ask me anything about your study materials or exams. Let’s study smarter together!",
+    type: 'ai',
+    sender: 'AI Tutor',
+});
+
+const toUiMessage = (msg) => ({
+    id: msg.id || messageIdCounter++,
+    text: msg.content || '',
+    type: msg.sender === 'user' ? 'user' : 'ai',
+    sender: msg.sender === 'ai' ? 'AI Tutor' : null,
+});
+
+const Chatbot = ({ user: userProp }) => {
+    const { user: authUser } = useAuth();
+    const user = userProp ?? authUser;
+    const isAuthenticated = Boolean(user || localStorage.getItem('auth_token'));
     // --- State Variables ---
     const [messageInput, setMessageInput] = useState('');
     const [attachedFile, setAttachedFile] = useState(null); 
     const [isSearchPopupVisible, setIsSearchPopupVisible] = useState(false);
     const [currentSearchMode, setCurrentSearchMode] = useState('disabled');
     const [isProcessing, setIsProcessing] = useState(false); 
-    const [history, setHistory] = useState([
-        { id: messageIdCounter++, text: "👋 Hello! I'm AI Tutor, your AI study assistant. Ask me anything about your study materials or exams. Let’s study smarter together!", type: 'ai', sender: 'AI Tutor' }
-    ]);
+    const [history, setHistory] = useState([getWelcomeMessage()]);
+    
+
+    // Session Management State
+    const [currentSessionId, setCurrentSessionId] = useState(null);
+    const [chatSessions, setChatSessions] = useState([]);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(typeof window !== 'undefined' && window.innerWidth > 768);
+    const [isLoadingHistory, setIsLoadingHistory] = useState(false);
     
     // --- Ref Variables ---
     const chatMessagesRef = useRef(null);
@@ -54,6 +79,114 @@ const Chatbot = ({ user }) => {
         setAttachedFile(null);
         const fileInput = document.getElementById('file-input');
         if (fileInput) fileInput.value = '';
+    };
+
+
+    // Session Management Functions
+    const fetchChatHistory = useCallback(async () => {
+        const token = localStorage.getItem('auth_token');
+        if (!token) return;
+        try {
+            setIsLoadingHistory(true);
+            const response = await djangoApi.get('/chatbot/history/');
+            if (response.data && response.data.history) {
+                setChatSessions(response.data.history);
+                // Auto-load first session if history exists
+                if (response.data.history.length > 0) {
+                    const firstSession = response.data.history[0];
+                    const firstSessionId = firstSession.session_id || firstSession.id;
+                    setCurrentSessionId(firstSessionId);
+                    await loadSessionMessages(firstSessionId);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to fetch chat history:', error);
+        } finally {
+            setIsLoadingHistory(false);
+        }
+    }, []);
+
+    const loadSessionMessages = async (sessionId) => {
+        try {
+            setHistory([{ id: messageIdCounter++, text: "Loading conversation...", type: 'ai', sender: 'AI Tutor' }]);
+            const response = await djangoApi.get('/chat/history/', {
+                params: { session_id: sessionId },
+            });
+
+            const messages = Array.isArray(response?.data?.messages) ? response.data.messages : [];
+            if (messages.length === 0) {
+                setHistory([getWelcomeMessage()]);
+                return;
+            }
+
+            setHistory(messages.map(toUiMessage));
+        } catch (error) {
+            console.error('Failed to load session:', error);
+            setHistory([{ id: messageIdCounter++, text: '[Error: Failed to load conversation.]', type: 'ai', sender: 'AI Tutor' }]);
+        }
+    };
+
+    const handleNewChat = () => {
+        // Generate a new UUID for the new session
+        const newSessionId = 'chat-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        setCurrentSessionId(newSessionId);
+        setHistory([getWelcomeMessage()]);
+        setMessageInput('');
+        clearAttachment();
+    };
+
+    const handleSwitchSession = async (sessionId) => {
+        setCurrentSessionId(sessionId);
+        await loadSessionMessages(sessionId);
+    };
+
+    const handleDeleteSession = async (sessionId) => {
+        try {
+            await djangoApi.delete('/chat/history/', {
+                params: { session_id: sessionId },
+            });
+
+            setChatSessions((prev) => {
+                const remaining = prev.filter((session) => (session.session_id || session.id) !== sessionId);
+
+                if (currentSessionId === sessionId) {
+                    if (remaining.length > 0) {
+                        const nextSessionId = remaining[0].session_id || remaining[0].id;
+                        setCurrentSessionId(nextSessionId);
+                        loadSessionMessages(nextSessionId);
+                    } else {
+                        setCurrentSessionId(null);
+                        setHistory([getWelcomeMessage()]);
+                    }
+                }
+
+                return remaining;
+            });
+        } catch (error) {
+            console.error('Failed to delete session:', error);
+            alert('Could not delete the chat session. Please try again.');
+        }
+    };
+
+    const handleRenameSession = async (sessionId, title) => {
+        try {
+            const response = await djangoApi.post('/chat/history/rename/', {
+                session_id: sessionId,
+                title,
+            });
+
+            const updatedTitle = response?.data?.title || title;
+            setChatSessions((prev) =>
+                prev.map((session) =>
+                    (session.session_id || session.id) === sessionId
+                        ? { ...session, title: updatedTitle }
+                        : session
+                )
+            );
+        } catch (error) {
+            console.error('Failed to rename session:', error);
+            alert('Could not rename the chat session. Please try again.');
+        }
     };
 
     // --- Core Logic (API Calls) ---
@@ -106,14 +239,21 @@ const Chatbot = ({ user }) => {
                 formData.append('file_upload', fileToSend);
                 formData.append('message', text);
                 formData.append('search_mode', currentSearchMode);
+                formData.append('session_id', currentSessionId);
                 
                 const res = await djangoApi.post(fileApiEndpoint, formData, {
                     headers: { 'Content-Type': 'multipart/form-data' },
                 });
 
                 const aiResponseText = res.data?.response || "[Error: Empty response from file API]";
+                const returnedSessionId = res.data?.session_id;
 
-                setHistory(prev => prev.map(msg => 
+                // Update session_id if it was newly created
+                if (returnedSessionId && returnedSessionId !== currentSessionId) {
+                    setCurrentSessionId(returnedSessionId);
+                }
+
+                setHistory(prev => prev.map(msg =>
                     msg.id === placeholderId ? { ...msg, text: aiResponseText, isThinking: false } : msg
                 ));
 
@@ -131,11 +271,12 @@ const Chatbot = ({ user }) => {
                         ...(token ? { Authorization: `Token ${token}` } : {}),
                     },
                     credentials: "include",
-                    body: JSON.stringify({ 
+                    body: JSON.stringify({
                         message: text,
                         search_mode: currentSearchMode,
-                        conversation_history: [], 
-                        context_document: null 
+                        session_id: currentSessionId,
+                        conversation_history: [],
+                        context_document: null
                     }),
                 });
 
@@ -191,7 +332,7 @@ const Chatbot = ({ user }) => {
             setIsProcessing(false);
             scrollToBottom();
         }
-    }, [messageInput, attachedFile, currentSearchMode, isProcessing]);
+    }, [messageInput, attachedFile, currentSearchMode, isProcessing, currentSessionId]);
 
     // --- Effect Hooks ---
 
@@ -205,6 +346,11 @@ const Chatbot = ({ user }) => {
     useEffect(() => {
         scrollToBottom();
     }, [history]);
+
+    // Fetch chat history on mount
+    useEffect(() => {
+        fetchChatHistory();
+    }, [fetchChatHistory]);
 
 
     // --- Handler Functions ---
@@ -323,106 +469,129 @@ const Chatbot = ({ user }) => {
     return (
         <>
             <Navbar user={user}/>
-            <div className="chat-container">
-                <div className="chat-header">
-                    <h1>AI Tutor</h1>
-                    <span className="user-id-display" id="user-id-display">Connected</span>
-                </div>
+            <div className="chat-wrapper">
+                <Sidebar
+                    sessions={chatSessions}
+                    currentSessionId={currentSessionId}
+                    onNewChat={handleNewChat}
+                    onSwitchSession={handleSwitchSession}
+                    onDeleteSession={handleDeleteSession}
+                    onRenameSession={handleRenameSession}
+                    isOpen={isSidebarOpen}
+                    onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                    isLoading={isLoadingHistory}
+                    user={user}
+                    isAuthenticated={isAuthenticated}
+                />
 
-                <div id="chat-messages" ref={chatMessagesRef}>
-                    {history.map(msg => <MessageBubble key={msg.id} message={msg} />)}
-                </div>
-
-                
-
-                <div id="search-indicator" className={searchIndicatorClassName}>
-                    <span className="searching-text">
-                        <FontAwesomeIcon icon={faSpinner} spin /> 
-                        {currentSearchMode === 'deep_research' ? 'Conducting deep research...' : 'Searching the web...'}
-                    </span>
-                </div>
-
-                <div id="file-status-bar" className={fileBarClassName}>
-                    <div className="file-meta-wrap">
-                        <span className="file-meta-icon" aria-hidden="true">
-                            <FontAwesomeIcon icon={faFolder} />
-                        </span>
-                        <div className="file-meta-text">
-                            <span id="file-name-display" className="truncate">{fileNameDisplay}</span>
-                            <span className="file-size-display">{fileSizeDisplay}</span>
+                <div className="chat-main">
+                    <div className="chat-container">
+                        <div className="chat-header">
+                            <button
+                                className="sidebar-collapse-btn"
+                                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                                title={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+                                aria-label="Toggle sidebar"
+                            >
+                                <FontAwesomeIcon icon={faAngleDoubleLeft} />
+                            </button>
+                            <h1>AI Tutor</h1>
                         </div>
-                        <span className="file-ready-badge">Ready</span>
+
+                        <div id="chat-messages" ref={chatMessagesRef}>
+                            {history.map(msg => <MessageBubble key={msg.id} message={msg} />)}
+                        </div>
+
+                        <div id="search-indicator" className={searchIndicatorClassName}>
+                            <span className="searching-text">
+                                <FontAwesomeIcon icon={faSpinner} spin />
+                                {currentSearchMode === 'deep_research' ? 'Conducting deep research...' : 'Searching the web...'}
+                            </span>
+                        </div>
+
+                        <div id="file-status-bar" className={fileBarClassName}>
+                            <div className="file-meta-wrap">
+                                <span className="file-meta-icon" aria-hidden="true">
+                                    <FontAwesomeIcon icon={faFolder} />
+                                </span>
+                                <div className="file-meta-text">
+                                    <span id="file-name-display" className="truncate">{fileNameDisplay}</span>
+                                    <span className="file-size-display">{fileSizeDisplay}</span>
+                                </div>
+                                <span className="file-ready-badge">Ready</span>
+                            </div>
+                            <button id="clear-file-btn" title="Remove attachment" onClick={clearAttachment} disabled={isProcessing}>
+                                <FontAwesomeIcon icon={faTimesCircle} />
+                            </button>
+                        </div>
+
+                        <div id="web-search-options-popup" className={`web-search-popup ${isSearchPopupVisible ? '' : 'hidden'}`}>
+                            <p className="popup-title">Web Search Mode:</p>
+                            {['disabled', 'web_search', 'deep_research'].map((mode) => (
+                                <label key={mode}>
+                                    <input
+                                        type="radio"
+                                        name="search-mode"
+                                        value={mode}
+                                        checked={currentSearchMode === mode}
+                                        onChange={handleSearchModeChange}
+                                    />
+                                    {mode === 'disabled' && 'Disabled (Use internal knowledge)'}
+                                    {(mode === 'web_search' || mode === 'deep_research') && <strong>{mode === 'web_search' ? 'Web Search' : 'Deep Research'}</strong>}
+                                    {mode === 'web_search' && ' (Quick, real-time results)'}
+                                    {mode === 'deep_research' && ' (In-depth, multi-step analysis)'}
+                                </label>
+                            ))}
+                        </div>
+
+                        <div className="chat-input-area">
+                            <button
+                                className={searchButtonClass}
+                                title="Web Search Options"
+                                onClick={() => setIsSearchPopupVisible(prev => !prev)}
+                                disabled={isProcessing}
+                            >
+                                <FontAwesomeIcon icon={faGlobe} />
+                            </button>
+
+                            <label htmlFor="file-input" className="file-upload-btn" title="Upload File">
+                                <FontAwesomeIcon icon={faFolder} />
+                                <input
+                                    type="file"
+                                    id="file-input"
+                                    accept=".pdf, .docx, .pptx, .txt"
+                                    onChange={handleFileChange}
+                                    disabled={isProcessing}
+                                />
+                            </label>
+
+                            <textarea
+                                ref={textareaRef}
+                                id="message-input"
+                                placeholder="Ask me anything..."
+                                rows="1"
+                                value={messageInput}
+                                onChange={handleInputChange}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter" && !e.shiftKey) {
+                                        e.preventDefault();
+                                        handleSendMessage(e);
+                                    }
+                                }}
+                                disabled={isProcessing}
+                            ></textarea>
+
+                            <button
+                                id="send-btn"
+                                title="Send Message"
+                                className={sendButtonClass}
+                                disabled={shouldBeDisabled}
+                                onClick={handleSendMessage}
+                            >
+                                <FontAwesomeIcon icon={faPaperPlane} />
+                            </button>
+                        </div>
                     </div>
-                    <button id="clear-file-btn" title="Remove attachment" onClick={clearAttachment} disabled={isProcessing}>
-                        <FontAwesomeIcon icon={faTimesCircle} />
-                    </button>
-                </div>
-
-                <div id="web-search-options-popup" className={`web-search-popup ${isSearchPopupVisible ? '' : 'hidden'}`}>
-                    <p className="popup-title">Web Search Mode:</p>
-                    {['disabled', 'web_search', 'deep_research'].map((mode) => (
-                        <label key={mode}>
-                            <input 
-                                type="radio" 
-                                name="search-mode" 
-                                value={mode} 
-                                checked={currentSearchMode === mode}
-                                onChange={handleSearchModeChange}
-                            />
-                            {mode === 'disabled' && 'Disabled (Use internal knowledge)'}
-                            {(mode === 'web_search' || mode === 'deep_research') && <strong>{mode === 'web_search' ? 'Web Search' : 'Deep Research'}</strong>}
-                            {mode === 'web_search' && ' (Quick, real-time results)'}
-                            {mode === 'deep_research' && ' (In-depth, multi-step analysis)'}
-                        </label>
-                    ))}
-                </div>
-
-                <div className="chat-input-area">
-                    <button 
-                        className={searchButtonClass} 
-                        title="Web Search Options"
-                        onClick={() => setIsSearchPopupVisible(prev => !prev)}
-                        disabled={isProcessing}
-                    >
-                        <FontAwesomeIcon icon={faGlobe} />
-                    </button>
-                    
-                    <label htmlFor="file-input" className="file-upload-btn" title="Upload File">
-                        <FontAwesomeIcon icon={faFolder} />
-                        <input 
-                            type="file" 
-                            id="file-input" 
-                            accept=".pdf, .docx, .pptx, .txt"
-                            onChange={handleFileChange}
-                            disabled={isProcessing}
-                        />
-                    </label>
-                    
-                    <textarea 
-                        ref={textareaRef} 
-                        id="message-input" 
-                        placeholder="Ask me anything..." 
-                        rows="1"
-                        value={messageInput}
-                        onChange={handleInputChange}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter" && !e.shiftKey) {
-                                e.preventDefault(); 
-                                handleSendMessage(e);
-                            }
-                        }}
-                        disabled={isProcessing}
-                    ></textarea>
-                    
-                    <button 
-                        id="send-btn" 
-                        title="Send Message" 
-                        className={sendButtonClass}
-                        disabled={shouldBeDisabled}
-                        onClick={handleSendMessage}
-                    >
-                        <FontAwesomeIcon icon={faPaperPlane} />
-                    </button>
                 </div>
             </div>
         </>

@@ -8,6 +8,7 @@ These views implement the Asynchronous Proxy Pattern for chatbot endpoints:
 """
 import json
 import logging
+from time import perf_counter
 import httpx
 from django.conf import settings
 from django.http import JsonResponse, StreamingHttpResponse
@@ -17,6 +18,7 @@ from asgiref.sync import sync_to_async
 from .file_extractor import extract_text_from_file, FileExtractionError
 from apps.core.async_client import call_fastapi, build_fastapi_headers
 from .helpers import (
+    _resolve_authenticated_user,
     _get_or_create_session,
     _save_user_message,
     _save_ai_message,
@@ -25,6 +27,7 @@ from .helpers import (
     _build_mcp_context,
     fallback_response,
 )
+from .models import ChatSession
 
 logger = logging.getLogger(__name__)
 
@@ -47,12 +50,13 @@ async def chatbot_api_async(request):
         # Parse request
         data = json.loads(request.body) if request.body else {}
         user_message = data.get('message', '')
-        
+        session_id = data.get('session_id', None)  # Get session_id from request
+
         if not user_message:
             return JsonResponse({"error": "Message is required"}, status=400)
-        
+
         # 1. Django handles session/auth (fast DB operations)
-        user, session_obj = await _get_or_create_session(request)
+        user, session_obj = await _get_or_create_session(request, session_id=session_id)
         
         # 2. Save user message
         await _save_user_message(session_obj, user_message)
@@ -192,7 +196,7 @@ async def chatbot_api_async(request):
             logger.error(f"Failed to save AI response: {e}", exc_info=True)
             return JsonResponse({"error": "Failed to save response"}, status=500)
         
-        return JsonResponse({"response": cleaned_response})
+        return JsonResponse({"response": cleaned_response, "session_id": session_obj.session_id})
         
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON"}, status=400)
@@ -231,6 +235,7 @@ async def chatbot_file_api_async(request):
         file = request.FILES['file_upload']
         # For multipart/form-data, data is in request.POST
         user_message = request.POST.get('message', 'Analyze the uploaded document.')
+        session_id = request.POST.get('session_id', None)
         filename = file.name
 
         logger.info(f"Processing file upload: {filename}, message: {user_message[:50]}")
@@ -244,7 +249,7 @@ async def chatbot_file_api_async(request):
             return JsonResponse({"error": str(fee)}, status=400)
 
         # 2. Session & History
-        user, session_obj = await _get_or_create_session(request)
+        user, session_obj = await _get_or_create_session(request, session_id=session_id)
         logger.debug("Authenticated session in use: %s", getattr(session_obj, "id", None))
         
         # 3. Save user message with file reference
@@ -318,7 +323,8 @@ async def chatbot_file_api_async(request):
         logger.info(f"Successfully processed file {filename} with {len(cleaned_response)} char response")
 
         return JsonResponse({
-            "response": cleaned_response, 
+            "response": cleaned_response,
+            "session_id": session_obj.session_id,
             "filename": file.name
         })
 
@@ -339,12 +345,13 @@ async def chatbot_stream_async(request):
         # Parse request
         data = json.loads(request.body) if request.body else {}
         user_message = data.get('message', '')
-        
+        session_id = data.get('session_id', None)
+
         if not user_message:
             return JsonResponse({"error": "Message is required"}, status=400)
-        
+
         # 1. Django handles session/auth
-        user, session_obj = await _get_or_create_session(request)
+        user, session_obj = await _get_or_create_session(request, session_id=session_id)
         
         # 2. Save user message
         await _save_user_message(session_obj, user_message)
@@ -464,8 +471,27 @@ async def get_conversation_history(request):
     
     Returns: List of all messages in the current user's session.
     """
+    start = perf_counter()
     try:
-        user, session_obj = await _get_or_create_session(request)
+        requested_session_id = request.GET.get("session_id")
+
+        if requested_session_id:
+            user = await _resolve_authenticated_user(request)
+            if not user:
+                return JsonResponse({"detail": "Authentication required"}, status=401)
+
+            session_obj = await sync_to_async(
+                ChatSession.objects.filter(
+                    user=user,
+                    session_id=requested_session_id,
+                ).first
+            )()
+
+            if not session_obj:
+                return JsonResponse({"detail": "Session not found"}, status=404)
+        else:
+            user, session_obj = await _get_or_create_session(request)
+
         if not user or not session_obj:
             return JsonResponse({"detail": "Authentication required"}, status=401)
         
@@ -479,42 +505,113 @@ async def get_conversation_history(request):
             messages_data.append({
                 "id": msg.id,
                 "sender": msg.sender,
-                "content": msg.content[:200] + "..." if len(msg.content) > 200 else msg.content,
+                "content": msg.content,
                 "created_at": msg.created_at.isoformat()
             })
         
         return JsonResponse({
             "session_id": session_obj.session_id,
-            "user": str(session_obj.user),
+            "user": str(user) if user else None,
+            "user_id": getattr(user, "id", None),
             "message_count": len(messages_data),
             "messages": messages_data
         })
-        
     except Exception as e:
         logger.error(f"Get conversation history error: {e}", exc_info=True)
         return JsonResponse({"error": str(e)}, status=500)
+    finally:
+        duration_ms = (perf_counter() - start) * 1000
+        logger.info(
+            "[chatbot] get_history session=%s duration_ms=%.2f",
+            request.GET.get("session_id", "(auto)"),
+            duration_ms,
+        )
 
 
 @require_http_methods(["DELETE"])
 async def clear_conversation_history(request):
     """
-    Diagnostic endpoint to clear conversation history for current session.
-    Useful for testing.
+    Delete conversation history for the current session or a specific session_id.
     """
+    start = perf_counter()
     try:
-        user, session_obj = await _get_or_create_session(request)
+        requested_session_id = request.GET.get("session_id")
+
+        if requested_session_id:
+            user = await _resolve_authenticated_user(request)
+            if not user:
+                return JsonResponse({"detail": "Authentication required"}, status=401)
+
+            session_obj = await sync_to_async(
+                ChatSession.objects.filter(
+                    user=user,
+                    session_id=requested_session_id,
+                ).first
+            )()
+        else:
+            user, session_obj = await _get_or_create_session(request)
+
         if not user or not session_obj:
             return JsonResponse({"detail": "Authentication required"}, status=401)
-        deleted_count, _ = await sync_to_async(session_obj.messages.all().delete)()
+        deleted_count, _ = await sync_to_async(session_obj.delete, thread_sensitive=True)()
         
-        logger.info(f"Cleared {deleted_count} messages from session {session_obj.session_id}")
+        logger.info("Deleted chat session %s for user %s", session_obj.session_id, getattr(user, "id", None))
         
         return JsonResponse({
             "status": "success",
             "deleted_count": deleted_count,
             "session_id": session_obj.session_id
         })
-        
     except Exception as e:
         logger.error(f"Clear conversation history error: {e}", exc_info=True)
         return JsonResponse({"error": str(e)}, status=500)
+    finally:
+        duration_ms = (perf_counter() - start) * 1000
+        logger.info("[chatbot] clear_history duration_ms=%.2f", duration_ms)
+
+
+@csrf_exempt
+@require_http_methods(["POST", "PATCH"])
+async def rename_conversation_session(request):
+    """Rename a chat session for the authenticated user."""
+    start = perf_counter()
+    try:
+        data = json.loads(request.body) if request.body else {}
+        requested_session_id = data.get("session_id") or request.GET.get("session_id")
+        new_title = (data.get("title") or data.get("name") or "").strip()
+
+        if not requested_session_id:
+            return JsonResponse({"detail": "session_id is required"}, status=400)
+        if not new_title:
+            return JsonResponse({"detail": "title is required"}, status=400)
+
+        user = await _resolve_authenticated_user(request)
+        if not user:
+            return JsonResponse({"detail": "Authentication required"}, status=401)
+
+        session_obj = await sync_to_async(
+            ChatSession.objects.filter(
+                user=user,
+                session_id=requested_session_id,
+            ).first
+        )()
+
+        if not session_obj:
+            return JsonResponse({"detail": "Session not found"}, status=404)
+
+        session_obj.title = new_title[:120]
+        await sync_to_async(session_obj.save, thread_sensitive=True)(update_fields=["title"])
+
+        return JsonResponse({
+            "status": "success",
+            "session_id": session_obj.session_id,
+            "title": session_obj.title,
+        })
+    except json.JSONDecodeError:
+        return JsonResponse({"detail": "Invalid JSON"}, status=400)
+    except Exception as e:
+        logger.error(f"Rename conversation session error: {e}", exc_info=True)
+        return JsonResponse({"error": str(e)}, status=500)
+    finally:
+        duration_ms = (perf_counter() - start) * 1000
+        logger.info("[chatbot] rename_session duration_ms=%.2f", duration_ms)

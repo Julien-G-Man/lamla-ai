@@ -3,7 +3,17 @@
 ## Frontend
 
 - Page: `src/pages/Chatbot/Chatbot.jsx`
+- Sidebar: `src/pages/Chatbot/Sidebar.jsx`
 - Route: `/ai-tutor` (`/chatbot` redirects to `/ai-tutor`)
+
+### Sidebar Session UX (Current)
+
+- Shows up to the 10 newest saved sessions for authenticated users.
+- Each session row supports actions via a 3-dot menu:
+	- Rename session (in-app modal)
+	- Delete session (with confirmation)
+- Selecting a different session prompts for confirmation before switching.
+- Guests can chat, but the empty state prompts signup to persist and recover sessions.
 
 ## Django Endpoints
 
@@ -14,7 +24,13 @@ From `backend/apps/chatbot/urls.py`:
 - `POST /api/chat/file/`
 - `GET /api/chat/history/`
 - `DELETE /api/chat/history/clear/`
+- `POST /api/chat/history/rename/` (also accepts `PATCH`)
 - `GET /api/chatbot/history/` (dashboard/admin history view)
+
+Notes:
+
+- `DELETE /api/chat/history/clear/` supports optional `session_id` for deleting a specific session.
+- `GET /api/chat/history/` supports optional `session_id` for loading a specific conversation.
 
 ## FastAPI Endpoint
 
@@ -24,8 +40,28 @@ From `backend/apps/chatbot/urls.py`:
 
 - Session container: `ChatSession`
 - Message rows: `ChatMessage` (ordered by created_at)
+- Session title: `ChatSession.title`
 
-Authenticated users get a deterministic session keyed on `user-{id}`. Anonymous sessions are not persisted.
+Authenticated users use explicit `session_id` values so one user can maintain multiple independent conversations.
+
+Anonymous users can chat but session history is not persisted across visits.
+
+Session retention policy:
+
+- A hard cap of 10 sessions per authenticated user is enforced server-side.
+- When a new session is created beyond the cap, older sessions are pruned automatically.
+- Dashboard history responses also return only the newest 10 sessions.
+
+Default session naming:
+
+- On first user message in a new session, the server derives a default title from the first sentence.
+- Users can later rename that title from the sidebar.
+
+Performance notes:
+
+- Dashboard session listing avoids N+1 queries by annotating message count and latest message.
+- Chat models include indexes for user/session recency and session message retrieval.
+- History endpoints emit duration logs for lightweight latency monitoring.
 
 ## Prompt Construction
 

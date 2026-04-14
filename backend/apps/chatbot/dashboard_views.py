@@ -1,7 +1,8 @@
+from django.db.models import Count, OuterRef, Subquery
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import ChatSession
+from .models import ChatMessage, ChatSession
 
 
 class ChatHistoryView(APIView):
@@ -9,18 +10,23 @@ class ChatHistoryView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        last_message_subquery = ChatMessage.objects.filter(
+            session=OuterRef('pk')
+        ).order_by('-created_at').values('content')[:1]
+
         sessions = ChatSession.objects.filter(
             user=request.user
-        ).order_by('-created_at')[:20]
+        ).annotate(
+            message_count=Count('messages'),
+            last_message_raw=Subquery(last_message_subquery),
+        ).order_by('-created_at')[:10]
 
         data = [{
             'id':            s.id,
-            'message_count': s.messages.count(),
-            'last_message':  (
-                s.messages.order_by('-created_at')
-                .values_list('content', flat=True)
-                .first() or ''
-            )[:120],
+            'session_id':    s.session_id,
+            'title':         s.title,
+            'message_count': s.message_count,
+            'last_message':  (s.last_message_raw or '')[:120],
             'created_at':    s.created_at.isoformat(),
         } for s in sessions]
 
