@@ -187,7 +187,7 @@ const Sidebar = ({
       >
         {/* Header */}
         <div className="sidebar-header">
-          <h2 className="sidebar-title">Chat History</h2>
+          <h2 className="sidebar-title"> </h2>
           {/* Close button visible on mobile */}
           <button
             className="sidebar-close-btn"
@@ -220,7 +220,7 @@ const Sidebar = ({
           {isLoading ? (
             <div className="sidebar-loading">
               <div className="sidebar-loading-spinner">
-                <FontAwesomeIcon icon={faSpinner} spin /> Loading conversations...
+                <FontAwesomeIcon icon={faSpinner} spin /> Loading past messages...
               </div>
             </div>
           ) : sessions && sessions.length > 0 ? (

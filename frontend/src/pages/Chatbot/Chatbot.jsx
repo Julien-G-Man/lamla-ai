@@ -16,10 +16,12 @@ import {
     faGlobe,
     faPaperPlane,
     faCopy,
-    faAngleDoubleLeft
+    faAngleDoubleLeft,
+    faArrowDown
 } from '@fortawesome/free-solid-svg-icons';
 import djangoApi from '../../services/api'; 
 import { useAuth } from '../../context/AuthContext';
+import { normalizeScientificText } from '../../utils/scientificText';
 
 // Global counter for generating unique message IDs
 let messageIdCounter = Date.now();
@@ -62,18 +64,61 @@ const Chatbot = ({ user: userProp }) => {
     const [chatSessions, setChatSessions] = useState([]);
     const [isSidebarOpen, setIsSidebarOpen] = useState(typeof window !== 'undefined' && window.innerWidth > 768);
     const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+    const [showScrollToBottom, setShowScrollToBottom] = useState(false);
     
     // --- Ref Variables ---
     const chatMessagesRef = useRef(null);
     const textareaRef = useRef(null);
+    const scrollToBottomButtonRef = useRef(null);
+    const showScrollToBottomRef = useRef(false);
+    const visibilityRafRef = useRef(null);
 
     // --- Utility Functions ---
 
     const scrollToBottom = () => {
-        if (chatMessagesRef.current) {
-            chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
+        const container = chatMessagesRef.current;
+        if (container && container.scrollHeight > container.clientHeight + 8) {
+            container.scrollTop = container.scrollHeight;
+        } else {
+            const scroller = document.scrollingElement || document.documentElement;
+            window.scrollTo({ top: scroller.scrollHeight, behavior: 'smooth' });
         }
+        showScrollToBottomRef.current = false;
+        setShowScrollToBottom(false);
     };
+
+    const updateScrollToBottomVisibility = useCallback(() => {
+        const container = chatMessagesRef.current;
+        const hasContainerScroll = Boolean(container && container.scrollHeight > container.clientHeight + 8);
+
+        let distanceFromBottom = 0;
+        if (hasContainerScroll && container) {
+            distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+        } else {
+            const scroller = document.scrollingElement || document.documentElement;
+            distanceFromBottom = scroller.scrollHeight - scroller.scrollTop - window.innerHeight;
+        }
+
+        const shouldShow = showScrollToBottomRef.current
+            ? distanceFromBottom > 12
+            : distanceFromBottom > 48;
+
+        if (shouldShow !== showScrollToBottomRef.current) {
+            showScrollToBottomRef.current = shouldShow;
+            setShowScrollToBottom(shouldShow);
+        }
+    }, []);
+
+    const scheduleScrollToBottomVisibilityUpdate = useCallback(() => {
+        if (visibilityRafRef.current !== null) {
+            return;
+        }
+
+        visibilityRafRef.current = window.requestAnimationFrame(() => {
+            visibilityRafRef.current = null;
+            updateScrollToBottomVisibility();
+        });
+    }, [updateScrollToBottomVisibility]);
 
     const clearAttachment = () => {
         setAttachedFile(null);
@@ -108,7 +153,7 @@ const Chatbot = ({ user: userProp }) => {
 
     const loadSessionMessages = async (sessionId) => {
         try {
-            setHistory([{ id: messageIdCounter++, text: "Loading conversation...", type: 'ai', sender: 'AI Tutor' }]);
+            setHistory([{ id: messageIdCounter++, text: "Loading past messages...", type: 'ai', sender: 'AI Tutor' }]);
             const response = await djangoApi.get('/chat/history/', {
                 params: { session_id: sessionId },
             });
@@ -347,6 +392,38 @@ const Chatbot = ({ user: userProp }) => {
         scrollToBottom();
     }, [history]);
 
+    useEffect(() => {
+        scheduleScrollToBottomVisibilityUpdate();
+    }, [history, scheduleScrollToBottomVisibilityUpdate]);
+
+    useEffect(() => {
+        showScrollToBottomRef.current = showScrollToBottom;
+
+        if (!showScrollToBottom && scrollToBottomButtonRef.current === document.activeElement) {
+            scrollToBottomButtonRef.current.blur();
+        }
+    }, [showScrollToBottom]);
+
+    useEffect(() => {
+        const handleResize = () => scheduleScrollToBottomVisibilityUpdate();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, [scheduleScrollToBottomVisibilityUpdate]);
+
+    useEffect(() => {
+        const handleWindowScroll = () => scheduleScrollToBottomVisibilityUpdate();
+        window.addEventListener('scroll', handleWindowScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleWindowScroll);
+    }, [scheduleScrollToBottomVisibilityUpdate]);
+
+    useEffect(() => {
+        return () => {
+            if (visibilityRafRef.current !== null) {
+                window.cancelAnimationFrame(visibilityRafRef.current);
+            }
+        };
+    }, []);
+
     // Fetch chat history on mount
     useEffect(() => {
         fetchChatHistory();
@@ -398,9 +475,21 @@ const Chatbot = ({ user: userProp }) => {
     const isTextPresent = messageInput.trim().length > 0;
     const isReadyToSend = isTextPresent || attachedFile;
     const shouldBeDisabled = !isReadyToSend || isProcessing; 
+    const scrollToBottomButtonStyle = {
+        opacity: showScrollToBottom ? 1 : 0,
+        transform: showScrollToBottom ? 'translateY(0)' : 'translateY(8px)',
+        pointerEvents: showScrollToBottom ? 'auto' : 'none',
+    };
 
     const MessageBubble = ({ message }) => (
         <div className={`message-bubble ${message.type}-message`}>
+            {(() => {
+                const displayText = message.type === 'ai'
+                    ? normalizeScientificText(message.text)
+                    : message.text;
+
+                return (
+                    <>
             {message.sender && (
                 <div className="sender-row">
                     <div className="sender-name">{message.sender}</div>
@@ -408,7 +497,7 @@ const Chatbot = ({ user: userProp }) => {
                         <button 
                             className="copy-btn" 
                             title="Copy to clipboard"
-                            onClick={() => copyToClipboard(message.text)}
+                            onClick={() => copyToClipboard(displayText)}
                         >
                             <FontAwesomeIcon icon={faCopy} size="xs" />
                         </button>
@@ -452,17 +541,24 @@ const Chatbot = ({ user: userProp }) => {
                             pre: ({node, ...props}) => <pre className="md-pre" {...props} />,
                             a: ({node, children, ...props}) => <a className="md-a" target="_blank" rel="noopener noreferrer" {...props}>{children}</a>,
                             hr: ({node, ...props}) => <hr className="md-hr" {...props} />,
-                            table: ({node, ...props}) => <table className="chatbot-table" {...props} />,
+                            table: ({node, ...props}) => (
+                                <div className="chatbot-table-scroll">
+                                    <table className="chatbot-table" {...props} />
+                                </div>
+                            ),
                             thead: ({node, ...props}) => <thead className="chatbot-thead" {...props} />,
                             tbody: ({node, ...props}) => <tbody className="chatbot-tbody" {...props} />,
                             th: ({node, ...props}) => <th className="chatbot-th" {...props} />,
                             td: ({node, ...props}) => <td className="chatbot-td" {...props} />,
                         }}
                     >
-                        {message.text}
+                        {displayText}
                     </ReactMarkdown>
                 </div>
             )}
+                    </>
+                );
+            })()}
         </div>
     );
     
@@ -498,9 +594,22 @@ const Chatbot = ({ user: userProp }) => {
                             <h1>AI Tutor</h1>
                         </div>
 
-                        <div id="chat-messages" ref={chatMessagesRef}>
+                        <div id="chat-messages" ref={chatMessagesRef} onScroll={scheduleScrollToBottomVisibilityUpdate}>
                             {history.map(msg => <MessageBubble key={msg.id} message={msg} />)}
                         </div>
+
+                        <button
+                            ref={scrollToBottomButtonRef}
+                            type="button"
+                            className="scroll-to-bottom-btn"
+                            style={scrollToBottomButtonStyle}
+                            onClick={scrollToBottom}
+                            title="Go to latest message"
+                            aria-label="Go to latest message"
+                            tabIndex={showScrollToBottom ? 0 : -1}
+                        >
+                            <FontAwesomeIcon icon={faArrowDown} />
+                        </button>
 
                         <div id="search-indicator" className={searchIndicatorClassName}>
                             <span className="searching-text">
