@@ -9,11 +9,12 @@
 ### Sidebar Session UX (Current)
 
 - Shows up to the 10 newest saved sessions for authenticated users.
+- On load, the most recent session is automatically selected and its full message history is fetched and rendered.
 - Each session row supports actions via a 3-dot menu:
 	- Rename session (in-app modal)
-	- Delete session (with confirmation)
-- Selecting a different session prompts for confirmation before switching.
-- Guests can chat, but the empty state prompts signup to persist and recover sessions.
+	- Delete session (with confirmation); if the active session is deleted, the next available session loads automatically, or the welcome state is shown if none remain.
+- Switching sessions fetches and renders the full message history for the selected session.
+- Guests can chat, but session history is not persisted and the empty state prompts signup.
 
 ## Django Endpoints
 

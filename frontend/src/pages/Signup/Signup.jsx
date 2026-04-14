@@ -139,7 +139,7 @@ const Signup = () => {
             <em>smarter today</em>.
           </h2>
           <p>
-            Join thousands of students who use Lamla AI to ace their exams
+            Join hundreds of students who use Lamla AI to ace their exams
             with personalised quizzes, flashcards, and an always-on AI tutor.
           </p>
         </div>

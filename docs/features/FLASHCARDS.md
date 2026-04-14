@@ -2,12 +2,20 @@
 
 ## Frontend Pages
 
-- `/flashcards` -> `FlashcardDecks.jsx`
-- `/flashcards/create` -> `FlashcardCreate.jsx`
-- `/flashcards/deck/:id` -> `FlashcardDeck.jsx`
-- `/flashcards/study/:id` -> `FlashcardStudy.jsx`
+| File | Route | Sidebar |
+|---|---|---|
+| `FlashcardDecks.jsx` | `/flashcards` | Yes — shared sidebar (`activeId=""`) |
+| `FlashcardCreate.jsx` | `/flashcards/create` | No |
+| `FlashcardDeck.jsx` | `/flashcards/deck/:id` | No |
+| `FlashcardStudy.jsx` | `/flashcards/study/:id` | No |
 
 Styles live in `src/pages/Flashcards/Flashcards.css`.
+
+### `/flashcards` — Deck List Page
+
+Uses the shared `Sidebar` component with the same user nav items as Dashboard and Profile. Sidebar is always shown (unauthenticated users are redirected to login). No flashcard-specific items are added to the sidebar nav.
+
+Sidebar nav behaviour: clicking "Past Quizzes" → `/quiz`; "Materials" / "Dashboard" → `/dashboard?tab=<id>`; "Profile" → `/profile`.
 
 ## Django Endpoints
 

@@ -29,10 +29,10 @@ Legacy redirects:
 
 ## Quiz
 
-- `/quiz/create` -> CreateQuiz
+- `/quiz` -> QuizHistory *(authenticated only — redirects to `/auth/login` if not signed in)*
+- `/quiz/create` -> CreateQuiz *(public; guests limited to one quiz via `lamla_guest_quiz_used` localStorage flag)*
 - `/quiz/play` -> Quiz
 - `/quiz/results` -> QuizResults
-- `/quiz` -> redirect `/quiz/create`
 
 ## Flashcards
 

@@ -2,9 +2,35 @@
 
 ## Frontend Pages
 
-- `src/pages/Quiz/CreateQuiz.jsx` (`/quiz/create`)
-- `src/pages/Quiz/Quiz.jsx` (`/quiz/play`)
-- `src/pages/Quiz/QuizResults.jsx` (`/quiz/results`)
+| File | Route | Access |
+|---|---|---|
+| `src/pages/Quiz/QuizHistory.jsx` | `/quiz` | Authenticated only |
+| `src/pages/Quiz/CreateQuiz.jsx` | `/quiz/create` | Public (guest one-quiz limit) |
+| `src/pages/Quiz/Quiz.jsx` | `/quiz/play` | Public |
+| `src/pages/Quiz/QuizResults.jsx` | `/quiz/results` | Public |
+
+### `/quiz` — Quiz History Page
+
+The dedicated quiz history page. Replaces the former inline "Past Quizzes" tab that lived inside `/dashboard`.
+
+- Requires authentication — unauthenticated visitors are redirected to `/auth/login`.
+- Uses the shared `Sidebar` component (`activeId="history"`) with the same navigation items as Dashboard and Profile.
+- Header row: "Past Quizzes" heading left-aligned, "Take a New Quiz" button right-aligned at the same level.
+- Sidebar nav behaviour: clicking "Past Quizzes" stays on page; other items navigate to `/dashboard?tab=<id>` or `/profile`.
+
+### Guest Access & One-Quiz Limit
+
+Unauthenticated users may create and take exactly one quiz.
+
+- The Navbar "Quiz" link routes guests to `/quiz/create` and authenticated users to `/quiz`.
+- When a guest successfully generates a quiz (navigates to `/quiz/play`), the flag `lamla_guest_quiz_used = "true"` is stored in `localStorage`.
+- On subsequent visits to `/quiz/create`, the component detects the flag and shows a **blocking modal** (not a silent redirect):
+  - Heading: "You've used your free quiz"
+  - Body: invitation to sign up for unlimited access
+  - Primary CTA: "Sign Up — it's free" → `/auth/signup` (with `state.fromGuest = true`)
+  - Secondary link: "Already have an account? Sign in" → `/auth/login`
+- The Signup page reads `location.state?.fromGuest` and surfaces a contextual banner above the form.
+- On any successful auth (login, signup, Google OAuth), `lamla_guest_quiz_used` is removed from `localStorage` so the user is no longer treated as a repeat guest.
 
 ## Django Endpoints
 
