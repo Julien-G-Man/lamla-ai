@@ -73,33 +73,11 @@ Start with option 1. Migrate to option 2 when the batch LLM pipeline exists.
 
 ### Implementation Strategy
 
-**Step 1 — Create the model and migration**
-Add `TopicPerformance` to the quiz app models.
-
-**Step 2 — Hook into quiz submission**
-In `QuizSession` save logic (post-submission), iterate over each question
-and its user answer. For each wrong answer, call:
-```python
-TopicPerformance.objects.update_or_create(
-    user=user, topic=subject,
-    defaults={...}  # increment totals, recompute accuracy
-)
-```
-Use `F()` expressions to avoid race conditions on concurrent submissions.
-
-**Step 3 — Weak areas API endpoint**
-`GET /api/quiz/weak-areas/` returns the bottom 5 topics by accuracy for
-the authenticated user. Minimum 3 questions attempted to qualify
-(avoids noise from single-question topics).
-
-**Step 4 — Surface in dashboard**
-Add weak areas to the existing `DashboardStatsView` response.
-Frontend renders them as highlighted cards with a "Practice this" CTA.
-
-**Step 5 — Drive quiz generation**
-On the quiz generation form, pre-fill the subject field with the user's
-weakest topic. The student sees their weak spot suggested before they even
-think about what to study.
+**Step 1 — Create the model and migration** ✅
+**Step 2 — Hook into quiz submission** ✅
+**Step 3 — Weak areas API endpoint** ✅
+**Step 4 — Surface in dashboard** ✅
+**Step 5 — Drive quiz generation** ✅
 
 ---
 
@@ -142,32 +120,11 @@ class QuizTopicSchedule(models.Model):
 
 ### Implementation Strategy
 
-**Step 1 — Reuse existing SM-2 logic**
-The flashcards app already has `scheduling.py` with the full SM-2
-implementation. Import and call it from the quiz submission handler.
-Do not duplicate code.
-
-**Step 2 — Map quiz score to SM-2 quality rating**
-After quiz submission, convert score percentage to the 0–5 SM-2 quality scale:
-```
-score >= 90%  → quality 5
-score >= 75%  → quality 4
-score >= 60%  → quality 3
-score >= 40%  → quality 2
-score >= 20%  → quality 1
-score <  20%  → quality 0
-```
-
-**Step 3 — Update schedule on submission**
-After each quiz submission, update or create a `QuizTopicSchedule` row
-for the quiz subject using the mapped quality rating.
-
-**Step 4 — Due topics API**
-`GET /api/quiz/due-topics/` returns topics where `next_review <= now`
-for the authenticated user, ordered by most overdue first.
-
-**Step 5 — Integrate with Daily Study Plan** (see feature 3 below)
-The daily plan pulls from this endpoint to recommend what to study today.
+**Step 1 — Reuse existing SM-2 logic** ✅
+**Step 2 — Map quiz score to SM-2 quality rating** ✅
+**Step 3 — Update schedule on submission** ✅
+**Step 4 — Due topics API** ✅ (`GET /api/quiz/due-topics/` live)
+**Step 5 — Integrate with Daily Study Plan** ⏳ (Daily Study Plan not yet built)
 
 ---
 
@@ -192,35 +149,10 @@ session start rate and depth of engagement.
 
 ### Implementation Strategy
 
-**Step 1 — Build a `StudyPlanBuilder` utility class** in `dashboard/helpers.py`
-
-Inputs (all from existing DB queries):
-- Overdue flashcard count (next_review <= now) and which deck
-- Due quiz topics from `QuizTopicSchedule`
-- Weakest topic from `TopicPerformance`
-- Days since last chat session
-- Days since last material upload/download
-- Current streak status
-
-Output: a JSON structure with 2–4 recommended actions, each with:
-- action type (quiz / flashcard / chat / read)
-- display message
-- pre-filled parameters (e.g., subject to quiz on)
-- urgency level (due_today / suggested / optional)
-
-**Step 2 — Add to dashboard endpoint**
-Extend `DashboardStatsView` to include a `study_plan` array in its response.
-No new endpoint needed.
-
-**Step 3 — Redis caching**
-Cache the computed plan per user for 6 hours. Invalidate on quiz submission,
-flashcard review, or chat message sent. Prevents redundant DB queries on
-every page load.
-
-**Step 4 — Frontend CTA buttons**
-Each plan item links directly to the relevant feature with parameters
-pre-filled. "Practice Thermodynamics" opens quiz generation with subject
-already set.
+**Step 1 — Build a `StudyPlanBuilder` utility class** ⏳
+**Step 2 — Add to dashboard endpoint** ⏳
+**Step 3 — Redis caching** ⏳
+**Step 4 — Frontend CTA buttons** ⏳
 
 ---
 
@@ -274,32 +206,11 @@ class UserXP(models.Model):
 
 ### Implementation Strategy
 
-**Step 1 — Seed Badge table**
-Create a data migration that inserts all badge definitions.
-Badge logic lives in code; the DB just stores definitions and awards.
-
-**Step 2 — Badge checker service**
-Create `dashboard/badges.py` with a `check_and_award_badges(user)` function.
-It queries the user's stats and awards any newly earned badges.
-Idempotent — safe to call repeatedly. `unique_together` constraint prevents
-double-awarding.
-
-**Step 3 — Hook into action endpoints**
-Call `check_and_award_badges.delay(user.id)` (async Celery task) after:
-- Quiz submission
-- Flashcard review session end
-- Chat message sent
-- Material uploaded
-- Streak update
-
-**Step 4 — Profile API**
-Add `badges` and `total_xp` to the profile endpoint response.
-Frontend renders badge icons in the profile page.
-
-**Step 5 — In-app notification**
-When a badge is newly awarded, the next API response (dashboard or profile)
-includes a `new_badges` array. Frontend shows a celebration moment.
-No push notifications needed at this stage.
+**Step 1 — Seed Badge table** ⏳
+**Step 2 — Badge checker service** ⏳
+**Step 3 — Hook into action endpoints** ⏳
+**Step 4 — Profile API** ⏳
+**Step 5 — In-app notification** ⏳
 
 ---
 
@@ -324,36 +235,11 @@ Your email system is already configured (SMTP, Resend, Brevo).
 
 ### Implementation Strategy
 
-**Step 1 — Celery beat schedule**
-Add to `settings.py` CELERY_BEAT_SCHEDULE:
-```python
-"weekly-digest": {
-    "task": "apps.dashboard.tasks.send_weekly_digest",
-    "schedule": crontab(hour=8, minute=0, day_of_week="sunday"),
-}
-```
-
-**Step 2 — Digest task**
-`send_weekly_digest` task:
-1. Queries all active, verified users
-2. For each user, fetches last 7 days of activity
-3. Computes delta vs. previous 7 days
-4. Renders HTML email template
-5. Sends via existing email backend
-6. Processes in batches of 50 with small delays to avoid SMTP rate limits
-
-**Step 3 — Email template**
-Plain, clean HTML. No heavy design. Data-forward. One clear CTA button:
-"Continue studying →" that deep-links back to the app.
-
-**Step 4 — Opt-out**
-Add `email_digest_enabled` boolean to User model (default True).
-Unsubscribe link in email footer sets it to False via a signed URL.
-No account login required to unsubscribe.
-
-**Step 5 — Only send to active users**
-Only email users who have taken at least one action in the last 30 days.
-Avoids spamming dormant accounts and keeps sender reputation healthy.
+**Step 1 — Celery beat schedule** ⏳
+**Step 2 — Digest task** ⏳
+**Step 3 — Email template** ⏳
+**Step 4 — Opt-out** ⏳
+**Step 5 — Only send to active users** ⏳
 
 ---
 
@@ -376,28 +262,9 @@ This meets students where their real anxiety is.
 
 ### Implementation Strategy
 
-**Step 1 — Add exam_mode flag to QuizSession**
-```python
-exam_mode = models.BooleanField(default=False)
-time_limit_minutes = models.PositiveIntegerField(null=True)
-```
+**Step 1 — Add exam_mode flag to QuizSession** ✅ (`exam_mode`, `time_limit_minutes` added in migration `0002`)
+**Step 2 — No backend changes to generation** ✅ (`exam_mode` recorded on session creation)
 
-**Step 2 — No backend changes to generation**
-The quiz generation endpoint already accepts `time_limit` and question counts.
-Exam mode is a frontend experience constraint, not a backend one.
-Pass `exam_mode=True` in the session creation payload so it's recorded.
-
-**Step 3 — Exam results page**
-After submission, show a dedicated results view:
-- Overall score with pass/fail indicator (configurable threshold, default 50%)
-- Time taken vs. time allowed
-- Question-by-question breakdown with correct answers and explanations
-- Weak areas identified from this exam (feeds into TopicPerformance)
-
-**Step 4 — Exam badge**
-Award the "Exam Ready" badge on first exam completion.
-Award "Distinction" badge for scoring 80%+ in exam mode.
-
-**Step 5 — Exam history**
-Filter `QuizSession` by `exam_mode=True` for a dedicated exam history view.
-Students track their mock exam performance over time.
+**Step 3 — Exam results page** ⏳ (frontend UI not built)
+**Step 4 — Exam badge** ⏳ (badge system not yet built)
+**Step 5 — Exam history** ⏳ (frontend exam history view not built)
