@@ -39,7 +39,7 @@
     "heading": "Quick Access URLs and Website",
     "source_file": "platform_overview.md",
     "keywords": ["urls", "web addresses", "links", "page urls", "direct links", "website", "site", "homepage", "url", "address", "lamla url", "platform url", "where is", "find lamla", "open lamla", "access lamla", "lamla website", "lamla link", "lamla.ai", "vercel"],
-    "text": "The Lamla AI platform is live at: https://lamla-ai.vercel.app\n\nFull page URLs:\n- Homepage: https://lamla-ai.vercel.app/\n- Login page: https://lamla-ai.vercel.app/auth/login\n- Signup page: https://lamla-ai.vercel.app/auth/signup\n- AI Tutor chat: https://lamla-ai.vercel.app/ai-tutor\n- Create Quiz: https://lamla-ai.vercel.app/quiz/create\n- Take Quiz: https://lamla-ai.vercel.app/quiz/play\n- Quiz Results: https://lamla-ai.vercel.app/quiz/results\n- Flashcard Decks: https://lamla-ai.vercel.app/flashcards\n- Create Flashcard Deck: https://lamla-ai.vercel.app/flashcards/create\n- Study a Deck: https://lamla-ai.vercel.app/flashcards/study/:id\n- Materials Library: https://lamla-ai.vercel.app/materials\n- Upload Material: https://lamla-ai.vercel.app/materials/upload\n- Dashboard: https://lamla-ai.vercel.app/dashboard\n- Admin Dashboard: https://lamla-ai.vercel.app/admin-dashboard\n- Profile settings: https://lamla-ai.vercel.app/profile"
+    "text": "The Lamla AI platform is live at: https://lamla-ai.vercel.app\n\nFull page URLs:\n- Homepage: https://lamla-ai.vercel.app/\n- Login page: https://lamla-ai.vercel.app/auth/login\n- Signup page: https://lamla-ai.vercel.app/auth/signup\n- AI Tutor chat: https://lamla-ai.vercel.app/ai-tutor\n- Create Quiz: https://lamla-ai.vercel.app/quiz/create\n- Take Quiz: https://lamla-ai.vercel.app/quiz/play\n- Quiz Results: https://lamla-ai.vercel.app/quiz/results\n- Flashcard Decks: https://lamla-ai.vercel.app/flashcards\n- Create Flashcard Deck: https://lamla-ai.vercel.app/flashcards/create\n- Study a Deck: https://lamla-ai.vercel.app/flashcards/study/:id\n- Materials Library: https://lamla-ai.vercel.app/materials\n- Upload Material: https://lamla-ai.vercel.app/materials/upload\n- Dashboard: https://lamla-ai.vercel.app/dashboard\n- Profile settings: https://lamla-ai.vercel.app/profile"
   },
   "learning_tools.md::s1": {
     "heading": "Quiz Generator",
@@ -69,13 +69,13 @@
     "heading": "Dashboard And Progress",
     "source_file": "learning_tools.md",
     "keywords": ["dashboard", "progress", "analytics", "stats", "activity", "performance", "trends", "learning statistics", "my progress", "study stats", "dashboard page", "user dashboard"],
-    "text": "The Dashboard is at https://lamla-ai.vercel.app/dashboard\n\nLeft sidebar navigation: Dashboard tab (overview), Past Quizzes tab, Materials tab, Profile tab, Logout button.\n\nOverview tab shows 4 statistics cards:\n1. Total Quizzes: number of quizzes completed\n2. Average Score: average quiz score percentage\n3. Study Streak: consecutive days active\n4. Flashcard Sets: number of flashcard decks created\n\nQuick Actions on the dashboard:\n- Create Quiz: https://lamla-ai.vercel.app/quiz/create\n- Flashcards: https://lamla-ai.vercel.app/flashcards\n- AI Tutor: https://lamla-ai.vercel.app/ai-tutor\n\nRecent Activity section: Timeline of quiz completions with scores, flashcard decks created, materials uploaded.\n\nPast Quizzes tab: All quizzes with subject, score, and date.\n\nAdmin Dashboard (admins only): At https://lamla-ai.vercel.app/admin-dashboard. Shows platform-wide statistics: total users, total quizzes, platform average score, total flashcard decks, usage trend charts, user management tools."
+    "text": "The Dashboard is at https://lamla-ai.vercel.app/dashboard\n\nLeft sidebar navigation: Dashboard tab (overview), Past Quizzes tab, Materials tab, Profile tab, Logout button.\n\nOverview tab shows 4 statistics cards:\n1. Total Quizzes: number of quizzes completed\n2. Average Score: average quiz score percentage\n3. Study Streak: consecutive days active\n4. Flashcard Sets: number of flashcard decks created\n\nWeak Areas card: Shows your lowest-accuracy topics (if you have taken quizzes). Each has a Practice button to start a focused quiz on that topic.\n\nQuick Actions on the dashboard:\n- Create Quiz: https://lamla-ai.vercel.app/quiz/create\n- Flashcards: https://lamla-ai.vercel.app/flashcards\n- AI Tutor: https://lamla-ai.vercel.app/ai-tutor\n\nRecent Activity section: Timeline of quiz completions with scores, flashcard decks created, materials uploaded."
   },
   "accounts_and_auth.md::s1": {
     "heading": "Sign Up And Login",
     "source_file": "accounts_and_auth.md",
     "keywords": ["signup", "sign up", "login", "account", "username", "email", "password", "register", "authentication", "create account", "where to login", "how to sign up", "new account"],
-    "text": "Signup page: https://lamla-ai.vercel.app/auth/signup\nLogin page: https://lamla-ai.vercel.app/auth/login\n\nTo create an account:\n1. Click Signup in the top navigation menu\n2. Fill in: Email address (used as your login), Username (your display name), Password\n3. Click the Sign Up button\n4. You will be redirected to verify your email\n\nAlternatively sign up with Google:\n1. Click Continue with Google on the signup page\n2. Select your Google account\n3. Account is created instantly, no email verification needed\n4. You are redirected to your dashboard immediately\n\nTo log in:\n1. Click Login in the top navigation menu\n2. Enter your email and password\n3. Click Sign in or press Enter\n4. Admins go to Admin Dashboard; regular users go to Dashboard"
+    "text": "Signup page: https://lamla-ai.vercel.app/auth/signup\nLogin page: https://lamla-ai.vercel.app/auth/login\n\nTo create an account:\n1. Click Signup in the top navigation menu\n2. Fill in: Email address (used as your login), Username (your display name), Password\n3. Click the Sign Up button\n4. You will be redirected to verify your email\n\nAlternatively sign up with Google:\n1. Click Continue with Google on the signup page\n2. Select your Google account\n3. Account is created instantly, no email verification needed\n4. You are redirected to your dashboard immediately\n\nTo log in:\n1. Click Login in the top navigation menu\n2. Enter your email and password\n3. Click Sign in or press Enter\n4. You are redirected to your Dashboard"
   },
   "accounts_and_auth.md::s2": {
     "heading": "Email Verification",
@@ -93,7 +93,7 @@
     "heading": "Dashboard Access",
     "source_file": "accounts_and_auth.md",
     "keywords": ["dashboard", "where is dashboard", "access dashboard", "my dashboard", "user dashboard"],
-    "text": "Dashboard URL: https://lamla-ai.vercel.app/dashboard\n\nFeatures:\n- Overview tab: Statistics cards and quick actions\n- Past Quizzes tab: View quiz history\n- Materials tab: Materials you have uploaded\n- Profile tab: Account settings\n\nAdmin users see the Admin Dashboard at https://lamla-ai.vercel.app/admin-dashboard with platform-wide statistics."
+    "text": "Dashboard URL: https://lamla-ai.vercel.app/dashboard\n\nFeatures:\n- Overview tab: Statistics cards, weak areas card, and quick actions\n- Past Quizzes tab: View quiz history\n- Materials tab: Materials you have uploaded\n- Profile tab: Account settings"
   },
   "accounts_and_auth.md::s5": {
     "heading": "Logout",
@@ -165,7 +165,7 @@
     "heading": "YouTube Quiz Input",
     "source_file": "files_and_limits.md",
     "keywords": ["youtube", "video", "youtube video", "youtube url", "video transcript", "youtube transcript", "youtube tab", "video quiz", "youtube quiz", "captions", "load transcript", "supported youtube links", "youtu.be", "youtube shorts"],
-    "text": "You can generate quizzes directly from YouTube videos in Quiz Creator.\n\nHow to use:\n1. Open https://lamla-ai.vercel.app/quiz/create\n2. Select the YouTube tab\n3. Paste a YouTube URL (supported: youtube.com/watch?v=..., youtu.be/..., youtube.com/shorts/...)\n4. Click Load Transcript\n5. After transcript loads, configure quiz settings and click Generate Quiz\n\nImportant limits and requirements:\n- Captions must be available on the video (manual or auto-generated)\n- Transcript text is internally capped at 16,000 characters before AI generation\n- If transcript loading fails, try another URL or a video with captions enabled\n\nCommon YouTube errors and fixes:\n- Captions are disabled or unavailable: choose a video with captions\n- Could not find a YouTube video ID: check URL format\n- Transcript too short: choose a video with more spoken content\n- Please load a YouTube transcript first: click Load Transcript before Generate"
+    "text": "You can generate quizzes directly from YouTube videos in Quiz Creator.\n\nHow to use:\n1. Open https://lamla-ai.vercel.app/quiz/create\n2. Select the YouTube tab\n3. Paste a YouTube URL (supported: youtube.com/watch?v=..., youtu.be/..., youtube.com/shorts/...)\n4. Click Load Transcript\n5. After transcript loads, configure quiz settings and click Generate Quiz\n\nImportant limits and requirements:\n- Captions must be available on the video (manual or auto-generated)\n- Very long transcripts are trimmed before AI generation to keep quiz quality high\n- If transcript loading fails, try another URL or a video with captions enabled\n\nCommon YouTube errors and fixes:\n- Captions are disabled or unavailable: choose a video with captions\n- Could not find a YouTube video ID: check URL format\n- Transcript too short: choose a video with more spoken content\n- Please load a YouTube transcript first: click Load Transcript before Generate"
   },
   "support_and_policies.md::s1": {
     "heading": "How To Get Help",
@@ -192,39 +192,33 @@
     "text": "Share feedback, suggestions, or ideas for new features by contacting us:\n- Email: lamlaaiteam@gmail.com\n- WhatsApp: +233509341251"
   },
   "models_and_capabilities.md::s1": {
-    "heading": "Model Routing Overview",
+    "heading": "AI Behind Lamla",
     "source_file": "models_and_capabilities.md",
-    "keywords": ["ai models", "model routing", "providers", "llm selection", "which model", "default model", "model priority"],
-    "text": "Lamla uses a provider-priority strategy for AI generation. Current model preference order:\n1. NVIDIA DeepSeek (nvidia_deepseek)\n2. NVIDIA OpenAI-compatible (nvidia_openai)\n3. Claude (claude)\n\nIf the first model fails or is unavailable, Lamla automatically tries the next one."
+    "keywords": ["ai models", "which ai", "what ai does lamla use", "powered by", "ai technology", "chatgpt", "claude", "ai provider", "large language model"],
+    "text": "Lamla is powered by state-of-the-art large language models including DeepSeek, Claude (Anthropic), and GPT4 (OpenAI).\n\nThese are the same class of models used by leading AI products worldwide. They handle quiz generation, flashcard creation, short-answer evaluation, and the AI Tutor chat.\n\nFor reliability, Lamla connects to multiple AI providers. If one is slow or unavailable, the system automatically switches to another — so you rarely experience downtime."
   },
   "models_and_capabilities.md::s2": {
-    "heading": "NVIDIA DeepSeek",
+    "heading": "Why Responses Sometimes Vary",
     "source_file": "models_and_capabilities.md",
-    "keywords": ["nvidia deepseek", "deepseek", "reasoning model", "advanced reasoning", "first priority"],
-    "text": "Provider key: nvidia_deepseek. Configured model: deepseek-ai/deepseek-v3.2.\nBest for: complex reasoning, structured long-form answers, concept-heavy educational explanations.\nFirst-choice model for quiz generation and educational content."
+    "keywords": ["slow response", "ai slow", "response quality", "why different answers", "inconsistent", "ai response time", "generation speed"],
+    "text": "AI response quality and speed can vary because:\n- Lamla uses multiple AI providers and automatically selects the best available one\n- Provider performance fluctuates based on demand and availability\n- Complex requests (long documents, many questions) take longer to process\n\nIf a response seems slow or lower quality than usual, try again — the system may route to a different provider on the next request."
   },
-  "models_and_capabilities.md::s3": {
-    "heading": "NVIDIA OpenAI-Compatible Model",
-    "source_file": "models_and_capabilities.md",
-    "keywords": ["nvidia openai", "openai compatible", "backup model", "secondary model"],
-    "text": "Provider key: nvidia_openai. Configured model: openai/gpt-oss-20b.\nBest for: reliable general-purpose responses, fast structured generation, robust fallback when DeepSeek is unavailable.\nSecond-priority model for quiz, flashcard, and tutoring flows."
+  "learning_tools.md::s6": {
+    "heading": "Quiz History Page",
+    "source_file": "learning_tools.md",
+    "keywords": ["quiz history", "past quizzes", "quiz page", "history page", "my quizzes", "previous quizzes", "quiz results history", "quiz scores"],
+    "text": "Quiz History is at https://lamla-ai.vercel.app/quiz\n\nThis is a dedicated page for authenticated users showing all past quizzes. You must be logged in to access it — guests are redirected to login.\n\nThe page shows:\n- All past quizzes with subject, score percentage, and date\n- A 'Take a New Quiz' button (top right) to start a fresh quiz\n- Sidebar navigation identical to the Dashboard\n\nAccessing quiz history:\n- Click Quiz in the top navigation (if logged in, goes directly to /quiz)\n- Or navigate to https://lamla-ai.vercel.app/quiz\n\nNote: Guests who are not logged in are redirected to the login page when trying to access quiz history."
   },
-  "models_and_capabilities.md::s4": {
-    "heading": "Claude",
-    "source_file": "models_and_capabilities.md",
-    "keywords": ["claude", "anthropic", "fallback model", "tertiary model"],
-    "text": "Provider key: claude. Best for: clear explanations, educational tutoring tone.\nThird-priority fallback model when NVIDIA providers are unavailable."
+  "learning_tools.md::s7": {
+    "heading": "Weak Area Detection and Spaced Quiz Scheduling",
+    "source_file": "learning_tools.md",
+    "keywords": ["weak areas", "weak topics", "struggling", "performance tracking", "topic performance", "spaced quiz", "due for review", "quiz schedule", "what to study", "study recommendation", "next review", "topic accuracy", "low score topics"],
+    "text": "Lamla automatically tracks your performance per topic after every quiz you submit.\n\nWeak Area Detection:\n- After each quiz, Lamla records how many questions you got right and wrong for that topic\n- Over time it builds a per-topic accuracy map (e.g. 'Thermodynamics: 38% accuracy across 18 questions')\n- The Dashboard overview shows your weakest topics as a 'Weak Areas' card\n- Each weak area has a 'Practice' button that opens Quiz Creator with that subject pre-filled\n- Only topics with at least 3 questions attempted are shown (to avoid noise from a single quiz)\n- The AI Tutor also knows your weak areas and can factor them into study suggestions\n\nSpaced Quiz Scheduling:\n- Lamla uses the SM-2 spaced repetition algorithm (also used for flashcards) to schedule quiz topics\n- Topics you score well on are reviewed less often; topics you struggle with come back sooner\n- 'Due for review' topics are tracked automatically — no action needed from you\n- The AI Tutor can tell you which topics are due for review today\n\nHow to use it:\n- Take quizzes regularly — data improves as you do more quizzes\n- Check the Dashboard for your weak areas card\n- Ask the AI Tutor: 'What should I study today?' or 'What are my weakest topics?'"
   },
-  "models_and_capabilities.md::s5": {
-    "heading": "Timeout and Reliability Behavior",
-    "source_file": "models_and_capabilities.md",
-    "keywords": ["timeout", "latency", "provider failure", "retry behavior", "fallback chain"],
-    "text": "Per-provider timeout: 10 seconds. If a provider fails or times out, Lamla tries the next provider in order. If all providers fail, the request returns an AI service error."
-  },
-  "models_and_capabilities.md::s6": {
-    "heading": "How Model Selection Works",
-    "source_file": "models_and_capabilities.md",
-    "keywords": ["how model selection works", "which model answered", "why fallback happened", "ai model questions"],
-    "text": "When users ask about models:\n- Lamla uses a prioritized multi-model strategy for reliability\n- DeepSeek on NVIDIA is preferred for reasoning quality\n- NVIDIA OpenAI-compatible and Claude are used as fallback providers\n- Provider selection can vary per request depending on availability and response success"
+  "learning_tools.md::s8": {
+    "heading": "I Know Your Progress",
+    "source_file": "learning_tools.md",
+    "keywords": ["ai tutor performance", "bot knows my progress", "personalized tutor", "study advice", "what should i study", "how am i doing", "tutor awareness", "ai knows my results", "personalized study", "chatbot performance", "ai tutor weak areas"],
+    "text": "I am aware of your learning progress. When you are logged in and have taken at least one quiz, I automatically know:\n- How many quizzes you have taken and your average score\n- Your weakest topics (lowest accuracy across at least 3 questions)\n- Which topics are due for review based on spaced repetition scheduling\n\nBecause I have this context, you can ask me things like:\n- 'What should I study today?'\n- 'What are my weakest topics?'\n- 'Am I ready for my exam?'\n- 'Which topic should I focus on next?'\n- 'How am I doing overall?'\n\nI use your actual performance data to give you specific, relevant answers — not generic advice.\n\nThis builds automatically as you take more quizzes. No setup needed.\n\nIf you are a guest or have not taken any quizzes yet, I do not have performance data for you — but I can still help with any subject questions you have."
   }
 }

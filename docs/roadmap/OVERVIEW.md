@@ -10,12 +10,16 @@
 
 | Feature | Status | Gap |
 |---|---|---|
-| Quiz generation (MCQ + short answer) | ✅ Live | Static difficulty, no topic memory |
-| AI chatbot tutor with file context | ✅ Live | Doesn't adapt to the individual |
-| Flashcards with SM-2 spaced repetition | ✅ Live | No session recommendations |
+| Quiz generation (MCQ + short answer) | ✅ Live | Static difficulty |
+| AI chatbot tutor with file context | ✅ Live | — |
+| Flashcards with SM-2 spaced repetition | ✅ Live | — |
 | Community material sharing | ✅ Live | Not indexed by concept |
 | Study streak tracking | ✅ Live | No meaningful milestones |
-| Admin dashboard + analytics | ✅ Live | No per-user learning intelligence |
+| Admin dashboard + analytics | ✅ Live | — |
+| Weak Area Detection Engine | ✅ Live | — |
+| Spaced Quiz Scheduling (SM-2 on topics) | ✅ Live | — |
+| Chatbot user performance awareness | ✅ Live | — |
+| Exam Simulation Mode (flag) | ✅ Live (backend) | Frontend UX not built yet |
 
 ---
 

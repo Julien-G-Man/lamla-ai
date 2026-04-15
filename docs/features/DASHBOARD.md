@@ -13,7 +13,7 @@ All admin endpoints require `IsAdminUser` permission (authenticated + `is_admin=
 
 ## User Dashboard
 
-### `GET /api/dashboard/user/stats/`
+### `GET /api/dashboard/stats/`
 
 Retrieve the authenticated user's personal statistics.
 
@@ -21,16 +21,20 @@ Retrieve the authenticated user's personal statistics.
 ```json
 {
   "total_quizzes": 15,
-  "total_quiz_questions": 120,
   "average_score": 82.5,
-  "total_flashcard_decks": 3,
-  "total_flashcards": 45,
-  "total_chat_sessions": 8,
-  "total_chat_messages": 142,
-  "current_streak": 5,
-  "longest_streak": 12
+  "total_flashcard_sets": 3,
+  "total_chats": 8,
+  "study_streak": 5,
+  "total_ratings": 2,
+  "average_experience_rating": 4.5,
+  "weak_areas": [
+    { "topic": "Thermodynamics", "accuracy": 38.0, "total_questions": 20 },
+    { "topic": "Cell Biology",   "accuracy": 55.0, "total_questions": 12 }
+  ]
 }
 ```
+
+`weak_areas` — up to 3 lowest-accuracy topics for the user (min 3 questions attempted). Empty array if the user has no qualifying topic history. Drives the weak areas card on the dashboard overview and the chatbot performance injection.
 
 **Security:**
 - Requires authentication.

@@ -30,7 +30,7 @@ Legacy redirects:
 ## Quiz
 
 - `/quiz` -> QuizHistory *(authenticated only — redirects to `/auth/login` if not signed in)*
-- `/quiz/create` -> CreateQuiz *(public; guests limited to one quiz via `lamla_guest_quiz_used` localStorage flag)*
+- `/quiz/create` -> CreateQuiz *(public; guests limited to one quiz via `lamla_guest_quiz_used` localStorage flag; accepts `?subject=` query param to pre-fill subject — used by Dashboard weak areas "Practice" button)*
 - `/quiz/play` -> Quiz
 - `/quiz/results` -> QuizResults
 

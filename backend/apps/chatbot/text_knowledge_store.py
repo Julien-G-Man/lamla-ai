@@ -38,6 +38,25 @@ _PHRASE_HINTS = {
     "tutor": ["ai tutor", "chat", "chatbot", "assistant"],
     "material": ["materials", "library", "community", "shared"],
     "model": ["ai models", "model routing", "providers"],
+    # Weak areas / performance
+    "weak": ["weak areas", "weak topics", "struggling", "performance tracking"],
+    "struggling": ["weak areas", "weak topics", "low score"],
+    "performance": ["weak areas", "progress", "stats", "topic accuracy"],
+    "progress": ["dashboard", "progress", "weak areas", "stats"],
+    "improve": ["weak areas", "study recommendation", "practice"],
+    # Spaced scheduling
+    "due": ["due for review", "spaced quiz", "next review", "schedule"],
+    "review": ["spaced repetition", "due for review", "flashcard", "quiz schedule"],
+    "schedule": ["spaced quiz", "due for review", "spaced repetition"],
+    "study today": ["due for review", "weak areas", "what to study"],
+    "study plan": ["weak areas", "due for review", "recommendation"],
+    "what to study": ["weak areas", "due for review", "study recommendation"],
+    # Quiz history
+    "history": ["quiz history", "past quizzes", "previous quizzes"],
+    "past": ["quiz history", "past quizzes", "previous quizzes"],
+    # AI tutor awareness
+    "how am i doing": ["weak areas", "performance", "progress", "ai tutor performance"],
+    "ready": ["weak areas", "performance", "exam", "study recommendation"],
 }
 
 

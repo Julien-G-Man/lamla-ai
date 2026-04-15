@@ -203,9 +203,76 @@ def fallback_response(user_message: str) -> str:
     )
 
 
+def _fetch_user_performance_sync(user) -> dict | None:
+    """
+    Fetch a compact performance snapshot for the authenticated user.
+    Returns None if the user has no quiz history (nothing to inject).
+    Three cheap queries: aggregate stats, weak areas, due topics.
+    """
+    try:
+        from django.db.models import Avg, Count
+        from django.utils import timezone
+        from apps.quiz.models import QuizSession, TopicPerformance, QuizTopicSchedule
+
+        agg = QuizSession.objects.filter(user=user).aggregate(
+            total=Count('id'), avg_score=Avg('score_percentage')
+        )
+        total_quizzes = agg['total'] or 0
+        if total_quizzes == 0:
+            return None  # no history — skip injection entirely
+
+        avg_score = round(float(agg['avg_score'] or 0), 1)
+
+        qs = TopicPerformance.objects.filter(user=user, total_questions__gte=3)
+
+        weak = list(
+            qs.order_by('accuracy')[:3]
+            .values_list('topic', 'accuracy')
+        )
+
+        strong = list(
+            qs.order_by('-accuracy')[:3]
+            .values_list('topic', 'accuracy')
+        )
+
+        due = list(
+            QuizTopicSchedule.objects.filter(user=user, next_review__lte=timezone.now())
+            .order_by('next_review')[:3]
+            .values_list('topic', flat=True)
+        )
+
+        return {
+            'total_quizzes': total_quizzes,
+            'avg_score': avg_score,
+            'weak_areas': [(t, round(a, 1)) for t, a in weak],
+            'strong_areas': [(t, round(a, 1)) for t, a in strong],
+            'due_topics': due,
+        }
+    except Exception:
+        logger.exception("Failed to fetch user performance for chatbot prompt")
+        return None
+
+
+def _format_performance_block(perf: dict) -> str:
+    """Format the performance dict into a compact prompt-safe block."""
+    lines = [
+        f"[{perf['total_quizzes']} quizzes taken | Avg score: {perf['avg_score']}%]",
+    ]
+    if perf.get('weak_areas'):
+        topics = ', '.join(f"{t} ({a}%)" for t, a in perf['weak_areas'])
+        lines.append(f"Weak topics: {topics}")
+    if perf.get('strong_areas'):
+        topics = ', '.join(f"{t} ({a}%)" for t, a in perf['strong_areas'])
+        lines.append(f"Strong topics: {topics}")
+    if perf.get('due_topics'):
+        lines.append(f"Due for review: {', '.join(perf['due_topics'])}")
+    return "Student learning progress:\n" + "\n".join(lines) + "\n"
+
+
 def _build_system_prompt(
     platform_context: str,
     user=None,
+    user_performance: dict | None = None,
     context_document: str = "",
     tutor_mode: str = "direct",
     include_tool_guidance: bool = False,
@@ -218,6 +285,7 @@ def _build_system_prompt(
     inline here.
 
     platform_context  -- retrieved KB chunks (from text_knowledge_store)
+    user_performance  -- compact perf snapshot from _fetch_user_performance_sync (or None)
     context_document  -- optional uploaded file content
     tutor_mode        -- "direct" (default) or "socratic"
     include_tool_guidance -- True only for MCP/orchestrate paths
@@ -228,16 +296,19 @@ def _build_system_prompt(
         label = "superuser/platform manager" if user_name.lower() == "admin" else "student"
         user_line = f"Current user: {user_name} ({label}).\n"
 
+    perf_section = _format_performance_block(user_performance) + "\n" if user_performance else ""
     doc_section = wrap_document_context(context_document) if context_document else ""
     socratic_section = SOCRATIC_MODE_INSTRUCTIONS if tutor_mode == "socratic" else ""
     tool_section = TOOL_USE_GUIDANCE if include_tool_guidance else ""
 
     return (
-        "You are Lamla, an AI tutor built to help students learn deeply — not just get answers.\n"
-        "You are part of the Lamla AI platform: a study companion that generates quizzes, "
-        "flashcards, and explanations tailored to each student.\n\n"
+        "You are Lamla — the AI Tutor on the Lamla AI platform. "
+        "The student chatting with you right now is using the AI Tutor feature directly. "
+        "You are not a bot that knows about the AI Tutor. You are the AI Tutor. "
+        "Always speak in first person about your own capabilities and awareness.\n\n"
         f"{STATIC_PLATFORM_FACTS}\n"
         f"{user_line}"
+        f"{perf_section}"
         f"Date/time: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n"
         f"{doc_section}"
         f"PLATFORM KNOWLEDGE BASE:\n{platform_context}\n\n"
@@ -256,11 +327,16 @@ async def _build_chatbot_prompt(
 ) -> str:
     """One-shot prompt string for POST /chatbot/ (classic path)."""
     from .text_knowledge_store import knowledge_store
-    platform_context = await sync_to_async(knowledge_store.get_all_context)()
+    platform_context = await sync_to_async(knowledge_store.get_context)(user_message, top_k=6)
+
+    user_performance = None
+    if user:
+        user_performance = await sync_to_async(_fetch_user_performance_sync, thread_sensitive=True)(user)
 
     system_prompt = _build_system_prompt(
         platform_context=platform_context,
         user=user,
+        user_performance=user_performance,
         context_document=context_document,
         tutor_mode=tutor_mode,
         include_tool_guidance=False,
@@ -292,11 +368,16 @@ async def _build_mcp_context(
     messages       -- Anthropic [{role, content}] list, current user turn last
     """
     from .text_knowledge_store import knowledge_store
-    platform_context = await sync_to_async(knowledge_store.get_all_context)()
+    platform_context = await sync_to_async(knowledge_store.get_context)(user_message, top_k=6)
+
+    user_performance = None
+    if user:
+        user_performance = await sync_to_async(_fetch_user_performance_sync, thread_sensitive=True)(user)
 
     system_prompt = _build_system_prompt(
         platform_context=platform_context,
         user=user,
+        user_performance=user_performance,
         include_tool_guidance=True,
     )
 

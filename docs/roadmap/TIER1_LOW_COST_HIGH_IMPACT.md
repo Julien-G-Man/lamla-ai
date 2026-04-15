@@ -4,6 +4,17 @@
 > Zero LLM API calls. Build these first — they deliver the most learning value
 > per engineering hour and cost nothing to run at scale.
 
+## Status
+
+| Feature | Status |
+|---|---|
+| Weak Area Detection Engine | ✅ Built |
+| Spaced Quiz Scheduling | ✅ Built |
+| Exam Simulation Mode | ✅ Backend built — frontend UX pending |
+| Daily Study Plan | ⏳ Not started |
+| Milestone & Badge System | ⏳ Not started |
+| Weekly Progress Email Digest | ⏳ Not started |
+
 ---
 
 ## 1. Weak Area Detection Engine

@@ -42,6 +42,8 @@ From `backend/apps/quiz/urls.py`:
 - `POST /api/quiz/submit/` — evaluate and store quiz results
 - `POST /api/quiz/download/` — download quiz as PDF/DOCX
 - `GET /api/quiz/history/` — authenticated user's past sessions
+- `GET /api/quiz/weak-areas/` — bottom 5 topics by accuracy (min 3 questions attempted)
+- `GET /api/quiz/due-topics/` — topics where `next_review <= now`, ordered most overdue first
 
 ## FastAPI Endpoint
 
@@ -49,9 +51,24 @@ From `backend/apps/quiz/urls.py`:
 
 ## Data Model
 
-Primary persisted object:
+### `QuizSession`
+Primary session record. Fields: subject, scores, duration, question payload, user answers, `exam_mode` (bool), `time_limit_minutes` (nullable int).
 
-- `QuizSession` with subject, scores, duration, question payload, user answers.
+### `TopicPerformance`
+Per-user accuracy map built automatically after every quiz submission. Fields: `user`, `topic`, `subject`, `total_questions`, `correct_answers`, `accuracy` (recomputed on update), `last_attempted`. Unique on `(user, topic)`. Indexed on `(user, accuracy)` for fast weak-area queries.
+
+### `QuizTopicSchedule`
+SM-2 spaced-repetition schedule per user per topic — mirrors the flashcard `Flashcard` model. Fields: `user`, `topic`, `subject`, `repetition`, `interval`, `ease_factor`, `next_review`, `last_review`. Unique on `(user, topic)`. Uses the same `update_sm2()` function from `apps.flashcards.scheduling`.
+
+Score → SM-2 quality mapping applied at submission:
+| Score | Quality |
+|---|---|
+| ≥ 90% | 5 |
+| ≥ 75% | 4 |
+| ≥ 60% | 3 |
+| ≥ 40% | 2 |
+| ≥ 20% | 1 |
+| < 20%  | 0 |
 
 ## Input Sources
 
@@ -93,6 +110,28 @@ All three paths converge at the same `generate/` endpoint once `extractedText` i
 | Short answer questions | 0–10 | 3 |
 | Quiz time | 1–120 min | 10 |
 | Difficulty | easy / medium / hard / random | random |
+
+## Weak Area Detection
+
+After every quiz submission, `submit_quiz_api_async` updates `TopicPerformance` for the quiz subject using atomic `F()` expressions (race-condition safe). Accuracy is recomputed after each update.
+
+`GET /api/quiz/weak-areas/` returns the 5 lowest-accuracy topics for the user, filtered to topics with at least 3 questions attempted (noise filter). Used by the dashboard weak areas card and injected into the chatbot system prompt.
+
+### Historical Backfill
+
+Migration `0003_backfill_topic_performance` automatically populates `TopicPerformance` and `QuizTopicSchedule` from all existing `QuizSession` rows on first deploy. Safe to re-run — `TopicPerformance` rows are replaced with the full aggregate and `QuizTopicSchedule` rows are only initialised if they don't exist yet.
+
+A management command is also available for manual re-sync after a DB restore:
+```
+python manage.py backfill_topic_performance
+python manage.py backfill_topic_performance --dry-run
+```
+
+## Exam Simulation Mode
+
+`QuizSession` now carries `exam_mode` (bool, default `False`) and `time_limit_minutes`. Pass `exam_mode: true` in the submit payload to flag a session as an exam simulation. The quiz generation endpoint is unchanged — exam mode is a frontend UX constraint recorded at submission time.
+
+`GET /api/quiz/history/` response includes `exam_mode` per session so the frontend can filter exam-only history.
 
 ## Reliability Notes
 
