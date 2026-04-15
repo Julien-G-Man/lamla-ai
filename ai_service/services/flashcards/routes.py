@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException
 from core.ai_client import ai_service, APIIntegrationError
 from core.http import get_async_client
 from core.config import settings
-from .prompts import DIFFICULTY_PROMPTS
+from .prompts import DIFFICULTY_PROMPTS, FORMATTING_GUIDELINES
 from .schemas import FlashcardRequest, FlashcardExplainRequest
 
 flashcards_router = APIRouter()
@@ -91,6 +91,8 @@ Additional instructions:
 Difficulty level:
 {difficulty_prompt}
 
+{FORMATTING_GUIDELINES}
+
 Create {num_cards} flashcards.
 
 Return ONLY valid JSON in this format:
@@ -158,6 +160,8 @@ Correct Answer:
 
 Explain this concept clearly in 3 short sentences
 like a tutor helping a beginner.
+
+{FORMATTING_GUIDELINES}
 """
 
     if not await _try_acquire_ai_slot():

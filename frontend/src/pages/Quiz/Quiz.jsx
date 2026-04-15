@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
-import MathRenderer from '../../components/MathRenderer';
+import RichTextRenderer from '../../utils/richTextRenderer';
 import './Quiz.css';
 import djangoApi, { DJANGO_HEALTH_ENDPOINT, FASTAPI_HEALTH_ENDPOINT } from '../../services/api';
 
@@ -190,7 +190,7 @@ const Quiz = () => {
 
                 <section className="quiz-question-shell">
                     <div className="quiz-question-body">
-                        <MathRenderer text={currentQ.question} />
+                        <RichTextRenderer text={currentQ.question} className="quiz-rich-text" />
                     </div>
 
                     {hasOptions ? (
@@ -206,7 +206,10 @@ const Quiz = () => {
                                         onClick={() => handleAnswer(letter)}
                                     >
                                         <span className="quiz-option-dot" aria-hidden="true" />
-                                        <span className="quiz-option-text">{letter}. <MathRenderer text={opt} /></span>
+                                        <span className="quiz-option-letter" aria-hidden="true">{letter}.</span>
+                                        <div className="quiz-option-text">
+                                            <RichTextRenderer text={opt} className="quiz-rich-text quiz-option-rich-text" />
+                                        </div>
                                     </button>
                                 );
                             })}

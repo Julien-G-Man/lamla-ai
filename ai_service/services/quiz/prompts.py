@@ -23,7 +23,7 @@ def _build_quiz_prompt(payload: QuizRequest) -> str:
     source_note = _SOURCE_CONTEXT.get(source_type, _SOURCE_CONTEXT["text"]).format(title=title)
 
     return (
-        f"You are Lamla AI Tutor. Generate a quiz based on this study material:\n\n"
+        f"You are Lamla AI's Quiz Engine. Generate a quiz based on this study material:\n\n"
         f"{payload.study_text}\n\n"
         f"Subject: {payload.subject}\n"
         f"Difficulty Level: {payload.difficulty}\n"
@@ -33,6 +33,13 @@ def _build_quiz_prompt(payload: QuizRequest) -> str:
         f"- Generate exactly {payload.num_short} short-answer questions\n"
         f"- Each MCQ must have 4 options (A, B, C, D)\n"
         f"- Provide clear, concise explanations for each answer\n\n"
+        f"Formatting for frontend rendering:\n"
+        f"- Keep question, answer, and explanation text plain and markdown-friendly\n"
+        f"- Use fenced code blocks for code examples, shell commands, and programming snippets\n"
+        f"- Never format code or procedures as markdown tables\n"
+        f"- Avoid HTML tags like <br> or <table>; use newline characters instead\n"
+        f"- Use LaTeX delimiters for math: $...$ for inline math and $$...$$ for block math\n"
+        f"- Use tables only for genuine comparisons, not for steps or code\n\n"
         f"Return ONLY valid JSON in this EXACT format (no markdown, no code blocks):\n"
         "{\n"
         '  "mcq_questions": [\n'
@@ -56,7 +63,8 @@ def _build_repair_prompt(bad_json_text: str) -> str:
         "Return JSON object with exactly these top-level keys: "
         '"mcq_questions" (array), "short_questions" (array). '
         "Each question object must contain: question, options (for MCQ), answer, explanation. "
-        "Do not include markdown fences or any extra text.\n\n"
+        "For any code, commands, or examples inside the JSON strings, use fenced markdown code blocks and newline characters, not tables or HTML breaks. "
+        "Use LaTeX delimiters for math when needed. Do not include markdown fences or any extra text.\n\n"
         "CONTENT TO FIX:\n"
         f"{bad_json_text}"
     )

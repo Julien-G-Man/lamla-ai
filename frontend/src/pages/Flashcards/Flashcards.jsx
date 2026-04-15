@@ -21,6 +21,7 @@ import {
   faArrowLeft,
 } from '@fortawesome/free-solid-svg-icons';
 import djangoApi from '../../services/api';
+import RichTextRenderer from '../../utils/richTextRenderer';
 import './Flashcards.css';
 
 const SUBJECT_OPTIONS = [
@@ -523,8 +524,14 @@ const Flashcards = () => {
                 <div className="flashcards-preview-grid">
                   {generatedCards.map((card, index) => (
                     <article key={`gen-${index}`} className="flashcards-preview-card">
-                      <p><strong>Q:</strong> {card.question}</p>
-                      <p><strong>A:</strong> {card.answer}</p>
+                      <div className="fc-preview-richtext">
+                        <strong>Q:</strong>
+                        <RichTextRenderer text={card.question} className="fc-rich-text" />
+                      </div>
+                      <div className="fc-preview-richtext">
+                        <strong>A:</strong>
+                        <RichTextRenderer text={card.answer} className="fc-rich-text" />
+                      </div>
                     </article>
                   ))}
                 </div>
@@ -573,11 +580,15 @@ const Flashcards = () => {
             <div className={`flashcards-study-card ${showAnswer ? 'show-answer' : ''}`}>
               <div className="flashcards-study-face front">
                 <div className="flashcards-face-label">Question</div>
-                <div className="flashcards-face-text">{currentCard?.question}</div>
+                <div className="flashcards-face-text">
+                  <RichTextRenderer text={currentCard?.question || ''} className="fc-rich-text" />
+                </div>
               </div>
               <div className="flashcards-study-face back">
                 <div className="flashcards-face-label">Answer</div>
-                <div className="flashcards-face-text">{currentCard?.answer}</div>
+                <div className="flashcards-face-text">
+                  <RichTextRenderer text={currentCard?.answer || ''} className="fc-rich-text" />
+                </div>
               </div>
             </div>
 
@@ -592,7 +603,10 @@ const Flashcards = () => {
 
             {explanation && (
               <div className="flashcards-explanation">
-                <strong>Tutor explanation:</strong> {explanation}
+                <strong>Tutor explanation:</strong>
+                <div className="fc-rich-card-block">
+                  <RichTextRenderer text={explanation} className="fc-rich-text" />
+                </div>
               </div>
             )}
 

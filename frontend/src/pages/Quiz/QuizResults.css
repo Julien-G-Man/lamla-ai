@@ -156,6 +156,49 @@
   line-height: 1.45;
 }
 
+.results-question-head {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.results-question-label {
+  width: fit-content;
+  border: 1px solid var(--results-yellow);
+  border-radius: 999px;
+  color: var(--results-yellow);
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.results-rich-text .md-code-inline {
+  background: rgba(255, 214, 0, 0.14);
+  color: var(--results-text-primary);
+}
+
+.results-rich-text .md-pre {
+  background: #0f172a;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.results-rich-text .md-pre .md-code-block {
+  color: #e5e7eb;
+}
+
+.results-rich-text .chatbot-table {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.results-rich-text .chatbot-th,
+.results-rich-text .chatbot-td {
+  color: var(--results-text-secondary);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
 .results-answer-rows {
   display: grid;
   gap: 8px;
@@ -182,10 +225,14 @@
 }
 
 .results-answer-row .value.with-action {
-  display: inline-flex;
-  align-items: center;
+  display: flex;
+  align-items: flex-start;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.results-answer-row .value .results-rich-text {
+  min-width: 0;
 }
 
 .results-inline-btn {

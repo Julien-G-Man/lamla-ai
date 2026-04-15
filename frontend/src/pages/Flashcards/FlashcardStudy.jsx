@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "../../components/Navbar";
-import MathRenderer from "../../components/MathRenderer";
 import { useAuth } from "../../context/AuthContext";
 import djangoApi, { getApiErrorMessage } from "../../services/api";
+import RichTextRenderer from "../../utils/richTextRenderer";
 import "./Flashcards.css";
 
 const qualityMap = {
@@ -111,8 +111,16 @@ export default function FlashcardStudy() {
               <>
                 <p className="fc-progress">Card {idx + 1} / {cards.length}</p>
                 <article className="fc-study-card">
-                  <h3><MathRenderer text={current.question} /></h3>
-                  {showAnswer && <p><MathRenderer text={current.answer} /></p>}
+                  <div className="fc-rich-card-block">
+                    <div className="fc-rich-card-label">Question</div>
+                    <RichTextRenderer text={current.question} className="fc-rich-text" />
+                  </div>
+                  {showAnswer && (
+                    <div className="fc-rich-card-block">
+                      <div className="fc-rich-card-label">Answer</div>
+                      <RichTextRenderer text={current.answer} className="fc-rich-text" />
+                    </div>
+                  )}
                 </article>
 
                 {!showAnswer ? (
@@ -127,7 +135,9 @@ export default function FlashcardStudy() {
                     {explanation && (
                       <div className="fc-explain-box">
                         <strong>Explanation</strong>
-                        <p><MathRenderer text={explanation} /></p>
+                        <div className="fc-rich-card-block">
+                          <RichTextRenderer text={explanation} className="fc-rich-text" />
+                        </div>
                       </div>
                     )}
                     <p className="fc-info">How well did you remember?</p>

@@ -397,6 +397,53 @@
   color: var(--fc-text);
 }
 
+.fc-rich-card-block {
+  display: grid;
+  gap: 8px;
+}
+
+.fc-rich-card-label {
+  color: var(--fc-primary);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.fc-rich-text .md-code-inline {
+  background: rgba(255, 214, 0, 0.15);
+  color: var(--fc-text);
+}
+
+.fc-rich-text .md-pre {
+  background: #0f172a;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.fc-rich-text .md-pre .md-code-block {
+  color: #e5e7eb;
+}
+
+.fc-rich-text .chatbot-table {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.fc-rich-text .chatbot-th,
+.fc-rich-text .chatbot-td {
+  color: var(--fc-text);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.fc-preview-richtext {
+  display: grid;
+  gap: 6px;
+}
+
+.fc-preview-richtext + .fc-preview-richtext {
+  margin-top: 10px;
+}
+
 .fc-edit-form {
   display: flex;
   flex-direction: column;

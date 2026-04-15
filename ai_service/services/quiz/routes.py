@@ -21,12 +21,32 @@ except Exception:  # pragma: no cover - fallback paths
         ai_service = None
 
 
-def _strip_fences(text: str) -> str:
+def _as_text(value) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        parts = []
+        for item in value:
+            if isinstance(item, dict):
+                text = item.get("text")
+                if isinstance(text, str) and text.strip():
+                    parts.append(text.strip())
+            elif item is not None:
+                text = str(item).strip()
+                if text:
+                    parts.append(text)
+        return "\n".join(parts)
+    return str(value)
+
+
+def _strip_fences(text) -> str:
     """
     Strip markdown code fences from LLM responses.
     Handles ```json ... ```, ``` ... ```, and leading/trailing whitespace.
     """
-    text = text.strip()
+    text = _as_text(text).strip()
     # Remove opening fence: ```json or ```
     text = re.sub(r'^```(?:json)?\s*', '', text, flags=re.IGNORECASE)
     # Remove closing fence
@@ -53,8 +73,6 @@ def _normalize_study_text(text: str) -> str:
         "\u2212": "-",     # math minus
         "\u00d7": " x ",   # multiply symbol
         "\u00f7": " / ",   # division symbol
-        "~": " ",
-        "!": " ",
     }
 
     for old, new in replacements.items():
@@ -73,13 +91,14 @@ def _normalize_study_text(text: str) -> str:
     return cleaned.strip()
 
 
-def _parse_json_safe(text: str, provider_hint: str = "") -> dict | None:
+def _parse_json_safe(text, provider_hint: str = "") -> dict | None:
     """
     Robustly parse a JSON string from an LLM response.
     Strips markdown fences, then falls back to finding the first {...} block.
     Returns None if parsing fails entirely.
     """
-    clean = _strip_fences(text)
+    source_text = _as_text(text)
+    clean = _strip_fences(source_text)
 
     # Attempt 1: direct parse of cleaned text
     try:
@@ -138,7 +157,7 @@ def _parse_json_safe(text: str, provider_hint: str = "") -> dict | None:
     logger.warning(
         "Could not parse JSON from %s response. First 300 chars: %s",
         provider_hint or "provider",
-        text[:300],
+        source_text[:300],
     )
     return None
 
@@ -176,7 +195,7 @@ async def quiz_endpoint(payload: QuizRequest):
                 if "choices" in raw and isinstance(raw.get("choices"), list):
                     # Azure response format – extract content string from choices
                     try:
-                        content_str = raw["choices"][0]["message"]["content"]
+                        content_str = _as_text(raw["choices"][0].get("message", {}).get("content"))
                         logger.debug("Extracted Azure content (first 100): %s", content_str[:100])
                         data = _parse_json_safe(content_str, provider_hint="Azure")
                         if data is None:
@@ -189,9 +208,9 @@ async def quiz_endpoint(payload: QuizRequest):
                                     timeout=60,
                                 )
                                 repair_text = (
-                                    repair_raw.get("choices", [{}])[0].get("message", {}).get("content", "")
+                                    _as_text(repair_raw.get("choices", [{}])[0].get("message", {}).get("content"))
                                     if isinstance(repair_raw, dict)
-                                    else str(repair_raw)
+                                    else _as_text(repair_raw)
                                 )
                                 data = _parse_json_safe(repair_text, provider_hint="Azure-repair")
                             except Exception as repair_exc:
@@ -217,9 +236,9 @@ async def quiz_endpoint(payload: QuizRequest):
                             timeout=60,
                         )
                         repair_text = (
-                            repair_raw.get("choices", [{}])[0].get("message", {}).get("content", "")
+                            _as_text(repair_raw.get("choices", [{}])[0].get("message", {}).get("content"))
                             if isinstance(repair_raw, dict)
-                            else str(repair_raw)
+                            else _as_text(repair_raw)
                         )
                         data = _parse_json_safe(repair_text, provider_hint="repair")
                     except Exception as repair_exc:

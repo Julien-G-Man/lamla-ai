@@ -4,6 +4,7 @@ from typing import List, Optional, Union
 import httpx
 import anthropic
 from core.config import settings
+from core.utils import _coerce_text, _extract_json_substring
 
 logger = logging.getLogger(__name__)
 
@@ -14,36 +15,6 @@ DEFAULT_PROVIDER_ORDER = ["nvidia_deepseek", "nvidia_openai", "claude"]
 class APIIntegrationError(Exception):
     """Raised when all AI providers fail or a configured provider fails fatally."""
     pass
-
-
-def _extract_json_substring(text: str):
-    if not text or not isinstance(text, str):
-        return None
-    text = text.strip()
-    if text.startswith('{') or text.startswith('['):
-        try:
-            return json.loads(text)
-        except Exception:
-            pass
-
-    first_brace = min(
-        [idx for idx in (text.find('{'), text.find('[')) if idx != -1],
-        default=-1
-    )
-    if first_brace == -1:
-        return None
-
-    opening = text[first_brace]
-    closing = '}' if opening == '{' else ']'
-    last_close = text.rfind(closing)
-    if last_close == -1 or last_close <= first_brace:
-        return None
-
-    candidate = text[first_brace:last_close + 1]
-    try:
-        return json.loads(candidate)
-    except Exception:
-        return None
 
 
 class AIClient:
@@ -171,8 +142,8 @@ class AIClient:
                     # Extract content from OpenAI-style choices wrapper (Azure, NVIDIA OpenAI, DeepSeek)
                     if provider in ("azure", "nvidia_openai", "deepseek", "nvidia_deepseek") and isinstance(parsed, dict):
                         if "choices" in parsed:
-                            content = parsed["choices"][0]["message"].get("content", "")
-                            if content and content.strip():
+                            content = _coerce_text(parsed["choices"][0].get("message", {}).get("content"))
+                            if content:
                                 logger.debug("%s extracted content: %s...", provider, content[:100])
                                 return content
                     return parsed
@@ -182,8 +153,10 @@ class AIClient:
                         return parsed
                     return text
 
-            except APIIntegrationError:
-                raise
+            except APIIntegrationError as e:
+                logger.warning("Provider %s failed: %s", provider, str(e))
+                errors.append((provider, str(e)))
+                continue
             except Exception as e:
                 logger.warning("Provider %s failed: %s", provider, str(e))
                 errors.append((provider, str(e)))
@@ -479,7 +452,7 @@ class AIClient:
         resp.raise_for_status()
 
         data = resp.json()
-        content = data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+        content = _coerce_text(data.get("choices", [{}])[0].get("message", {}).get("content"))
         if not content:
             raise APIIntegrationError(f"NVIDIA DeepSeek returned empty content. Full response: {data}")
 
@@ -517,10 +490,22 @@ class AIClient:
         resp.raise_for_status()
 
         data = resp.json()
+        choice = data.get("choices", [{}])[0]
+        message = choice.get("message", {}) if isinstance(choice, dict) else {}
+
         # Standard OpenAI shape
-        content = data["choices"][0]["message"].get("content", "").strip()
+        content = _coerce_text(message.get("content"))
         if not content:
-            raise APIIntegrationError(f"NVIDIA returned empty content. Full response: {data}")
+            # Some NVIDIA-compatible models may place partial/truncated output in reasoning fields.
+            reasoning = _coerce_text(message.get("reasoning_content")) or _coerce_text(message.get("reasoning"))
+            if reasoning and "{" in reasoning and ("mcq_questions" in reasoning or "short_questions" in reasoning):
+                logger.warning("NVIDIA returned null content; using reasoning fallback for downstream repair.")
+                return reasoning
+
+            finish_reason = choice.get("finish_reason") if isinstance(choice, dict) else None
+            raise APIIntegrationError(
+                f"NVIDIA returned empty content (finish_reason={finish_reason}). Full response: {data}"
+            )
 
         logger.debug("NVIDIA response snippet: %s...", content[:120])
         return content

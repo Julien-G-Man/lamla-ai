@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "../../components/Navbar";
-import MathRenderer from "../../components/MathRenderer";
 import { useAuth } from "../../context/AuthContext";
 import djangoApi, { getApiErrorMessage } from "../../services/api";
+import RichTextRenderer from "../../utils/richTextRenderer";
 import "./Flashcards.css";
 
 export default function FlashcardDeck() {
@@ -195,8 +195,14 @@ export default function FlashcardDeck() {
                 </>
               ) : (
                 <>
-                  <h4><MathRenderer text={card.question} /></h4>
-                  <p><MathRenderer text={card.answer} /></p>
+                  <div className="fc-rich-card-block">
+                    <div className="fc-rich-card-label">Question</div>
+                    <RichTextRenderer text={card.question} className="fc-rich-text" />
+                  </div>
+                  <div className="fc-rich-card-block">
+                    <div className="fc-rich-card-label">Answer</div>
+                    <RichTextRenderer text={card.answer} className="fc-rich-text" />
+                  </div>
                   <div className="fc-actions">
                     <button
                       className="fc-secondary"
@@ -222,7 +228,9 @@ export default function FlashcardDeck() {
                   {explanations[card.id] && (
                     <div className="fc-explain-box">
                       <strong>Explanation</strong>
-                      <p><MathRenderer text={explanations[card.id]} /></p>
+                      <div className="fc-rich-card-block">
+                        <RichTextRenderer text={explanations[card.id]} className="fc-rich-text" />
+                      </div>
                     </div>
                   )}
                 </>

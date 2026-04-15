@@ -1,12 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Navbar from '../../components/Navbar';
 import Sidebar from './Sidebar';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import remarkMath from 'remark-math';
-import rehypeKatex from 'rehype-katex';
-import rehypeRaw from 'rehype-raw';
-import 'katex/dist/katex.min.css';
 import './Chatbot.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -21,7 +15,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import djangoApi from '../../services/api'; 
 import { useAuth } from '../../context/AuthContext';
-import { normalizeScientificText } from '../../utils/scientificText';
+import RichTextRenderer, { normalizeRichTextContent } from '../../utils/richTextRenderer';
 
 // Global counter for generating unique message IDs
 let messageIdCounter = Date.now();
@@ -483,13 +477,6 @@ const Chatbot = ({ user: userProp }) => {
 
     const MessageBubble = ({ message }) => (
         <div className={`message-bubble ${message.type}-message`}>
-            {(() => {
-                const displayText = message.type === 'ai'
-                    ? normalizeScientificText(message.text)
-                    : message.text;
-
-                return (
-                    <>
             {message.sender && (
                 <div className="sender-row">
                     <div className="sender-name">{message.sender}</div>
@@ -497,7 +484,7 @@ const Chatbot = ({ user: userProp }) => {
                         <button 
                             className="copy-btn" 
                             title="Copy to clipboard"
-                            onClick={() => copyToClipboard(displayText)}
+                            onClick={() => copyToClipboard(normalizeRichTextContent(message.text))}
                         >
                             <FontAwesomeIcon icon={faCopy} size="xs" />
                         </button>
@@ -518,47 +505,12 @@ const Chatbot = ({ user: userProp }) => {
                     <span></span><span></span><span></span>
                 </div>
             ) : (
-                <div className="message-content">
-                    <ReactMarkdown
-                        remarkPlugins={[remarkGfm, remarkMath]}
-                        rehypePlugins={[rehypeRaw, rehypeKatex]}
-                        components={{
-                            p: ({node, ...props}) => <p className="md-p" {...props} />,
-                            strong: ({node, ...props}) => <strong className="md-strong" {...props} />,
-                            em: ({node, ...props}) => <em className="md-em" {...props} />,
-                            ul: ({node, ...props}) => <ul className="md-ul" {...props} />,
-                            ol: ({node, ...props}) => <ol className="md-ol" {...props} />,
-                            li: ({node, ...props}) => <li className="md-li" {...props} />,
-                            h1: ({node, children, ...props}) => <h1 className="md-h1" {...props}>{children}</h1>,
-                            h2: ({node, children, ...props}) => <h2 className="md-h2" {...props}>{children}</h2>,
-                            h3: ({node, children, ...props}) => <h3 className="md-h3" {...props}>{children}</h3>,
-                            h4: ({node, children, ...props}) => <h4 className="md-h4" {...props}>{children}</h4>,
-                            blockquote: ({node, ...props}) => <blockquote className="md-blockquote" {...props} />,
-                            code: ({node, inline, ...props}) =>
-                                inline
-                                    ? <code className="md-code-inline" {...props} />
-                                    : <code className="md-code-block" {...props} />,
-                            pre: ({node, ...props}) => <pre className="md-pre" {...props} />,
-                            a: ({node, children, ...props}) => <a className="md-a" target="_blank" rel="noopener noreferrer" {...props}>{children}</a>,
-                            hr: ({node, ...props}) => <hr className="md-hr" {...props} />,
-                            table: ({node, ...props}) => (
-                                <div className="chatbot-table-scroll">
-                                    <table className="chatbot-table" {...props} />
-                                </div>
-                            ),
-                            thead: ({node, ...props}) => <thead className="chatbot-thead" {...props} />,
-                            tbody: ({node, ...props}) => <tbody className="chatbot-tbody" {...props} />,
-                            th: ({node, ...props}) => <th className="chatbot-th" {...props} />,
-                            td: ({node, ...props}) => <td className="chatbot-td" {...props} />,
-                        }}
-                    >
-                        {displayText}
-                    </ReactMarkdown>
-                </div>
+                <RichTextRenderer
+                    text={message.text}
+                    className="message-content"
+                    normalizeMath={message.type === 'ai'}
+                />
             )}
-                    </>
-                );
-            })()}
         </div>
     );
     

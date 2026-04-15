@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
-import MathRenderer from '../../components/MathRenderer';
+import RichTextRenderer from '../../utils/richTextRenderer';
 import './QuizResults.css';
 import djangoApi from '../../services/api';
 import { dashboardService } from '../../services/dashboard';
@@ -208,37 +208,40 @@ const QuizResults = ({ user }) => {
                                     detail.is_correct ? 'is-correct' : detail.user_answer ? 'is-incorrect' : 'is-unanswered',
                                 ].join(' ')}
                             >
-                                <h4>Q{idx + 1}. <MathRenderer text={detail.question} /></h4>
+                                <div className="results-question-head">
+                                    <span className="results-question-label">Q{idx + 1}</span>
+                                    <RichTextRenderer text={detail.question} className="results-rich-text results-question-text" />
+                                </div>
 
                                 <div className="results-answer-rows">
                                     <div className="results-answer-row">
                                         <span className="label">Your answer</span>
-                                        <span className="value">
-                                            <MathRenderer text={detail.user_answer_display || detail.user_answer || '(Unanswered)'} />
-                                        </span>
+                                        <div className="value">
+                                            <RichTextRenderer text={detail.user_answer_display || detail.user_answer || '(Unanswered)'} className="results-rich-text" />
+                                        </div>
                                     </div>
                                     <div className="results-answer-row">
                                         <span className="label">Correct answer</span>
-                                        <span className="value with-action">
-                                            <MathRenderer text={detail.correct_answer_display || detail.correct_answer} />
+                                        <div className="value with-action">
+                                            <RichTextRenderer text={detail.correct_answer_display || detail.correct_answer} className="results-rich-text" />
                                             <button
                                                 className="results-inline-btn"
                                                 onClick={(e) => handleCopy(detail.correct_answer_display || detail.correct_answer, e)}
                                             >
                                                 Copy
                                             </button>
-                                        </span>
+                                        </div>
                                     </div>
                                     {detail.reasoning && (
                                         <div className="results-answer-row">
                                             <span className="label">Evaluation</span>
-                                            <span className="value"><MathRenderer text={detail.reasoning} /></span>
+                                            <div className="value"><RichTextRenderer text={detail.reasoning} className="results-rich-text" /></div>
                                         </div>
                                     )}
                                     {detail.explanation && (
                                         <div className="results-answer-row">
                                             <span className="label">Explanation</span>
-                                            <span className="value"><MathRenderer text={detail.explanation} /></span>
+                                            <div className="value"><RichTextRenderer text={detail.explanation} className="results-rich-text" /></div>
                                         </div>
                                     )}
                                 </div>
