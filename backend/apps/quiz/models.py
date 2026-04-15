@@ -19,6 +19,8 @@ class QuizSession(models.Model):
     duration_minutes  = models.IntegerField(default=0, help_text="Time taken in minutes")
     questions_data    = models.JSONField(default=dict, help_text="Stored quiz questions and answers")
     user_answers      = models.JSONField(default=dict, help_text="User's answers")
+    exam_mode         = models.BooleanField(default=False, help_text="Whether this was taken as an exam simulation")
+    time_limit_minutes = models.PositiveIntegerField(null=True, blank=True, help_text="Time limit set for this session")
     created_at        = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -67,3 +69,42 @@ class QuestionCache(models.Model):
 
     def __str__(self):
         return f"Cache for {self.question_content_hash[:8]}..."
+
+
+class TopicPerformance(models.Model):
+    """Tracks per-user accuracy by topic to power the Weak Area Detection Engine."""
+    user    = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="topic_performance")
+    topic   = models.CharField(max_length=200, db_index=True)
+    subject = models.CharField(max_length=200, db_index=True)
+    total_questions = models.PositiveIntegerField(default=0)
+    correct_answers = models.PositiveIntegerField(default=0)
+    accuracy        = models.FloatField(default=0.0)
+    last_attempted  = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("user", "topic")
+        indexes = [models.Index(fields=["user", "accuracy"])]
+
+    def __str__(self):
+        return f"{self.user.email} — {self.topic} ({self.accuracy:.1f}%)"
+
+
+class QuizTopicSchedule(models.Model):
+    """SM-2 spaced-repetition schedule for quiz topics per user."""
+    user    = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="quiz_schedules")
+    topic   = models.CharField(max_length=200)
+    subject = models.CharField(max_length=200)
+
+    # SM-2 fields — field names match flashcards/scheduling.py so update_sm2() works unchanged
+    repetition  = models.IntegerField(default=0)
+    interval    = models.IntegerField(default=1)
+    ease_factor = models.FloatField(default=2.5)
+    next_review = models.DateTimeField(default=timezone.now)
+    last_review = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ("user", "topic")
+        indexes = [models.Index(fields=["user", "next_review"])]
+
+    def __str__(self):
+        return f"{self.user.email} — {self.topic} (due: {self.next_review.date()})"

@@ -19,7 +19,7 @@ from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from .models import QuizSession
+from .models import QuizSession, TopicPerformance, QuizTopicSchedule
 
 logger = logging.getLogger(__name__)
 
@@ -295,18 +295,33 @@ async def submit_quiz_api_async(request):
             "submitted_at": datetime.now()
         }
 
+        subject_clean = (quiz_data.get("subject", "General") or "General")[:100]
+        exam_mode = bool(data.get("exam_mode", False))
+
         # Persist to quiz history for this authenticated user (including admins).
         await sync_to_async(QuizSession.objects.create, thread_sensitive=True)(
             user=user,
-            subject=(quiz_data.get("subject", "General") or "General")[:100],
+            subject=subject_clean,
             total_questions=total_questions,
             correct_answers=correct_count,
             score_percentage=score_percent,
             duration_minutes=int(data.get("duration_minutes") or 0),
             questions_data=quiz_data,
             user_answers=user_answers,
+            exam_mode=exam_mode,
+            time_limit_minutes=int(data.get("time_limit") or 0) or None,
         )
-        
+
+        # Update Tier 1 intelligence models (fire-and-forget; errors are logged, never bubble up)
+        try:
+            await _update_topic_performance(user, subject_clean, correct_count, total_questions)
+        except Exception as exc:
+            logger.warning("TopicPerformance update failed: %s", exc)
+        try:
+            await _update_quiz_schedule(user, subject_clean, score_percent)
+        except Exception as exc:
+            logger.warning("QuizTopicSchedule update failed: %s", exc)
+
         logger.info(f"Quiz submitted: {correct_count}/{total_questions} correct ({score_percent}%)")
         
         return JsonResponse(results)
@@ -367,6 +382,62 @@ async def _evaluate_short_answer(question_text: str, correct_answer: str, user_a
             "score": 1.0 if is_correct else 0.0,
         }
 
+def _score_to_sm2_quality(score_percent: float) -> int:
+    """Map quiz score percentage to SM-2 quality rating (0–5)."""
+    if score_percent >= 90:
+        return 5
+    if score_percent >= 75:
+        return 4
+    if score_percent >= 60:
+        return 3
+    if score_percent >= 40:
+        return 2
+    if score_percent >= 20:
+        return 1
+    return 0
+
+
+def _update_topic_performance_sync(user, topic: str, correct: int, total: int):
+    """Sync helper: update or create TopicPerformance row for user/topic."""
+    from django.db.models import F
+    tp, created = TopicPerformance.objects.get_or_create(
+        user=user,
+        topic=topic,
+        defaults={
+            'subject': topic,
+            'total_questions': total,
+            'correct_answers': correct,
+            'accuracy': round(correct / total * 100, 2) if total > 0 else 0.0,
+        },
+    )
+    if not created:
+        tp.total_questions = F('total_questions') + total
+        tp.correct_answers = F('correct_answers') + correct
+        tp.save(update_fields=['total_questions', 'correct_answers'])
+        tp.refresh_from_db(fields=['total_questions', 'correct_answers'])
+        tp.accuracy = round(tp.correct_answers / tp.total_questions * 100, 2) if tp.total_questions > 0 else 0.0
+        tp.save(update_fields=['accuracy'])
+
+
+def _update_quiz_schedule_sync(user, topic: str, score_percent: float):
+    """Sync helper: run SM-2 update on QuizTopicSchedule for user/topic."""
+    from apps.flashcards.scheduling import update_sm2
+    schedule, _ = QuizTopicSchedule.objects.get_or_create(
+        user=user,
+        topic=topic,
+        defaults={'subject': topic},
+    )
+    update_sm2(schedule, _score_to_sm2_quality(score_percent))
+
+
+async def _update_topic_performance(user, topic: str, correct: int, total: int):
+    await sync_to_async(_update_topic_performance_sync, thread_sensitive=True)(user, topic, correct, total)
+
+
+async def _update_quiz_schedule(user, topic: str, score_percent: float):
+    await sync_to_async(_update_quiz_schedule_sync, thread_sensitive=True)(user, topic, score_percent)
+
+
 class QuizHistoryView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -382,6 +453,51 @@ class QuizHistoryView(APIView):
             'correct_answers': s.correct_answers,
             'score_percent':  float(s.score_percentage),
             'created_at':     s.created_at.isoformat(),
+            'exam_mode':      s.exam_mode,
         } for s in sessions]
 
         return Response({'history': data})
+
+
+class WeakAreasView(APIView):
+    """GET /api/quiz/weak-areas/ — bottom 5 topics by accuracy (min 3 questions)."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        weak = TopicPerformance.objects.filter(
+            user=request.user,
+            total_questions__gte=3,
+        ).order_by('accuracy')[:5]
+
+        data = [{
+            'topic':           tp.topic,
+            'subject':         tp.subject,
+            'total_questions': tp.total_questions,
+            'correct_answers': tp.correct_answers,
+            'accuracy':        round(tp.accuracy, 1),
+            'last_attempted':  tp.last_attempted.isoformat(),
+        } for tp in weak]
+
+        return Response({'weak_areas': data})
+
+
+class DueTopicsView(APIView):
+    """GET /api/quiz/due-topics/ — topics where next_review <= now, ordered most overdue first."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from django.utils import timezone
+        due = QuizTopicSchedule.objects.filter(
+            user=request.user,
+            next_review__lte=timezone.now(),
+        ).order_by('next_review')
+
+        data = [{
+            'topic':       s.topic,
+            'subject':     s.subject,
+            'next_review': s.next_review.isoformat(),
+            'last_review': s.last_review.isoformat() if s.last_review else None,
+            'interval':    s.interval,
+        } for s in due]
+
+        return Response({'due_topics': data})

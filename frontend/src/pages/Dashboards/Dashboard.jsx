@@ -27,6 +27,7 @@ const Dashboard = () => {
   const initialTab = location.state?.tab;
   const [activeTab, setActiveTab]         = useState(initialTab === 'history' ? 'overview' : (initialTab || 'overview'));
   const [stats, setStats]                 = useState({ totalQuizzes: 0, averageScore: 0, studyStreak: 0, totalFlashcards: 0 });
+  const [weakAreas, setWeakAreas]         = useState([]);
   const [recentActivity, setRecentActivity] = useState([]);
   const [materials, setMaterials]         = useState([]);
   const [loadingStats, setLoadingStats]   = useState(true);
@@ -53,6 +54,7 @@ const Dashboard = () => {
           studyStreak:     statsData.study_streak,
           totalFlashcards: statsData.total_flashcard_sets,
         });
+        setWeakAreas(statsData.weak_areas || []);
         setMaterials(materials || []);
 
         // Merge quizzes + flashcard decks + materials into a single activity feed
@@ -161,6 +163,36 @@ const Dashboard = () => {
                   ))}
                 </div>
               </div>
+
+              {/* ── Weak Areas ── */}
+              {!loadingStats && weakAreas.length > 0 && (
+                <div className="db-card" style={{ marginBottom: 22 }}>
+                  <div className="db-card-header">
+                    <h2>Weak Areas</h2>
+                    <span style={{ fontSize: 13, color: 'var(--text-muted, #888)' }}>Topics to focus on</span>
+                  </div>
+                  <div className="db-activity-list">
+                    {weakAreas.map((area) => (
+                      <div className="db-activity-item" key={area.topic}>
+                        <div className="db-activity-dot" style={{ background: area.accuracy < 50 ? 'rgba(239,68,68,0.15)' : 'rgba(234,179,8,0.15)', color: area.accuracy < 50 ? '#ef4444' : '#eab308' }}>
+                          <FontAwesomeIcon icon={faBook} />
+                        </div>
+                        <div className="db-activity-body">
+                          <p>{area.topic}</p>
+                          <span>{area.total_questions} questions · {area.accuracy}% accuracy</span>
+                        </div>
+                        <button
+                          className="db-btn db-btn-primary"
+                          style={{ padding: '5px 12px', fontSize: 12, flexShrink: 0 }}
+                          onClick={() => navigate(`/quiz/create?subject=${encodeURIComponent(area.topic)}`)}
+                        >
+                          Practice
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* ── Recent Activity (quizzes + flashcards merged) ── */}
               <div className="db-card">

@@ -52,6 +52,16 @@ class DashboardStatsView(APIView):
             average=dm.Avg('rating'),
         )
 
+        from apps.quiz.models import TopicPerformance
+        weak_qs = TopicPerformance.objects.filter(
+            user=user, total_questions__gte=3
+        ).order_by('accuracy')[:3]
+        weak_areas = [{
+            'topic':           tp.topic,
+            'accuracy':        round(tp.accuracy, 1),
+            'total_questions': tp.total_questions,
+        } for tp in weak_qs]
+
         return Response({
             'total_quizzes': quiz_stats['total'] or 0,
             'average_score': round(float(quiz_stats['avg'] or 0), 1),
@@ -60,6 +70,7 @@ class DashboardStatsView(APIView):
             'study_streak': _calculate_streak(user),
             'total_ratings': int(feedback_stats.get('total') or 0),
             'average_experience_rating': round(float(feedback_stats.get('average') or 0), 2),
+            'weak_areas': weak_areas,
         })
 
 

@@ -27,12 +27,14 @@ const CreateQuiz = () => {
     const location  = useLocation();
     const { isAuthenticated, isLoading } = useAuth();
 
-    // Pre-fill from Materials "Use for Quiz" navigation
+    // Pre-fill from Materials "Use for Quiz" navigation or weak-area "Practice" link
     const prefill = location.state || {};
+    const searchParams = new URLSearchParams(location.search);
+    const subjectParam = searchParams.get('subject') || '';
 
     // --- State Variables ---
     const [activeTab, setActiveTab]     = useState(prefill.studyText ? 'textContent' : 'fileContent');
-    const [subject, setSubject]         = useState(prefill.subject || '');
+    const [subject, setSubject]         = useState(prefill.subject || subjectParam);
     const [customSubject, setCustomSubject] = useState('');
     const [isOtherSelected, setIsOtherSelected] = useState(false);
     const [studyText, setStudyText]     = useState(prefill.studyText || '');
