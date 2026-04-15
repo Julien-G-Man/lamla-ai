@@ -42,6 +42,11 @@ Legacy redirects:
 - `/flashcards/study/:id` -> FlashcardStudy
 - `/flashcard` -> redirect `/flashcards`
 
+## Donations
+
+- `/donate` -> Donate (full-height split layout — image left, form right; open to all)
+- `/donate/thank-you` -> DonateThankyou (verifies payment on load via `?reference=` query param)
+
 ## Materials
 
 - `/materials` -> Materials

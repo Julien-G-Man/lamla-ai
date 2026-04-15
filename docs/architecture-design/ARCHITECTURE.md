@@ -51,6 +51,7 @@ From `backend/lamla/urls.py`:
 - `/api/` + `apps.quiz.urls`
 - `/api/` + `apps.flashcards.urls`
 - `/api/` + `apps.dashboard.urls`
+- `/api/` + `apps.subscriptions.urls`
 
 Also:
 
@@ -63,6 +64,7 @@ Also:
 - Flashcards: `apps.flashcards.models.Deck`, `Flashcard`
 - Chat: `apps.chatbot.models.ChatSession`, `ChatMessage`
 - Users/auth: `apps.accounts.models.User`
+- Payments: `apps.subscriptions.models.Donation`, `Subscription`, `PaymentHistory`
 
 ## Authentication Architecture
 

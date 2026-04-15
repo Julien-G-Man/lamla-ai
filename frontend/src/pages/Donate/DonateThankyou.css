@@ -1,0 +1,240 @@
+/* ═══════════════════════════════════════════════════
+   DONATE THANK-YOU PAGE
+   ═══════════════════════════════════════════════════ */
+
+.ty-page {
+  background: var(--background-color);
+  flex: 1 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 100px 40px 80px;
+  min-height: calc(100vh - 70px);
+  margin-top: 70px;
+}
+
+/* ── Centered states (loading / failed / no_ref) ──── */
+.ty-center {
+  text-align: center;
+  max-width: 520px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+/* ── Success — two-column ─────────────────────────── */
+.ty-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  align-items: center;
+  max-width: 960px;
+  width: 100%;
+}
+
+.ty-left {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ty-heading {
+  font-size: clamp(2rem, 3.5vw, 3rem);
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.1;
+  margin: 0;
+}
+
+.ty-body {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.7;
+  margin: 0;
+}
+
+.ty-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.ty-actions--center { justify-content: center; }
+
+.ty-btn-primary {
+  display: inline-block;
+  padding: 12px 28px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+  color: #111;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-decoration: none;
+  transition: var(--transition);
+  box-shadow: 0 0 18px rgba(255, 214, 0, 0.25);
+}
+
+.ty-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 28px rgba(255, 214, 0, 0.45);
+}
+
+.ty-btn-secondary {
+  display: inline-block;
+  padding: 12px 28px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none;
+  transition: var(--transition);
+}
+
+.ty-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+/* ── Right column — badge + perks ─────────────────── */
+.ty-right {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.ty-badge {
+  background: var(--surface);
+  border: 1px solid rgba(255, 214, 0, 0.25);
+  border-radius: var(--radius-xl);
+  padding: 40px 32px;
+  text-align: center;
+  box-shadow: 0 0 40px rgba(255, 214, 0, 0.06);
+}
+
+.ty-check {
+  display: block;
+  width: 72px;
+  height: 72px;
+  line-height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+  color: #111;
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 0 auto 20px;
+}
+
+.ty-badge-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0 0 8px;
+}
+
+.ty-badge-amount {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--primary-color);
+  margin: 0;
+}
+
+.ty-perks {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ty-perks li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-secondary);
+  font-size: 0.93rem;
+}
+
+.ty-perks li::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary-color);
+  flex-shrink: 0;
+}
+
+/* ── Status icons (failed / neutral) ─────────────── */
+.ty-status-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 72px;
+  text-align: center;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.ty-status-icon.failed  { background: #ef4444; }
+.ty-status-icon.neutral { background: var(--surface-raised); color: var(--text-muted); }
+
+.ty-ref {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 10px;
+  background: var(--surface-raised);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  color: var(--primary-color);
+  font-family: monospace;
+}
+
+/* ── Spinner ──────────────────────────────────────── */
+.ty-spinner {
+  width: 44px;
+  height: 44px;
+  border: 3px solid var(--border-dark);
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: ty-spin 0.75s linear infinite;
+}
+
+.ty-hint {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+@keyframes ty-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ═══════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .ty-page { padding: 80px 24px 60px; }
+
+  .ty-split {
+    grid-template-columns: 1fr;
+    gap: 48px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ty-page { padding: 60px 20px 48px; }
+
+  .ty-actions { flex-direction: column; }
+  .ty-btn-primary,
+  .ty-btn-secondary { text-align: center; }
+}

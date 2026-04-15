@@ -172,7 +172,7 @@ body {
     background: rgba(26, 26, 26, 0);
     backdrop-filter: blur(0px);
     box-shadow: none;
-    z-index: 2100;
+    z-index: 6000;
     display: flex;
     align-items: center;
     transition: var(--transition);

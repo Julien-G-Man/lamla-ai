@@ -73,7 +73,8 @@ INSTALLED_APPS = [
     'apps.quiz',
     'apps.flashcards',
     'apps.dashboard',
-    'apps.materials'
+    'apps.materials',
+    'apps.subscriptions'
 ]
 
 MIDDLEWARE = [
@@ -233,6 +234,10 @@ SEARCH_TIMEOUT_SECONDS=5
 SERPAPI_API_KEY = os.getenv("SERPAPI_API_KEY")
 
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
+
+# Paystack — Phase 1 (donations)
+PAYSTACK_PUBLIC_KEY = os.getenv("PAYSTACK_PUBLIC_KEY", "")   
+PAYSTACK_SECRET_KEY = os.getenv("PAYSTACK_SECRET_KEY", "") 
 
 # Dashboard emails (contact form, newsletter) — auth emails use EmailJS on the frontend
 EMAIL_BACKEND_PRIORITY = os.getenv("EMAIL_BACKEND_PRIORITY")  # brevo, resend, smtp, console

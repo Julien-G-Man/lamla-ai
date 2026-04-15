@@ -15,6 +15,7 @@ Location: `backend/apps/accounts/models.py`
 - `is_admin`, `is_staff`, `is_superuser`, `is_active`
 - `is_email_verified`, `email_verified_at`
 - `profile_image`, `date_joined`, `last_login`
+- `is_donor` — set to `True` permanently when a donation is confirmed; never unset. Included in all `user_to_dict` payloads. Used in Tier 3 for LLM budget and future donor badge display.
 
 ## Manager Rules
 

@@ -29,6 +29,8 @@ import Profile from "./pages/UserProfile/Profile";
 import Materials from "./pages/Materials/Materials";
 import MaterialUpload from "./pages/Materials/MaterialUpload";
 import NotFound from "./pages/NotFound/NotFound";
+import Donate from "./pages/Donate/Donate";
+import DonateThankyou from "./pages/Donate/DonateThankyou";
 
 const WAKE_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -84,6 +86,9 @@ function App() {
             <Route path="/flashcards/deck/:id" element={<FlashcardDeck />} />
             <Route path="/flashcards/study/:id" element={<FlashcardStudy />} />
             <Route path="/flashcard" element={<Navigate to="/flashcards" replace />} />
+
+            <Route path="/donate" element={<Donate />} />
+            <Route path="/donate/thank-you" element={<DonateThankyou />} />
 
             <Route path="/materials" element={<Materials />} />
             <Route path="/materials/upload" element={<MaterialUpload />} />

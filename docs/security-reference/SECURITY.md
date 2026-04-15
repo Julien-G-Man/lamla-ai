@@ -225,6 +225,49 @@ def validate_password_complexity(password):
 
 ---
 
+## Payments Security
+
+### Webhook Verification
+
+Every incoming Paystack webhook is verified before any processing:
+
+```python
+expected = hmac.new(secret, request.body, hashlib.sha512).hexdigest()
+if not hmac.compare_digest(expected, paystack_sig):
+    return 400
+```
+
+- Uses `hmac.compare_digest` (constant-time) to prevent timing attacks.
+- Rejects requests immediately if `PAYSTACK_SECRET_KEY` is not configured — an empty key would trivially pass its own HMAC, which would allow anyone to forge events.
+- `@csrf_exempt` is applied only to the webhook endpoint; all other payment endpoints use standard DRF CSRF handling.
+
+### Reference Sanitisation
+
+Before a reference is interpolated into a Paystack API URL it is validated against `^[a-zA-Z0-9_-]+$`. Any reference that fails this check raises a `ValueError` and is rejected before the HTTP call is made, preventing path traversal.
+
+### Input Validation
+
+- **Amount:** Minimum GHS 5, maximum GHS 10,000. Enforced in the view before any Paystack call.
+- **Email (anonymous donors):** Validated with `django.core.validators.validate_email` before being sent to Paystack.
+
+### Idempotency & Race Safety
+
+`mark_donation_paid` uses `select_for_update()` inside `transaction.atomic()`. This acquires a DB-level row lock so that duplicate webhook deliveries or a simultaneous verify + webhook cannot both confirm the same donation.
+
+`PaymentHistory.get_or_create` on the unique `reference` field provides a second deduplication layer at the audit trail level.
+
+### Audit Trail
+
+Every confirmed payment (donation or subscription) creates an immutable `PaymentHistory` row. The Django admin disables deletion of these rows (`has_delete_permission` returns `False`).
+
+### Secret Key Hygiene
+
+- `PAYSTACK_SECRET_KEY` is backend-only — never sent to the frontend, never returned in API responses.
+- `PAYSTACK_PUBLIC_KEY` is frontend-safe (used by Paystack.js to open the hosted payment page).
+- Switch from `pk_test_` / `sk_test_` to `pk_live_` / `sk_live_` only after Paystack account documents are approved.
+
+---
+
 ## Audit Trail & Monitoring
 
 ### Admin Actions

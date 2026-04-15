@@ -67,6 +67,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_email_verified  = models.BooleanField(default=False)
     email_verified_at  = models.DateTimeField(null=True, blank=True)
 
+    is_donor = models.BooleanField(default=False)
+
     last_login_ip = models.GenericIPAddressField(null=True, blank=True)
 
     date_joined = models.DateTimeField(default=timezone.now)

@@ -88,7 +88,38 @@ any documents. Documents are only required to go live with real money.
 
 ## Phase 1: Voluntary Donations
 
-### What to Build
+### Status: SHIPPED (2026-04-15)
+
+**What was built:**
+
+Backend — `backend/apps/subscriptions/`:
+- `models.py` — `Donation` model (user FK nullable, amount, reference, status, email, paid_at, created_at)
+- `paystack.py` — thin wrapper for Paystack Initialize + Verify Transaction API calls
+- `views.py` — three endpoints (initiate, verify, webhook) with signature verification
+- `urls.py`, `admin.py`, `apps.py`, `migrations/0001_initial.py`
+- Registered in `INSTALLED_APPS` and mounted at `/api/subscriptions/`
+
+User model (`backend/apps/accounts/models.py`):
+- Added `is_donor = BooleanField(default=False)` — set once on donation confirmation, never unset
+- Migration: `accounts/migrations/0002_user_is_donor.py`
+- `user_to_dict` updated to include `is_donor` in all user payloads
+
+Frontend:
+- `frontend/src/pages/Donate/Donate.jsx` — donation form with suggested amounts, anonymous email field, redirects to Paystack
+- `frontend/src/pages/Donate/DonateThankyou.jsx` — verifies payment on load, shows success/failure
+- Routes: `/donate` and `/donate/thank-you`
+- `frontend/src/services/donations.js` — `initiateDonation`, `verifyDonation`
+
+Settings: `PAYSTACK_PUBLIC_KEY` and `PAYSTACK_SECRET_KEY` added to `settings.py` (read from env).
+
+**What was intentionally deferred:**
+- Donor badge / "Supporter" visual badge — deferred until social profiles and
+  group features (group quizzes, competitions) are built. `is_donor` flag is
+  already set and ready; the badge display is the only missing piece.
+
+---
+
+### Original Spec (kept for reference)
 
 A single page on the platform: "Support Our Work"
 
@@ -127,7 +158,7 @@ POST /api/subscriptions/donate/initiate/
 
 GET  /api/subscriptions/donate/verify/?reference=xxx
   → Calls Paystack Verify Transaction API
-  → If success: marks Donation as paid, awards Donor badge
+  → If success: marks Donation as paid, sets is_donor=True on User
   → Returns { status, amount }
 
 POST /api/subscriptions/webhook/
@@ -137,9 +168,10 @@ POST /api/subscriptions/webhook/
 ```
 
 **Donor badge:**
-When a donation is confirmed, award the "Supporter" badge from the badge system
-and set a `is_donor` boolean on the User model (used later for LLM budget
-in Tier 3). This flag is set once and never unset — a donor is always a donor.
+The `is_donor` boolean is set on the User model on donation confirmation
+(used later for LLM budget in Tier 3 and for displaying a badge when social
+profiles ship). This flag is set once and never unset — a donor is always a donor.
+The visual badge display is deferred to the social features phase.
 
 ### Paystack Initialize Transaction Call
 

@@ -22,6 +22,7 @@ def user_to_dict(user):
         "is_admin":          user.is_admin,
         "is_email_verified": user.is_email_verified,
         "profile_image":     user.profile_image,
+        "is_donor":          user.is_donor,
         "date_joined":       user.date_joined.isoformat(),
     }
 

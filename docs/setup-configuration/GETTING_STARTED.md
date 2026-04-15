@@ -31,6 +31,10 @@ CSRF_TRUSTED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 # Optional: Google OAuth (see docs/authentication/GOOGLE_OAUTH.md)
 # GOOGLE_OAUTH_CLIENT_ID=your-client-id.apps.googleusercontent.com
 # GOOGLE_OAUTH_CLIENT_SECRET=your-client-secret
+
+# Optional: Paystack (required for donations — use test keys locally)
+# PAYSTACK_PUBLIC_KEY=pk_test_...
+# PAYSTACK_SECRET_KEY=sk_test_...
 ```
 
 Run migrations:

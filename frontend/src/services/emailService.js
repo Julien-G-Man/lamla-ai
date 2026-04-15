@@ -1,21 +1,3 @@
-// src/services/emailService.js
-// Sends auth emails (verification, password reset, welcome) via EmailJS — no backend required.
-// Templates are managed in the EmailJS dashboard at https://dashboard.emailjs.com/
-//
-// Required env vars (REACT_APP_ prefix because this is CRA):
-//   REACT_APP_EMAILJS_PUBLIC_KEY         — found under Account > API Keys
-//   REACT_APP_EMAILJS_SERVICE_ID         — found under Email Services
-//   REACT_APP_EMAILJS_TEMPLATE_VERIFY    — template ID for verification emails
-//   REACT_APP_EMAILJS_TEMPLATE_RESET     — template ID for password reset emails
-//   REACT_APP_EMAILJS_TEMPLATE_WELCOME   — template ID for welcome emails (Google OAuth users)
-//
-// Each template must have these variables wired up in the EmailJS dashboard:
-//   Verification : {{to_email}}, {{user_name}}, {{verify_link}}
-//   Password reset: {{to_email}}, {{user_name}}, {{reset_link}}
-//   Welcome       : {{to_email}}, {{user_name}}
-//
-// To send to a dynamic recipient set the "To Email" field in the template to {{to_email}}.
-
 import emailjs from "@emailjs/browser";
 
 const PUBLIC_KEY        = process.env.REACT_APP_EMAILJS_PUBLIC_KEY;

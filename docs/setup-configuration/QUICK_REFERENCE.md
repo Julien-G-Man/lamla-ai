@@ -15,6 +15,8 @@ Django (`backend/.env`):
 - `GOOGLE_OAUTH_CLIENT_SECRET` - Google OAuth secret (not used in current token-exchange flow)
 - `STORAGE_BACKEND` (`local` or `cloudinary`)
 - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` (if Cloudinary is enabled)
+- `PAYSTACK_PUBLIC_KEY` — Paystack public key (`pk_test_...` / `pk_live_...`)
+- `PAYSTACK_SECRET_KEY` — Paystack secret key, backend only, never expose to frontend
 
 FastAPI (`ai_service/.env` or process env):
 
@@ -82,6 +84,12 @@ Materials:
 - `POST /api/materials/:id/download/`
 - `POST /api/materials/:id/extract/`
 - `DELETE /api/materials/:id/delete/`
+
+Donations:
+
+- `POST /api/subscriptions/donate/initiate/` - Start a Paystack donation (anon or authenticated)
+- `GET /api/subscriptions/donate/verify/?reference=xxx` - Verify payment after redirect
+- `POST /api/subscriptions/webhook/` - Paystack webhook (signature-verified)
 
 Dashboard/Admin:
 
