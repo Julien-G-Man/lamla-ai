@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.utils import timezone
 
 from .settings_model import SystemSettings
 
@@ -38,4 +39,34 @@ class QuizExperienceRating(models.Model):
         return f"{actor} rated {self.rating}/5"
 
 
-__all__ = ["SystemSettings", "QuizExperienceRating"]
+class AnonymousUsageEvent(models.Model):
+    """Ephemeral activity log for unauthenticated API usage (24h retention)."""
+
+    session_key = models.CharField(max_length=64, blank=True, db_index=True)
+    method = models.CharField(max_length=10)
+    path = models.CharField(max_length=255, db_index=True)
+    query_string = models.CharField(max_length=255, blank=True)
+    status_code = models.PositiveSmallIntegerField(db_index=True)
+    request_chars = models.PositiveIntegerField(default=0)
+    response_chars = models.PositiveIntegerField(default=0)
+    tutor_message = models.TextField(blank=True)
+    tutor_response = models.TextField(blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["created_at"]),
+            models.Index(fields=["path", "created_at"]),
+        ]
+
+    @classmethod
+    def purge_expired(cls, hours: int = 24) -> int:
+        cutoff = timezone.now() - timezone.timedelta(hours=hours)
+        deleted, _ = cls.objects.filter(created_at__lt=cutoff).delete()
+        return int(deleted)
+
+
+__all__ = ["SystemSettings", "QuizExperienceRating", "AnonymousUsageEvent"]

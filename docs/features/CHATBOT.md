@@ -47,6 +47,8 @@ Authenticated users use explicit `session_id` values so one user can maintain mu
 
 Anonymous users can chat but session history is not persisted across visits.
 
+Operational telemetry for anonymous API usage is retained for 24 hours for admin monitoring. This includes request metadata and, for non-stream chat requests, the latest user message and tutor response in the admin anonymous-usage dashboard feed.
+
 Session retention policy:
 
 - A hard cap of 10 sessions per authenticated user is enforced server-side.

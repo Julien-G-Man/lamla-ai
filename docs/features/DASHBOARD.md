@@ -108,7 +108,16 @@ Retrieve system-wide statistics.
     "decks": 8,
     "flashcards": 120,
     "chat_messages": 350,
-    "uploaded_materials": 5
+    "uploaded_materials": 5,
+    "anonymous_api_hits": 64
+  },
+  "unauthenticated_usage_24h": {
+    "quiz_requests": 18,
+    "chat_requests": 31,
+    "flashcard_requests": 15,
+    "estimated_tokens": 4275,
+    "source": "anonymous_api_events",
+    "retention_hours": 24
   },
   "recent_activity": [
     {
@@ -144,22 +153,14 @@ Retrieve usage trends over a specified period.
 ```json
 {
   "days": 14,
-  "trends": [
-    {
-      "date": "2025-01-01",
-      "quizzes": 32,
-      "flashcards": 85,
-      "chat_messages": 250,
-      "new_users": 5
-    },
-    {
-      "date": "2025-01-02",
-      "quizzes": 45,
-      "flashcards": 120,
-      "chat_messages": 340,
-      "new_users": 8
-    }
-  ]
+  "labels": ["2025-01-01", "2025-01-02"],
+  "series": {
+    "new_users": [5, 8],
+    "quizzes": [32, 45],
+    "decks": [7, 10],
+    "chat_messages": [250, 340],
+    "uploaded_materials": [2, 3]
+  }
 }
 ```
 
@@ -202,6 +203,57 @@ Retrieve system-wide activity feed with flexible filtering.
   "period": "week"
 }
 ```
+
+**Security:**
+- **Admin-only endpoint** (requires `IsAdminUser` permission).
+
+---
+
+### `GET /api/dashboard/admin/anonymous-usage/?limit=200`
+
+Retrieve anonymous API activity from the rolling last 24 hours.
+
+**Query Parameters:**
+- `limit`: Maximum events to return (default: 200, max: 500)
+
+**Response (200 OK):**
+```json
+{
+  "retention_hours": 24,
+  "deleted_expired": 12,
+  "total_last_24h": 64,
+  "unique_sessions_last_24h": 27,
+  "top_paths": [
+    { "path": "/api/chat/", "count": 31 },
+    { "path": "/api/quiz/generate/", "count": 18 }
+  ],
+  "by_status": [
+    { "status_code": 200, "count": 59 },
+    { "status_code": 429, "count": 5 }
+  ],
+  "events": [
+    {
+      "id": 2048,
+      "created_at": "2026-04-15T10:18:02.123456+00:00",
+      "method": "POST",
+      "path": "/api/chat/",
+      "query_string": "",
+      "status_code": 200,
+      "request_chars": 314,
+      "response_chars": 1580,
+      "tutor_message": "Explain Newton's second law with an example.",
+      "tutor_response": "Newton's second law states that force equals mass times acceleration...",
+      "session_key": "abc123...",
+      "ip_address": "203.0.113.1",
+      "user_agent": "Mozilla/5.0"
+    }
+  ]
+}
+```
+
+Notes:
+- Events are automatically purged after 24 hours.
+- Streaming chat responses are captured from the streamed output and stored in `tutor_response`.
 
 **Security:**
 - **Admin-only endpoint** (requires `IsAdminUser` permission).
@@ -410,7 +462,7 @@ Submit a contact form message.
 
 ---
 
-### `POST /api/dashboard/newsletter/subscribe/`
+### `POST /api/dashboard/newsletter/`
 
 Subscribe to the newsletter.
 
@@ -465,6 +517,7 @@ class IsAdminUser(BasePermission):
 - `AdminDashboardStatsView` (GET)
 - `AdminUsageTrendsView` (GET)
 - `AdminActivityFeedView` (GET)
+- `AdminAnonymousUsageView` (GET)
 - `AdminUsersListView` (GET)
 - `AdminUserDetailView` (GET)
 - `AdminUserDeleteView` (GET, DELETE)

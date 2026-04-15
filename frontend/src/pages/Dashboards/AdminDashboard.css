@@ -254,6 +254,12 @@
   white-space: nowrap;
 }
 
+.db-anon-response-richtext {
+  margin-top: 0;
+  margin-bottom: 0;
+  color: var(--text-primary);
+}
+
 @media (max-width: 420px) {
   .db-stats-grid.db-stats-grid--two {
     grid-template-columns: repeat(2, minmax(0, 1fr));

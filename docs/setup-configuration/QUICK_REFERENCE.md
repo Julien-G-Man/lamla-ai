@@ -99,6 +99,7 @@ Dashboard/Admin:
 - `GET /api/dashboard/admin/stats/`
 - `GET /api/dashboard/admin/usage-trends/`
 - `GET /api/dashboard/admin/activity/`
+- `GET /api/dashboard/admin/anonymous-usage/`
 - `GET /api/dashboard/admin/users/`
 - `DELETE /api/dashboard/admin/users/:id/`
 - `GET /api/dashboard/admin/settings/`

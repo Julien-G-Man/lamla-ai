@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import SystemSettings, QuizExperienceRating
+from .models import SystemSettings, QuizExperienceRating, AnonymousUsageEvent
 
 
 @admin.register(SystemSettings)
@@ -60,4 +60,12 @@ class QuizExperienceRatingAdmin(admin.ModelAdmin):
     list_filter = ("rating", "source", "created_at")
     search_fields = ("user__email", "session_key", "ip_address")
     readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(AnonymousUsageEvent)
+class AnonymousUsageEventAdmin(admin.ModelAdmin):
+    list_display = ("id", "method", "path", "status_code", "session_key", "created_at")
+    list_filter = ("method", "status_code", "created_at")
+    search_fields = ("path", "session_key", "ip_address", "user_agent")
+    readonly_fields = ("created_at",)
 

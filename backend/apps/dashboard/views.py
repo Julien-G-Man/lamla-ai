@@ -13,7 +13,7 @@ from apps.quiz.models import QuizSession
 from apps.chatbot.models import ChatSession, ChatMessage
 from apps.accounts.serializers import user_to_dict
 from apps.accounts.services import EmailDeliveryError
-from .models import QuizExperienceRating
+from .models import QuizExperienceRating, AnonymousUsageEvent
 from .serializers import ContactFormSerializer, NewsletterSerializer, QuizFeedbackSerializer
 from .services import send_contact_emails, send_newsletter_emails
 from .helpers import _calculate_streak, _tokens_from_chars, _safe_char_sum, _collect_admin_activity
@@ -85,6 +85,7 @@ class AdminDashboardStatsView(APIView):
 
         now = timezone.now()
         day_ago = now - datetime.timedelta(days=1)
+        AnonymousUsageEvent.purge_expired(hours=24)
 
         quiz_stats = QuizSession.objects.aggregate(
             total=dm.Count('id'),
@@ -123,6 +124,18 @@ class AdminDashboardStatsView(APIView):
         chat_messages_24h = ChatMessage.objects.filter(created_at__gte=day_ago).count()
         new_users_24h = User.objects.filter(date_joined__gte=day_ago).count()
         materials_24h = Material.objects.filter(created_at__gte=day_ago).count()
+        anonymous_usage_24h = AnonymousUsageEvent.objects.filter(created_at__gte=day_ago).count()
+
+        anonymous_qs = AnonymousUsageEvent.objects.filter(created_at__gte=day_ago)
+        anonymous_quiz_24h = anonymous_qs.filter(path__icontains='/quiz/').count()
+        anonymous_chat_24h = anonymous_qs.filter(
+            dm.Q(path__icontains='/chat/') | dm.Q(path__icontains='/chatbot/')
+        ).count()
+        anonymous_flashcards_24h = anonymous_qs.filter(path__icontains='/flashcards/').count()
+        anonymous_chars_24h = anonymous_qs.aggregate(
+            total=Coalesce(dm.Sum('request_chars'), Value(0)) + Coalesce(dm.Sum('response_chars'), Value(0))
+        ).get('total') or 0
+        anonymous_tokens_24h = _tokens_from_chars(int(anonymous_chars_24h))
 
         # Character volume for token estimates
         chat_chars = _safe_char_sum(ChatMessage.objects.all(), Length('content'))
@@ -179,7 +192,16 @@ class AdminDashboardStatsView(APIView):
                 'decks': decks_24h,
                 'flashcards': cards_24h,
                 'chat_messages': chat_messages_24h,
-                'uploaded_materials': materials_24h
+                'uploaded_materials': materials_24h,
+                'anonymous_api_hits': anonymous_usage_24h,
+            },
+            'unauthenticated_usage_24h': {
+                'quiz_requests': anonymous_quiz_24h,
+                'chat_requests': anonymous_chat_24h,
+                'flashcard_requests': anonymous_flashcards_24h,
+                'estimated_tokens': anonymous_tokens_24h,
+                'source': 'anonymous_api_events',
+                'retention_hours': 24,
             },
             'recent_activity': recent_activity_payload,
             'estimated_tokens': {
@@ -254,6 +276,72 @@ class AdminUsageTrendsView(APIView):
                     "chat_messages": chats,
                     "uploaded_materials": materials,
                 },
+            }
+        )
+
+
+class AdminAnonymousUsageView(APIView):
+    """GET /api/dashboard/admin/anonymous-usage/?limit=200"""
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request):
+        try:
+            limit = int(request.query_params.get("limit", 200))
+        except (TypeError, ValueError):
+            limit = 200
+        limit = max(1, min(limit, 500))
+
+        deleted_count = AnonymousUsageEvent.purge_expired(hours=24)
+        start_at = timezone.now() - datetime.timedelta(hours=24)
+
+        queryset = AnonymousUsageEvent.objects.filter(created_at__gte=start_at)
+
+        rows = list(queryset.order_by("-created_at")[:limit])
+        events = [
+            {
+                "id": row.id,
+                "created_at": row.created_at.isoformat(),
+                "method": row.method,
+                "path": row.path,
+                "query_string": row.query_string,
+                "status_code": row.status_code,
+                "request_chars": row.request_chars,
+                "response_chars": row.response_chars,
+                "tutor_message": row.tutor_message,
+                "tutor_response": row.tutor_response,
+                "session_key": row.session_key,
+                "ip_address": row.ip_address,
+                "user_agent": row.user_agent,
+            }
+            for row in rows
+        ]
+
+        totals = queryset.aggregate(
+            total=dm.Count("id"),
+            unique_sessions=dm.Count("session_key", distinct=True),
+        )
+
+        top_paths = list(
+            queryset.values("path")
+            .annotate(count=dm.Count("id"))
+            .order_by("-count", "path")[:20]
+        )
+
+        by_status = list(
+            queryset.values("status_code")
+            .annotate(count=dm.Count("id"))
+            .order_by("status_code")
+        )
+
+        return Response(
+            {
+                "retention_hours": 24,
+                "deleted_expired": int(deleted_count or 0),
+                "total_last_24h": int(totals.get("total") or 0),
+                "unique_sessions_last_24h": int(totals.get("unique_sessions") or 0),
+                "top_paths": top_paths,
+                "by_status": by_status,
+                "events": events,
             }
         )
 

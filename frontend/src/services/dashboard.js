@@ -60,6 +60,11 @@ export const dashboardService = {
     return res.data;
   },
 
+  getAdminAnonymousUsage: async (limit = 200) => {
+    const res = await djangoApi.get(`/dashboard/admin/anonymous-usage/?limit=${limit}`);
+    return res.data;
+  },
+
   getAdminUsers: async () => {
     const res = await djangoApi.get('/dashboard/admin/users/');
     return res.data.users;

@@ -87,6 +87,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'apps.dashboard.middleware.AnonymousUsageTrackingMiddleware',
 ]
 
 ROOT_URLCONF = 'lamla.urls'
