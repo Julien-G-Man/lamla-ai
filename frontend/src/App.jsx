@@ -12,7 +12,10 @@ import VerifyEmail from "./pages/Auth/VerifyEmail";
 import ForgotPassword from "./pages/Auth/ForgotPassword";
 import ResetPassword from "./pages/Auth/ResetPassword";
 import Dashboard from "./pages/Dashboards/Dashboard";
-import AdminDashboard from "./pages/Dashboards/AdminDashboard";
+import AdminOverview from "./pages/Dashboards/AdminOverview";
+import AdminUsers from "./pages/Dashboards/AdminUsers";
+import AdminContent from "./pages/Dashboards/AdminContent";
+import AdminSettings from "./pages/Dashboards/AdminSettings";
 import AdminUserDetails from "./pages/Dashboards/AdminUserDetails";
 import AdminActivity from "./pages/Dashboards/AdminActivity";
 import AdminRatings from "./pages/Dashboards/AdminRatings";
@@ -26,6 +29,7 @@ import FlashcardDeck from "./pages/Flashcards/FlashcardDeck";
 import FlashcardStudy from "./pages/Flashcards/FlashcardStudy";
 import Chatbot from "./pages/Chatbot/Chatbot";
 import Profile from "./pages/UserProfile/Profile";
+import AdminAppShell from "./components/AppShell/AdminAppShell";
 import Materials from "./pages/Materials/CommunityMaterials";
 import MaterialsMine from "./pages/Materials/MyMaterials";
 import MaterialUpload from "./pages/Materials/MaterialUpload";
@@ -71,7 +75,12 @@ function App() {
             <Route path="/verify-email" element={<Navigate to="/auth/verify-email" replace />} />
 
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/admin-dashboard" element={<AdminDashboard />} />
+            <Route path="/admin-dashboard" element={<Navigate to="/admin-dashboard/overview" replace />} />
+            <Route path="/admin-dashboard/overview" element={<AdminOverview />} />
+            <Route path="/admin-dashboard/users" element={<AdminUsers />} />
+            <Route path="/admin-dashboard/content" element={<AdminContent />} />
+            <Route path="/admin-dashboard/settings" element={<AdminSettings />} />
+            <Route path="/admin-dashboard/profile" element={<Profile ShellComponent={AdminAppShell} />} />
             <Route path="/admin-dashboard/user/:id" element={<AdminUserDetails />} />
             <Route path="/admin-dashboard/activity" element={<AdminActivity />} />
             <Route path="/admin-dashboard/ratings" element={<AdminRatings />} />

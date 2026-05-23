@@ -2,9 +2,9 @@
    dashboard-shared.css  —  Dashboard & Profile layout + utilities
    
    Components:
-     - Sidebar: src/components/sidebar/Sidebar.jsx + Sidebar.css
-     - Dashboard: src/pages/Dashboard/Dashboard.jsx
-     - AdminDashboard: src/pages/Dashboard/AdminDashboard.jsx
+    - AppShell: src/components/AppShell/AppShell.jsx + AppShell.css
+    - Dashboard: src/pages/Dashboards/Dashboard.jsx
+    - AdminOverview: src/pages/Dashboards/AdminOverview.jsx
      - Profile: src/pages/UserProfile/Profile.jsx
    
    Layout: Flexbox container (sidebar + main)

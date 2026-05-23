@@ -1,21 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Navbar from '../../components/Navbar';
-import Sidebar from '../../components/sidebar/Sidebar';
+import AdminAppShell from '../../components/AppShell/AdminAppShell';
 import { useAuth } from '../../context/AuthContext';
 import { dashboardService } from '../../services/dashboard';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUsers, faChartBar, faFileAlt, faCog, faUser } from '@fortawesome/free-solid-svg-icons';
+import { faChartBar } from '@fortawesome/free-solid-svg-icons';
 import './AdminDashboard.css';
-
-const NAV_ITEMS = [
-  { id: 'overview', icon: faChartBar, label: 'Overview' },
-  { id: 'users', icon: faUsers, label: 'Users' },
-  { id: 'content', icon: faFileAlt, label: 'Content' },
-  { id: 'settings', icon: faCog, label: 'Settings' },
-  { id: 'activity', icon: faChartBar, label: 'Activity' },
-  { id: 'profile', icon: faUser, label: 'Profile' },
-];
 
 const PERIOD_OPTIONS = [
   { id: 'day', label: '24 Hours' },
@@ -45,7 +35,7 @@ const formatRelativeTime = (isoDate) => {
 
 const AdminActivity = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, getUserRole, logout } = useAuth();
+  const { isAuthenticated, getUserRole } = useAuth();
 
   const [period, setPeriod] = useState('week');
   const [payload, setPayload] = useState({ activities: [], counts: {}, total: 0, has_more: false });
@@ -90,20 +80,6 @@ const AdminActivity = () => {
     loadActivity(period);
   }, [period, isAuthenticated, getUserRole]);
 
-  const handleLogout = async () => {
-    await logout();
-    navigate('/');
-  };
-
-  const handleNavigate = (id) => {
-    if (id === 'activity') return;
-    if (id === 'profile') {
-      navigate('/profile');
-      return;
-    }
-    navigate('/admin-dashboard', { state: { tab: id } });
-  };
-
   const activityStats = useMemo(() => {
     const counts = payload.counts || {};
     return [
@@ -116,19 +92,8 @@ const AdminActivity = () => {
   }, [payload]);
 
   return (
-    <div className="db-container">
-      <Navbar />
-      <div className="db-wrapper">
-        <Sidebar
-          user={user}
-          navItems={NAV_ITEMS}
-          activeId="activity"
-          onNavigate={handleNavigate}
-          onLogout={handleLogout}
-          variant="admin"
-        />
-
-        <main className="db-main">
+    <AdminAppShell>
+      <main className="db-main">
           <div className="db-page-header">
             <h1>Activity Explorer</h1>
             <p>Review platform activity across custom time windows.</p>
@@ -201,9 +166,8 @@ const AdminActivity = () => {
               </div>
             )}
           </div>
-        </main>
-      </div>
-    </div>
+      </main>
+    </AdminAppShell>
   );
 };
 

@@ -5,7 +5,22 @@
 The Dashboard system provides two separate experience layers:
 
 1. **User Dashboard**: Personal statistics, profile management, and activity overview.
-2. **Admin Dashboard**: System-wide statistics, user management, activity auditing, and settings.
+2. **Admin Dashboard**: System-wide statistics, user management, activity auditing, settings, and admin profile pages.
+
+The frontend now uses route-based admin pages under `/admin-dashboard/*` instead of a single tabbed screen. The admin experience is rendered inside a dedicated `AdminAppShell` wrapper that keeps the standard authenticated top navbar while using an admin-styled sidebar.
+
+### Admin frontend routes
+
+- `/admin-dashboard/overview` - Admin summary, usage trends, recent activity, token estimates, and ratings
+- `/admin-dashboard/users` - User management table
+- `/admin-dashboard/content` - Content totals and anonymous usage review
+- `/admin-dashboard/settings` - System settings and feature toggles
+- `/admin-dashboard/activity` - Activity feed explorer
+- `/admin-dashboard/ratings` - Quiz ratings history
+- `/admin-dashboard/user/:id` - User analytics detail page
+- `/admin-dashboard/profile` - Admin profile page (same profile form, admin shell)
+
+`/admin-dashboard` redirects to `/admin-dashboard/overview`.
 
 All admin endpoints require `IsAdminUser` permission (authenticated + `is_admin=true`). User endpoints are accessible to any authenticated user.
 
@@ -81,7 +96,7 @@ Retrieve the authenticated user's recent activity timeline.
 
 ---
 
-## Admin Dashboard
+## Admin Dashboard API
 
 ### `GET /api/dashboard/admin/stats/`
 

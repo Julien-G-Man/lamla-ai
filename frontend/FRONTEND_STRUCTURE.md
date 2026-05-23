@@ -1,7 +1,7 @@
 # Lamla AI — Frontend Structure
 
-> **Generated:** 2026-03-09
-> **Framework:** React 19.2.3 (Create React App)
+> **Updated:** 2026-05-23
+> **Framework:** React 19.2.3 + Vite 6.3.5
 > **Deployment:** Vercel
 
 ---
@@ -10,25 +10,23 @@
 
 ```
 frontend/
+├── index.html                 # Vite HTML entry point (root-level, not in public/)
+├── vite.config.js             # Vite config — React plugin, @ path alias, VITE_ env prefix
 ├── package.json               # Dependencies & scripts
 ├── package-lock.json          # Lockfile
-├── .env                       # Shared env vars (Django & FastAPI URLs)
-├── .env.development           # Development env overrides
-├── .env.production            # Production env overrides
-├── .gitignore
-├── vercel.json                # Vercel deployment config (SPA rewrites)
-├── public/
-│   ├── index.html             # Main HTML entry with SEO meta tags
+├── .env.development           # Dev env vars (VITE_* prefix)
+├── .env.example               # Env template for new contributors
+├── vercel.json                # Vercel SPA rewrite rules
+├── public/                    # Static assets — served as-is at /
 │   ├── favicon.ico
 │   ├── manifest.json          # PWA manifest
 │   ├── robots.txt
 │   ├── sitemap.xml
 │   ├── googlef82bec8c5ad249a7.html  # Google Search Console verification
-│   ├── Quiz_Results_Random_Stuff.pdf
-│   └── assets/                # Static images
+│   └── assets/                # Images referenced by CSS / JSX
 │       ├── lamla_logo.png
-│       ├── og-image.png            (1200x630, Open Graph)
-│       ├── og-image-square.png     (600x600)
+│       ├── og-image.png            (1200×630, Open Graph)
+│       ├── og-image-square.png     (600×600)
 │       ├── ai-tutor.jpg
 │       ├── ai_teaching.jpg
 │       ├── developer.jpg / .webp
@@ -47,8 +45,14 @@ frontend/
 │       ├── student.jpeg
 │       ├── student_desk.webp
 │       └── uni_exams.jpg
-└── src/                       # Application source code (see below)
+└── src/
+    ├── index.jsx              # React 19 entry (ReactDOM.createRoot)
+    ├── index.css              # Minimal global reset
+    ├── App.jsx                # Root — routing + context providers + warmup pings
+    └── App.css                # Design tokens (:root), global resets, AppShell layout
 ```
+
+> **Build output:** `dist/` (Vite). The legacy `build/` directory from CRA is dead and should be deleted.
 
 ---
 
@@ -56,252 +60,225 @@ frontend/
 
 ```
 src/
-├── index.js                        # React 19 entry point (ReactDOM.createRoot)
-├── index.css                       # Global styles
-├── App.jsx                         # Root component — routing & context providers
-├── App.css                         # App-level styles
-├── App.test.js
-├── reportWebVitals.js
-├── setupTests.js
-├── service-worker.js               # PWA service worker
-├── serviceWorkerRegistration.js
+├── context/
+│   ├── AuthContext.jsx        # Auth state, token, user object
+│   └── ThemeContext.jsx       # Light/dark theme — default light; data-theme on <html>
 │
-├── context/                        # Global state (React Context API)
-│   ├── AuthContext.jsx             # Auth state, token storage, user management
-│   └── ThemeContext.jsx            # Dark/light theme toggle + localStorage persist
+├── services/                  # API abstraction — nothing else calls fetch/axios directly
+│   ├── api.js                 # Axios instance (Django), interceptors, 10-min warmup ping
+│   ├── auth.js                # Auth endpoints (login, signup, Google, verify, password)
+│   ├── dashboard.js           # Dashboard + admin endpoints
+│   ├── materials.js           # Materials CRUD + extract-for-quiz
+│   ├── emailService.js        # EmailJS contact form
+│   └── payments.js            # Paystack donation flow
 │
-├── services/                       # API abstraction layer
-│   ├── api.js                      # Axios base config, interceptors, warmup logic
-│   ├── auth.js                     # Auth API methods
-│   ├── dashboard.js                # Dashboard & admin API methods
-│   └── materials.js                # Materials upload/download/extract methods
-│
-├── components/                     # Reusable UI components
-│   ├── Navbar.jsx                  # Top navigation bar (auth-aware)
-│   ├── Footer.jsx                  # Footer
-│   ├── MathRenderer.jsx            # LaTeX math rendering via KaTeX
-│   ├── GoogleSignInButton.jsx      # Google OAuth button
+├── components/
+│   ├── AppShell/
+│   │   ├── AppShell.jsx       # Authenticated layout — 240px sidebar (desktop) + bottom tab (mobile)
+│   │   └── AppShell.css
+│   ├── Navbar.jsx             # Top navbar — used by public pages + standalone Chatbot
+│   ├── Footer.jsx             # Footer — public pages only
+│   ├── GoogleSignInButton.jsx
 │   ├── GoogleSignInButton.css
-│   └── sidebar/
-│       ├── Sidebar.jsx             # Navigation sidebar
+│   └── sidebar/               # ⚠️ LEGACY — superseded by AppShell. Scheduled for deletion.
+│       ├── Sidebar.jsx
 │       └── Sidebar.css
 │
-└── pages/                          # Page-level components (one per route)
+├── utils/
+│   ├── richTextRenderer.jsx   # Markdown + KaTeX renderer for chat/quiz content
+│   └── richText.css
+│
+└── pages/
     ├── Home/
-    │   ├── Home.jsx                # Landing page
+    │   ├── Home.jsx
     │   └── Home.css
     ├── Auth/
-    │   ├── VerifyEmail.jsx         # Email verification handler
-    │   └── VerifyEmail.css
+    │   ├── VerifyEmail.jsx
+    │   ├── VerifyEmail.css
+    │   ├── ForgotPassword.jsx  # Password reset request form
+    │   └── ResetPassword.jsx   # Password reset confirmation (token from email)
     ├── Login/
-    │   ├── Login.jsx               # Login form + Google sign-in
-    │   ├── Login.css
+    │   ├── Login.jsx
+    │   ├── Login.css           # Shared by Login + Signup (auth page layout)
     │   └── GoogleAuth.css
     ├── Signup/
-    │   ├── Signup.jsx              # Registration form + Google sign-in
+    │   ├── Signup.jsx
     │   └── Signup.css
     ├── Dashboards/
-    │   ├── Dashboard.jsx           # User dashboard (stats, history)
+    │   ├── Dashboard.jsx
     │   ├── Dashboard.css
-    │   ├── AdminDashboard.jsx      # Admin overview
+    │   ├── AdminDashboard.jsx
     │   ├── AdminDashboard.css
-    │   ├── AdminUserDetails.jsx    # Admin: per-user detail view
+    │   ├── AdminUserDetails.jsx
     │   ├── AdminUserDetails.css
-    │   ├── AdminActivity.jsx       # Admin: activity log
-    │   ├── AdminRatings.jsx        # Admin: ratings/feedback view
-    │   └── dashboard-shared.css   # Shared dashboard styles
+    │   ├── AdminActivity.jsx
+    │   ├── AdminRatings.jsx
+    │   └── dashboard-shared.css
     ├── Quiz/
-    │   ├── CreateQuiz.jsx          # Quiz creation (subject, difficulty, source)
+    │   ├── CreateQuiz.jsx
     │   ├── CreateQuiz.css
-    │   ├── Quiz.jsx                # Quiz player (timer, flagging, progress)
+    │   ├── Quiz.jsx
     │   ├── Quiz.css
-    │   ├── QuizResults.jsx         # Results summary with feedback
+    │   ├── QuizHistory.jsx
+    │   ├── QuizResults.jsx
     │   └── QuizResults.css
     ├── Flashcards/
-    │   ├── FlashcardDecks.jsx      # List all flashcard decks
-    │   ├── FlashcardCreate.jsx     # Create a new deck
-    │   ├── FlashcardDeck.jsx       # View/manage a specific deck
-    │   ├── FlashcardStudy.jsx      # Study mode (flip cards)
+    │   ├── FlashcardDecks.jsx
+    │   ├── FlashcardCreate.jsx
+    │   ├── FlashcardDeck.jsx
+    │   ├── FlashcardStudy.jsx
     │   └── Flashcards.css
     ├── Chatbot/
-    │   ├── Chatbot.jsx             # AI tutor chat (markdown + KaTeX rendering)
-    │   └── Chatbot.css
+    │   ├── Chatbot.jsx         # Standalone page (own Navbar, not in AppShell)
+    │   ├── Chatbot.css
+    │   ├── Sidebar.jsx         # Chatbot session history sidebar
+    │   └── Sidebar.css
     ├── Materials/
-    │   ├── Materials.jsx           # Materials library (search, filter, download)
-    │   ├── MaterialUpload.jsx      # Upload materials form
+    │   ├── Materials.jsx       # Community materials library (/materials/community)
+    │   ├── CommunityMaterials.jsx
+    │   ├── MyMaterials.jsx     # User's own uploads (/materials/mine)
+    │   ├── MaterialUpload.jsx
     │   └── Materials.css
     ├── UserProfile/
-    │   ├── Profile.jsx             # Profile page (edit info, avatar, password)
+    │   ├── Profile.jsx
     │   └── Profile.css
     ├── About/
-    │   ├── About.jsx
+    │   ├── About.jsx           # ⚠️ Page exists but is NOT routed in App.jsx
     │   └── About.css
+    ├── Donate/
+    │   ├── Donate.jsx
+    │   ├── Donate.css
+    │   ├── DonateThankyou.jsx
+    │   └── DonateThankyou.css
+    ├── LeaderBoard/            # ⚠️ WIP — exists but not routed
     └── NotFound/
-        └── NotFound.jsx            # 404 page
+        └── NotFound.jsx
 ```
 
 ---
 
 ## 3. Routing (`App.jsx`)
 
-| Route | Component | Access |
-|---|---|---|
-| `/` | Home | Public |
-| `/auth/login` | Login | Public |
-| `/auth/signup` | Signup | Public |
-| `/auth/verify-email` | VerifyEmail | Public |
-| `/dashboard` | Dashboard | Authenticated |
-| `/admin-dashboard` | AdminDashboard | Admin only |
-| `/admin-dashboard/user/:id` | AdminUserDetails | Admin only |
-| `/admin-dashboard/activity` | AdminActivity | Admin only |
-| `/admin-dashboard/ratings` | AdminRatings | Admin only |
-| `/profile` | Profile | Authenticated |
-| `/quiz/create` | CreateQuiz | Authenticated |
-| `/quiz/play` | Quiz | Authenticated |
-| `/quiz/results` | QuizResults | Authenticated |
-| `/flashcards` | FlashcardDecks | Authenticated |
-| `/flashcards/create` | FlashcardCreate | Authenticated |
-| `/flashcards/deck/:id` | FlashcardDeck | Authenticated |
-| `/flashcards/study/:id` | FlashcardStudy | Authenticated |
-| `/materials` | Materials | Authenticated |
-| `/materials/upload` | MaterialUpload | Authenticated |
-| `/ai-tutor` | Chatbot | Authenticated |
-| `*` | NotFound | Public (catch-all) |
+See `docs/frontend/ROUTES_AND_PAGES.md` for the full route table with access rules.
+
+### Summary
+
+| Scope | Routes |
+|---|---|
+| Public | `/`, `/auth/login`, `/auth/signup`, `/auth/verify-email`, `/auth/forgot-password`, `/auth/reset-password` |
+| Authenticated | `/dashboard`, `/profile`, `/quiz/*`, `/flashcards/*`, `/materials/*`, `/ai-tutor` |
+| Admin | `/admin-dashboard`, `/admin-dashboard/user/:id`, `/admin-dashboard/activity`, `/admin-dashboard/ratings` |
+| Open | `/donate`, `/donate/thank-you` |
+| Redirects | `/auth` → login, `/login` → login, `/signup` → signup, `/ai` → `/ai-tutor`, `/materials` → `/materials/community` |
 
 ---
 
-## 4. State Management
+## 4. Layout System
+
+### AppShell (authenticated pages)
+All authenticated pages (`Dashboard`, `Quiz`, `Flashcards`, `Materials`, `Profile`, admin pages) render inside `<AppShell>` which provides:
+- **Desktop ≥1024px:** fixed 240px left sidebar with nav links, user section, logout
+- **Mobile <1024px:** full-width content + fixed bottom tab bar (5 items)
+
+### Standalone (public + chatbot)
+`Home`, `Login`, `Signup`, auth pages, `Donate`, and **`Chatbot`** render with their own `<Navbar>`. Chatbot is standalone because it has its own full-height layout with a session sidebar.
+
+---
+
+## 5. Design System
+
+All tokens live in `App.css` `:root`. **No component should hardcode colors, font sizes, or spacing.**
+
+```css
+/* Brand */
+--primary-color:   #2563EB   /* blue-600 */
+--primary-dark:    #1d4ed8
+--primary-light:   #eff6ff
+
+/* Surfaces */
+--background-dark: #ffffff   /* page background (light-only) */
+--background-gray: #f8fafc
+--surface:         #ffffff
+--border:          #e2e8f0
+
+/* Text */
+--text-primary:    #0f172a
+--text-secondary:  #475569
+--text-muted:      #94a3b8
+
+/* Semantic */
+--color-success: #16a34a    --color-danger:  #dc2626
+--color-warning: #d97706    --color-info:    #2563eb
+```
+
+**Theme:** Light-only by default (`data-theme="light"` always set). Dark mode CSS vars exist but the UI ships light.
+
+---
+
+## 6. State Management
 
 ### `AuthContext.jsx`
 - **State:** `user`, `isLoading`, `isAuthenticated`, `isEmailVerified`
-- **Methods:** `login()`, `signup()`, `googleAuth()`, `logout()`, `markEmailVerified()`, `resendVerificationEmail()`, `updateProfile()`, `uploadProfileImage()`, `changePassword()`, `getUserRole()`
+- **Key methods:** `login()`, `signup()`, `googleAuth()`, `logout()`, `updateProfile()`, `uploadProfileImage()`, `changePassword()`
 - **Storage:** `localStorage` (token + user object)
 
 ### `ThemeContext.jsx`
-- **State:** `theme` (`"dark"` | `"light"`)
-- **Methods:** `toggleTheme()`
-- **Storage:** `localStorage`; applies `data-theme` attribute to `<html>`
+- **State:** `theme` (`"light"` | `"dark"`) — default `"light"`
+- **Method:** `toggleTheme()`
+- **Effect:** writes `data-theme` attribute to `<html>`
 
 ---
 
-## 5. API Services
+## 7. API Services
 
 ### `api.js`
-- Axios instance for Django API
-- **Django base URL:** `REACT_APP_DJANGO_API_URL` → `https://lamla-api.onrender.com/api`
-- **FastAPI base URL:** `REACT_APP_FASTAPI_URL` → `https://lamla-fastapi.onrender.com`
-- Interceptor: injects auth token on every request
-- Warmup: pings Django & FastAPI every 10 minutes to prevent cold starts
+- Axios instance targeting Django REST API
+- Base URL: `VITE_DJANGO_API_URL` (env var)
+- Request interceptor: injects `Authorization: Token <token>` on every request
+- Warmup: pings Django + FastAPI on mount and every 10 min
 
-### `auth.js`
-```
-authService.signup(email, password, username)
-authService.login(identifier, password)
-authService.googleAuth(googleToken)
-authService.logout()
-authService.verifyEmail(uid, token)
-authService.resendVerificationEmail()
-authService.updateProfile(username, email)
-authService.uploadProfileImage(file)
-authService.changePassword(old_password, new_password)
-authService.getCurrentUser()
-authService.isAuthenticated()
-authService.getUserRole()
-```
+### Environment Variables
+All use `VITE_` prefix (Vite requirement):
 
-### `dashboard.js`
-```
-dashboardService.getStats()
-dashboardService.getQuizHistory()
-dashboardService.getFlashcardHistory()
-dashboardService.getChatHistory()
-dashboardService.getAdminStats()
-dashboardService.getAdminQuizFeedback(limit)
-dashboardService.getAdminUsageTrends(days)
-dashboardService.getAdminActivity({ period, limit, offset, customDays })
-dashboardService.getAdminUsers()
-dashboardService.getAdminUserDetails(userId)
-dashboardService.removeUser(userId)
-dashboardService.getSystemSettings()
-dashboardService.updateSystemSettings(settingsData)
-dashboardService.getQuizFeedbackSummary(source)
-dashboardService.submitQuizFeedback({ rating, source })
-```
-
-### `materials.js`
-```
-materialsService.getAll({ subject, q, page })
-materialsService.getMine()
-materialsService.upload({ title, description, subject, file }, onProgress)
-materialsService.download(id)
-materialsService.extractForQuiz(id)
-materialsService.delete(id)
-```
+| Variable | Description |
+|---|---|
+| `VITE_DJANGO_API_URL` | Django REST API base URL |
+| `VITE_FASTAPI_URL` | FastAPI AI service base URL |
 
 ---
 
-## 6. Technology Stack
+## 8. Technology Stack
 
 | Category | Package | Version |
 |---|---|---|
 | **Core** | React | 19.2.3 |
 | | React Router DOM | 6.30.2 |
 | | Axios | 1.13.2 |
-| **Auth** | React OAuth Google | 0.12.2 |
-| **Rendering** | React Markdown | 10.1.0 |
-| | KaTeX | 0.16.38 |
-| | React KaTeX | 3.1.0 |
-| | remark-gfm | — |
-| | remark-math | — |
-| | rehype-katex | 7.0.1 |
-| **Icons** | FontAwesome | 7.1.0 |
-| **Build** | React Scripts (CRA) | 5.0.1 |
-| | Web Vitals | 5.1.0 |
+| **Build** | Vite | 6.3.5 |
+| | @vitejs/plugin-react | 4.3.4 |
+| **Auth** | @react-oauth/google | 0.12.2 |
+| **Rendering** | react-markdown | 10.1.0 |
+| | katex | 0.16.38 |
+| | react-katex | 3.1.0 |
+| | remark-gfm / remark-math | latest |
+| | rehype-katex / rehype-raw | 7.x |
+| **Icons** | @fortawesome/react-fontawesome | 3.1.1 |
+| **Email** | @emailjs/browser | 4.4.1 |
 | **Styling** | Plain CSS (component-scoped) | — |
 | **Deploy** | Vercel | — |
 
 ---
 
-## 7. Environment Variables
+## 9. Known Legacy / Scheduled Deletions
 
-| Variable | Description |
+| File/Dir | Status |
 |---|---|
-| `REACT_APP_DJANGO_API_URL` | Django REST API base URL |
-| `REACT_APP_FASTAPI_URL` | FastAPI (AI services) base URL |
-
-`.env` values:
-```
-REACT_APP_DJANGO_API_URL=https://lamla-api.onrender.com/api
-REACT_APP_FASTAPI_URL=https://lamla-fastapi.onrender.com
-```
-
----
-
-## 8. Key Features
-
-| # | Feature | Description |
-|---|---|---|
-| 1 | **Authentication** | Token-based login/signup + Google OAuth + email verification |
-| 2 | **Quiz System** | AI-generated MCQ & short-answer, timer, flagging, results |
-| 3 | **Flashcards** | Create decks, study mode (flip cards), manage decks |
-| 4 | **AI Chatbot** | Markdown + KaTeX chat interface with AI tutor (FastAPI) |
-| 5 | **Materials Library** | Upload PDFs, download, extract text for quiz generation |
-| 6 | **User Dashboard** | Personal stats, quiz/flashcard/chat history |
-| 7 | **Admin Dashboard** | User management, activity logs, ratings, system settings |
-| 8 | **PWA Support** | Service worker, offline capability, installable app |
-| 9 | **Theme Support** | Dark/light mode toggle, persisted in localStorage |
-| 10 | **SEO** | Meta tags, Open Graph, JSON-LD structured data, sitemap |
-
----
-
-## 9. Summary
-
-| Item | Count |
-|---|---|
-| Pages (route-level components) | 20 |
-| Reusable components | 4 |
-| Context providers | 2 |
-| API service modules | 4 |
-| CSS stylesheets | 15+ |
-| Public assets (images/icons) | 25+ |
-| Defined routes | 20 |
+| `frontend/build/` | CRA output — dead. Vite outputs to `dist/` |
+| `src/reportWebVitals.js` | CRA-only — dead |
+| `src/service-worker.js` + `serviceWorkerRegistration.js` | CRA Workbox — dead |
+| `src/setupTests.js` + `src/App.test.js` | CRA Jest boilerplate — dead |
+| `public/index.html` | Old CRA HTML shell — dead (root `index.html` is now the entry) |
+| `public/Quiz_Results_Random_Stuff.pdf` | Test artifact — delete |
+| `src/components/sidebar/Sidebar.jsx` + `Sidebar.css` | Superseded by AppShell |
+| `pages/LeaderBoard/` | Unrouted WIP |
+| `pages/About/` | Page built, not routed |

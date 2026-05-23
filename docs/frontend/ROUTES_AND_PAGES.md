@@ -32,16 +32,25 @@ Source of truth: `frontend/src/App.jsx`.
 | `/dashboard` | Dashboard | User stats, quiz history, weak areas |
 | `/profile` | Profile | Edit account info, avatar, password |
 
+`Dashboard` and `Profile` are rendered inside the standard authenticated `AppShell`.
+
 ---
 
 ## Admin (staff/superuser only)
 
 | Route | Component |
 |---|---|
-| `/admin-dashboard` | AdminDashboard |
+| `/admin-dashboard` | Redirect to `/admin-dashboard/overview` |
+| `/admin-dashboard/overview` | AdminOverview |
+| `/admin-dashboard/users` | AdminUsers |
+| `/admin-dashboard/content` | AdminContent |
+| `/admin-dashboard/settings` | AdminSettings |
+| `/admin-dashboard/profile` | Profile (inside AdminAppShell) |
 | `/admin-dashboard/user/:id` | AdminUserDetails |
 | `/admin-dashboard/activity` | AdminActivity |
 | `/admin-dashboard/ratings` | AdminRatings |
+
+Admin pages use `AdminAppShell`, which keeps the shared authenticated top navbar and an admin-styled sidebar.
 
 ---
 

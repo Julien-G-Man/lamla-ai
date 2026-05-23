@@ -11,6 +11,11 @@
   background: var(--background-gray);
 }
 
+.app-shell--admin,
+.app-shell--sidebar-admin {
+  --admin-accent: #dc2626;
+}
+
 /* ── Top navbar ───────────────────────────────────────────────── */
 .app-shell__topbar {
   position: fixed;
@@ -51,6 +56,10 @@
   letter-spacing: -0.3px;
 }
 
+.app-shell--admin .app-shell__topbar-logo-name {
+  color: var(--admin-accent);
+}
+
 .app-shell__topbar-nav {
   display: flex;
   align-items: center;
@@ -78,6 +87,11 @@
   color: var(--primary-color);
   font-weight: 600;
   background: rgba(37, 99, 235, 0.07);
+}
+
+.app-shell--admin .app-shell__topbar-link.active {
+  color: var(--admin-accent);
+  background: rgba(220, 38, 38, 0.08);
 }
 
 .app-shell__topbar-right {
@@ -174,6 +188,12 @@
   background: rgba(37, 99, 235, 0.08);
   color: var(--primary-color);
   font-weight: 600;
+}
+
+.app-shell--admin .app-shell__nav-item.active,
+.app-shell--sidebar-admin .app-shell__nav-item.active {
+  background: rgba(220, 38, 38, 0.08);
+  color: var(--admin-accent);
 }
 
 .app-shell__nav-item.active .app-shell__nav-icon { opacity: 1; }
@@ -274,6 +294,13 @@
   color: var(--primary-color);
 }
 
+.app-shell--admin .app-shell__icon-btn:hover,
+.app-shell--sidebar-admin .app-shell__icon-btn:hover {
+  background: rgba(220, 38, 38, 0.07);
+  border-color: var(--admin-accent);
+  color: var(--admin-accent);
+}
+
 .app-shell__icon-btn--logout:hover {
   background: var(--color-danger-bg);
   border-color: rgba(220, 38, 38, 0.35);
@@ -288,6 +315,10 @@
   min-height: calc(100vh - var(--navbar-height));
   background: var(--background-gray);
   overflow-x: hidden;
+}
+
+.app-shell--no-sidebar .app-shell__content {
+  margin-left: 0;
 }
 
 /* ── Mobile nav ───────────────────────────────────────────────── */

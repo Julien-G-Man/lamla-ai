@@ -1,21 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-  faUsers, faChartBar, faFileAlt, faCog, faArrowLeft, faStar,
-} from '@fortawesome/free-solid-svg-icons';
-import Navbar from '../../components/Navbar';
-import Sidebar from '../../components/sidebar/Sidebar';
+import { faArrowLeft, faStar } from '@fortawesome/free-solid-svg-icons';
+import AdminAppShell from '../../components/AppShell/AdminAppShell';
 import { useAuth } from '../../context/AuthContext';
 import { dashboardService } from '../../services/dashboard';
 import './AdminDashboard.css';
-
-const NAV_ITEMS = [
-  { id: 'overview', icon: faChartBar, label: 'Overview' },
-  { id: 'users', icon: faUsers, label: 'Users' },
-  { id: 'content', icon: faFileAlt, label: 'Content' },
-  { id: 'settings', icon: faCog, label: 'Settings' },
-];
 
 const nfmt = (v) => (typeof v === 'number' ? v.toLocaleString() : (v ?? '0'));
 
@@ -31,7 +21,7 @@ const formatRelativeTime = (isoDate) => {
 
 export default function AdminRatings() {
   const navigate = useNavigate();
-  const { user, isAuthenticated, logout, getUserRole } = useAuth();
+  const { isAuthenticated, getUserRole } = useAuth();
   const [feedbackData, setFeedbackData] = useState({ ratings: [], total: 0, average_rating: 0 });
   const [loading, setLoading] = useState(true);
 
@@ -52,29 +42,9 @@ export default function AdminRatings() {
       .finally(() => setLoading(false));
   }, [isAuthenticated, getUserRole]);
 
-  const handleLogout = async () => {
-    await logout();
-    navigate('/');
-  };
-
-  const handleNavigate = (tab) => {
-    navigate('/admin-dashboard', { state: { tab } });
-  };
-
   return (
-    <div className="db-container">
-      <Navbar />
-      <div className="db-wrapper">
-        <Sidebar
-          user={user}
-          navItems={NAV_ITEMS}
-          activeId="overview"
-          onNavigate={handleNavigate}
-          onLogout={handleLogout}
-          variant="admin"
-        />
-
-        <main className="db-main">
+    <AdminAppShell>
+      <main className="db-main">
           <div className="db-tab">
             <div className="db-page-header">
               <button 
@@ -153,8 +123,7 @@ export default function AdminRatings() {
               )}
             </div>
           </div>
-        </main>
-      </div>
-    </div>
+      </main>
+    </AdminAppShell>
   );
 }

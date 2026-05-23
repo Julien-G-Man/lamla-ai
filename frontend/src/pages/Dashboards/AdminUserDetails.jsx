@@ -1,21 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-  faUsers, faChartBar, faFileAlt, faCog, faArrowLeft,
-} from '@fortawesome/free-solid-svg-icons';
-import Navbar from '../../components/Navbar';
-import Sidebar from '../../components/sidebar/Sidebar';
+import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import AdminAppShell from '../../components/AppShell/AdminAppShell';
 import { useAuth } from '../../context/AuthContext';
 import { dashboardService } from '../../services/dashboard';
 import './AdminUserDetails.css';
-
-const NAV_ITEMS = [
-  { id: 'overview', icon: faChartBar, label: 'Overview' },
-  { id: 'users', icon: faUsers, label: 'Users' },
-  { id: 'content', icon: faFileAlt, label: 'Content' },
-  { id: 'settings', icon: faCog, label: 'Settings' },
-];
 
 const nfmt = (v) => (typeof v === 'number' ? v.toLocaleString() : (v ?? '0'));
 
@@ -83,19 +73,8 @@ export default function AdminUserDetails() {
   ];
 
   return (
-    <div className="db-container">
-      <Navbar />
-      <div className="db-wrapper">
-        <Sidebar
-          user={user}
-          navItems={NAV_ITEMS}
-          activeId="users"
-          onNavigate={(tab) => navigate('/admin-dashboard', { state: { tab } })}
-          onLogout={handleLogout}
-          variant="admin"
-        />
-
-        <main className="db-main">
+    <AdminAppShell>
+      <main className="db-main">
           <div className="db-tab">
             <div className="db-page-header">
               <button className="db-btn db-btn-ghost db-btn-sm admin-user-back" onClick={() => navigate('/admin-dashboard')}>
@@ -155,8 +134,7 @@ export default function AdminUserDetails() {
               )}
             </div>
           </div>
-        </main>
-      </div>
-    </div>
+      </main>
+    </AdminAppShell>
   );
 }

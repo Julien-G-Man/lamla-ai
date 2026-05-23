@@ -11,7 +11,7 @@ import './Profile.css';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const Profile = () => {
+const Profile = ({ ShellComponent = AppShell }) => {
   const navigate = useNavigate();
   const { user, isAuthenticated, isLoading, updateProfile, uploadProfileImage, changePassword } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -157,7 +157,7 @@ const Profile = () => {
   if (isLoading || !isAuthenticated) return null;
 
   return (
-    <AppShell>
+    <ShellComponent>
       <main className="db-main">
         <div className="db-tab">
 
@@ -353,7 +353,7 @@ const Profile = () => {
 
         </div>
       </main>
-    </AppShell>
+    </ShellComponent>
   );
 };
 
