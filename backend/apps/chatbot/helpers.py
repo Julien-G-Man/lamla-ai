@@ -281,7 +281,7 @@ def _build_system_prompt(
     """
     Single source of truth for the Lamla system prompt.
 
-    Both _build_chatbot_prompt (one-shot) and _build_mcp_context (tool loop)
+    Both _build_chatbot_prompt (one-shot) and _build_agent_context (tool loop)
     call this. All text constants come from prompts.py — nothing is defined
     inline here.
 
@@ -289,7 +289,7 @@ def _build_system_prompt(
     user_performance  -- compact perf snapshot from _fetch_user_performance_sync (or None)
     context_document  -- optional uploaded file content
     tutor_mode        -- "direct" (default) or "socratic"
-    include_tool_guidance -- True only for MCP/orchestrate paths
+    include_tool_guidance -- True only for agent/orchestrate paths
     """
     user_name = getattr(user, "username", None) if user else None
     user_line = ""
@@ -361,13 +361,13 @@ async def _build_chatbot_prompt(
     )
 
 
-async def _build_mcp_context(
+async def _build_agent_context(
     user_message: str,
     conversation_history=None,
     user=None,
 ) -> tuple[str, list[dict]]:
     """
-    MCP / tool-loop variant. Returns (system_prompt, messages).
+    Agent / tool-loop variant. Returns (system_prompt, messages).
 
     system_prompt  -- persona + KB + tool guidance (no history — goes in messages)
     messages       -- Anthropic [{role, content}] list, current user turn last

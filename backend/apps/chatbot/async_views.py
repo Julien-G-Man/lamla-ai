@@ -24,7 +24,7 @@ from .helpers import (
     _save_ai_message,
     _get_conversation_history,
     _build_chatbot_prompt,
-    _build_mcp_context,
+    _build_agent_context,
     fallback_response,
 )
 from .models import ChatSession
@@ -65,37 +65,37 @@ async def chatbot_api_async(request):
         conversation_history = await _get_conversation_history(session_obj, limit=20)
         
         max_tokens = getattr(settings, "CHATBOT_MAX_TOKENS", 1200)
-        use_mcp = getattr(settings, "CHATBOT_USE_MCP", False)
+        use_agent = getattr(settings, "CHATBOT_USE_AGENT", False)
 
         # 4 & 5. Build prompt / messages, forward to FastAPI
         try:
             headers = build_fastapi_headers()
 
-            if use_mcp:
-                # ── MCP path: AI-driven tool loop ──────────────────────────
+            if use_agent:
+                # ── Agent path: AI-driven tool loop ──────────────────────────
                 # Build system prompt + Anthropic messages list separately
-                system_prompt, messages = await _build_mcp_context(
+                system_prompt, messages = await _build_agent_context(
                     user_message, conversation_history, user=user
                 )
                 # Restrict to chatbot-appropriate tools (no quiz/flashcard page tools)
-                mcp_tools = getattr(
+                agent_tools = getattr(
                     settings,
-                    "CHATBOT_MCP_TOOLS",
+                    "CHATBOT_AGENT_TOOLS",
                     None,  # None = all registered tools
                 )
                 logger.info(
-                    "[chatbot:mcp] orchestrate start session=%s tools=%s",
-                    getattr(session_obj, "session_id", "?"), mcp_tools,
+                    "[chatbot:agent] orchestrate start session=%s tools=%s",
+                    getattr(session_obj, "session_id", "?"), agent_tools,
                 )
                 fastapi_resp = await call_fastapi(
                     "POST",
-                    "/mcp/orchestrate",
+                    "/agent/orchestrate",
                     json={
                         "messages": messages,
                         "system_prompt": system_prompt,
-                        "tools": mcp_tools,
+                        "tools": agent_tools,
                         "max_tokens": max_tokens,
-                        "max_iterations": getattr(settings, "CHATBOT_MCP_MAX_ITERATIONS", 5),
+                        "max_iterations": getattr(settings, "CHATBOT_AGENT_MAX_ITERATIONS", 5),
                     },
                     headers=headers,
                     timeout=120.0,  # tool loops take longer than single-shot calls
@@ -103,40 +103,40 @@ async def chatbot_api_async(request):
 
                 if fastapi_resp.status_code != 200:
                     logger.warning(
-                        "[chatbot:mcp] orchestrate returned %d: %s",
+                        "[chatbot:agent] orchestrate returned %d: %s",
                         fastapi_resp.status_code, fastapi_resp.text[:200],
                     )
                     # Fall through to one-shot fallback below
-                    use_mcp = False
+                    use_agent = False
 
-                if use_mcp:
+                if use_agent:
                     try:
                         resp_json = fastapi_resp.json()
                         ai_response = resp_json.get("response", "")
                         tool_calls_made = resp_json.get("tool_calls_made", [])
                         iterations = resp_json.get("iterations", 0)
-                        mcp_error = resp_json.get("error")
+                        agent_error = resp_json.get("error")
 
-                        if mcp_error:
+                        if agent_error:
                             logger.warning(
-                                "[chatbot:mcp] orchestrate error: %s (calls=%s iter=%d)",
-                                mcp_error, tool_calls_made, iterations,
+                                "[chatbot:agent] orchestrate error: %s (calls=%s iter=%d)",
+                                agent_error, tool_calls_made, iterations,
                             )
 
                         logger.info(
-                            "[chatbot:mcp] done session=%s calls=%s iter=%d response_len=%d",
+                            "[chatbot:agent] done session=%s calls=%s iter=%d response_len=%d",
                             getattr(session_obj, "session_id", "?"),
                             tool_calls_made, iterations, len(ai_response),
                         )
 
                         if not ai_response:
-                            logger.warning("[chatbot:mcp] empty response — falling back to one-shot")
-                            use_mcp = False  # fall through to one-shot below
+                            logger.warning("[chatbot:agent] empty response — falling back to one-shot")
+                            use_agent = False  # fall through to one-shot below
                     except (json.JSONDecodeError, KeyError, TypeError) as e:
-                        logger.error("[chatbot:mcp] failed to parse orchestrate response: %s", e)
-                        use_mcp = False
+                        logger.error("[chatbot:agent] failed to parse orchestrate response: %s", e)
+                        use_agent = False
 
-            if not use_mcp:
+            if not use_agent:
                 # ── Original one-shot path (fallback or default) ───────────
                 full_prompt = await _build_chatbot_prompt(user_message, conversation_history, user=user)
                 fastapi_resp = await call_fastapi(

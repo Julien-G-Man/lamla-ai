@@ -62,7 +62,7 @@ Link: https://neon.com/docs/ai/skills/neon-postgres/references/neon-js.md
 
 ## Developer Tools
 
-Use this for local development enablement with `npx neonctl@latest init`, VSCode extension setup, and Neon MCP server configuration.
+Use this for local development enablement with `npx neonctl@latest init`, VSCode extension setup, and Neon AGENT server configuration.
 
 Link: https://neon.com/docs/ai/skills/neon-postgres/references/devtools.md
 
@@ -74,7 +74,7 @@ Link: https://neon.com/docs/ai/skills/neon-postgres/references/neon-cli.md
 
 ## Neon Admin API
 
-The Neon Admin API can be used to manage Neon resources programmatically. It is used behind the scenes by the Neon CLI and MCP server, but can also be used directly for more complex automation workflows or when embedding Neon in other applications.
+The Neon Admin API can be used to manage Neon resources programmatically. It is used behind the scenes by the Neon CLI and AGENT server, but can also be used directly for more complex automation workflows or when embedding Neon in other applications.
 
 ### Neon REST API
 
@@ -110,7 +110,7 @@ Key points:
 
 - Branches are instant, copy-on-write clones (no full data copy).
 - Each branch has its own compute endpoint.
-- Use the neonctl CLI or MCP server to create, inspect, and compare branches.
+- Use the neonctl CLI or AGENT server to create, inspect, and compare branches.
 
 Link: https://neon.com/docs/ai/skills/neon-postgres/references/branching.md
 

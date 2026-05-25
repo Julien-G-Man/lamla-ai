@@ -108,7 +108,7 @@ FORMATTING:
 - Keep responses scannable on a phone screen.
 """
 
-# Appended to the system prompt only on MCP / tool-use paths.
+# Appended to the system prompt only on Agent / tool-use paths.
 TOOL_USE_GUIDANCE = """
 TOOL USE:
 You have access to tools. Call a tool only when the student's request clearly requires

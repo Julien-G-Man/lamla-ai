@@ -335,7 +335,7 @@ async def submit_quiz_api_async(request):
 
 async def _evaluate_short_answer(question_text: str, correct_answer: str, user_answer: str) -> dict:
     """
-    Evaluate a short answer via the MCP evaluate_answer tool.
+    Evaluate a short answer via the agent evaluate_answer tool.
 
     Returns:
         {"is_correct": bool, "reasoning": str, "score": float}
@@ -347,7 +347,7 @@ async def _evaluate_short_answer(question_text: str, correct_answer: str, user_a
         headers = build_fastapi_headers()
         response = await call_fastapi(
             "POST",
-            "/mcp/call",
+            "/agent/call",
             json={
                 "tool_use_id": "quiz_eval",
                 "name": "evaluate_answer",
@@ -362,8 +362,8 @@ async def _evaluate_short_answer(question_text: str, correct_answer: str, user_a
         )
 
         if response.status_code != 200:
-            logger.warning("MCP evaluate_answer returned %s", response.status_code)
-            raise ValueError(f"MCP call failed: {response.status_code}")
+            logger.warning("Agent evaluate_answer returned %s", response.status_code)
+            raise ValueError(f"Agent call failed: {response.status_code}")
 
         data = response.json()
         output = data.get("output", {})
@@ -374,7 +374,7 @@ async def _evaluate_short_answer(question_text: str, correct_answer: str, user_a
         }
 
     except Exception as exc:
-        logger.warning("Short-answer evaluation via MCP failed: %s — falling back to string match", exc)
+        logger.warning("Short-answer evaluation via agent failed: %s — falling back to string match", exc)
         is_correct = user_answer.strip().lower() == correct_answer.strip().lower()
         return {
             "is_correct": is_correct,
