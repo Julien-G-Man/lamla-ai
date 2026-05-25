@@ -1,60 +1,56 @@
 # Agent Implementation — Lamla AI
 
-> **Status:** Core layer implemented and wired. Two functional gaps remain (marked in section 12).
-
 ---
 
 ## 1. What Agent Means Here
 
-Agent (Model Context Protocol) is a pattern where the AI receives a typed list of capabilities
-(tools), can request to call them instead of generating a final response, and continues
-reasoning over the results until it produces a definitive answer.
+Agent is a pattern where the AI receives a typed list of capabilities (tools), can request
+to call them instead of generating a final response, and continues reasoning over the results
+until it produces a definitive answer.
 
 In Lamla this means:
-- The AI receives tool definitions (name, description, JSON Schema) at the start of a session.
+- The AI receives tool definitions (name, description, JSON Schema) at the start of a request.
 - The AI can respond with a `tool_use` block instead of text.
 - The executor runs the tool in-process and returns the result to the AI.
 - The loop repeats until `stop_reason == end_turn` or `max_iterations` is hit.
-
-This is not a different backend. It is an orchestration layer on top of what already exists.
 
 ---
 
 ## 2. Architecture
 
-### Before Agent
-
 ```
-React -> Django (auth, validation) -> FastAPI POST /chatbot/ -> one-shot LLM -> Django -> React
+React
+  │  POST /api/chat/
+  ▼
+Django (API Gateway)
+  ├── Auth & session management
+  ├── Fetch user stats from DB (compact, ~60 tokens)
+  ├── Extract file text (file uploads)
+  ├── Persist messages (ChatMessage)
+  └── Forward to FastAPI
+          │  POST /agent/chat
+          ▼
+       FastAPI (AI Service)
+          ├── Build minimal system prompt (prompts.py)
+          ├── Run agent loop (router.py)
+          │     ├── kb_search  → ai_service/kb/ provider
+          │     └── web_search → Tavily
+          └── Return { "response": str }
 ```
 
-The AI was a black box at the end of a hardcoded pipeline.
-
-### After Agent
-
-```
-React -> Django (auth, validation) -> FastAPI POST /agent/orchestrate
-          |                                     |
-     [persist, auth]               [tool registry + executor]
-                                             |
-                                   [AI <-> tool loop]
-                                             |
-                                     [final response]
-```
-
-The chatbot is now an AI orchestrator. Dedicated quiz and flashcard endpoints are untouched.
+Django owns all DB work. FastAPI owns all AI work. No prompt construction in Django.
 
 ---
 
-## 3. Architectural Boundaries (Unchanged)
+## 3. Architectural Boundaries
 
-| Layer | Responsibility | Examples |
-|---|---|---|
-| Django | Auth, DB, routing, file I/O | Token validation, saving QuizSession, PDF extraction |
-| FastAPI | AI execution, tool orchestration | LLM calls, tool registry, agent executor loop |
-| Agent tools | Atomic capabilities | generate_quiz, summarize_text, evaluate_answer |
+| Layer | Responsibility |
+|---|---|
+| Django | Auth, session/message persistence, user stats, file extraction |
+| FastAPI | System prompt, agent loop, tool orchestration, LLM calls |
+| Agent tools | Atomic capabilities (kb_search, web_search, generate_quiz, …) |
 
-Django does not know about agent tools. It calls FastAPI endpoints. FastAPI owns the registry.
+Django never builds prompts. FastAPI never writes to the DB.
 
 ---
 
@@ -62,47 +58,71 @@ Django does not know about agent tools. It calls FastAPI endpoints. FastAPI owns
 
 ```
 ai_service/
-   core/
-      ai_client.py          # generate_with_tools() added (4-provider cascade)
-   agent_server/              # new module
-      __init__.py
-      schemas.py            # ToolDefinition, ToolCall, ToolResult, OrchestratorRequest/Response
-      registry.py           # TOOL_REGISTRY (6 tools), get_definitions(), get_handler()
-      executor.py           # execute_tool() with 5 error classes + per-tool timeouts
-      router.py             # GET /agent/tools, POST /agent/call, POST /agent/orchestrate
-      tools/
-         __init__.py
-         youtube.py         # extract_youtube_transcript()
-         evaluate.py        # evaluate_answer() (LLM + string-match fallback)
-         summarize.py       # summarize_text() (truncation fallback on AI failure)
-   main.py                  # app.include_router(agent_router, prefix="/agent") added
+  core/
+    ai_client.py         # generate_content() + generate_with_tools()
+  agent/
+    prompts.py           # All system prompt construction (build_chat_system_prompt, etc.)
+    schemas.py           # ToolDefinition, ToolCall, ToolResult, OrchestratorRequest/Response, ChatRequest
+    registry.py          # TOOL_REGISTRY, get_definitions(), get_handler()
+    executor.py          # execute_tool() — 5 error classes, per-tool timeouts, never raises
+    router.py            # Route handlers only: /tools, /call, /orchestrate, /chat
+    tools/
+      youtube.py         # extract_youtube_transcript()
+      evaluate.py        # evaluate_answer()
+      summarize.py       # summarize_text()
+      search.py          # search_web() via Tavily
+  kb/
+    base.py              # KBSearchProvider ABC
+    tfidf_provider.py    # Default — token overlap + keyword/heading boost
+    loader.py            # Resolves KB file path, instantiates provider, exposes kb_store singleton
+  platform_kb/
+    text_embeddings.json # Platform knowledge chunks (single source of truth)
+  services/
+    quiz/                # POST /quiz/ — standalone quiz generation
+    flashcards/          # POST /flashcards/ — standalone flashcard generation
 
 backend/apps/chatbot/
-   helpers.py               # _build_agent_context() added (returns system_prompt, messages)
-   async_views.py           # chatbot_api_async() branches on CHATBOT_USE_AGENT setting
+  async_views.py         # Proxy views: fetch stats, forward to /agent/chat, persist response
+  helpers.py             # Session/auth/DB helpers and _fetch_user_performance_sync()
 ```
-
-Note: the module is named `agent_server/` (not `agent/`) to avoid a collision with the `agent` PyPI
-package.
 
 ---
 
 ## 5. Registered Tools
 
-All tools live in `ai_service/agent_server/registry.py`.
+All tools live in `ai_service/agent/registry.py`.
 Handlers run in-process — no internal HTTP round-trips.
 
-| Tool | Handler | Deterministic? | Timeout |
+| Tool | Handler | Notes | Timeout |
 |---|---|---|---|
-| `extract_youtube_transcript` | `tools/youtube.py` | Yes (API call) | 30s |
-| `summarize_text` | `tools/summarize.py` | No (LLM) | 30s |
-| `evaluate_answer` | `tools/evaluate.py` | No (LLM, string-match fallback) | 25s |
-| `generate_quiz` | inline in registry.py | No (LLM) | 90s |
-| `generate_flashcards` | inline in registry.py | No (LLM) | 45s |
-| `explain_concept` | inline in registry.py | No (LLM) | 20s |
-| `search_web` | `tools/search.py` | Yes (Tavily API) | 12s |
+| `kb_search` | `kb/loader.py` singleton | Platform knowledge retrieval | 5s |
+| `search_web` | `tools/search.py` | Tavily — agent decides when to call | 12s |
+| `extract_youtube_transcript` | `tools/youtube.py` | Deterministic API call | 30s |
+| `summarize_text` | `tools/summarize.py` | LLM — truncation fallback on failure | 30s |
+| `evaluate_answer` | `tools/evaluate.py` | LLM + string-match fallback | 25s |
+| `generate_quiz` | inline in registry.py | LLM via quiz service | 90s |
+| `generate_flashcards` | inline in registry.py | LLM via flashcards service | 45s |
+| `explain_concept` | inline in registry.py | LLM | 20s |
+
+### Chatbot tool subset
+
+`POST /agent/chat` only exposes `kb_search` and `search_web` to the AI.
+The other tools (quiz generation, YouTube, etc.) are available via `POST /agent/orchestrate`
+when called with the appropriate tool whitelist.
 
 ### Input/output schemas
+
+**kb_search**
+```
+query: str, top_k: int = 4
+-> {chunks: [{heading, text}]}
+```
+
+**search_web**
+```
+query: str, num_results: int = 3
+-> {results: [{title, url, snippet}]}
+```
 
 **extract_youtube_transcript**
 ```
@@ -147,7 +167,7 @@ question: str, answer: str
 
 ## 6. Executor
 
-`agent_server/executor.py` dispatches every tool call and handles all failure modes.
+`agent/executor.py` dispatches every tool call and handles all failure modes.
 It never raises — errors surface through `ToolResult.error`.
 
 | Exception caught | Cause | Log level |
@@ -158,14 +178,11 @@ It never raises — errors surface through `ToolResult.error`.
 | `ValueError` | Expected user-facing error (bad URL, transcript unavailable, etc.) | WARNING |
 | `Exception` | Unexpected failure | EXCEPTION (full traceback) |
 
-Both sync and async handlers are supported. Sync handlers are wrapped in `asyncio.to_thread()`
-automatically.
+Both sync and async handlers are supported. Sync handlers are wrapped in `asyncio.to_thread()`.
 
 ---
 
 ## 7. generate_with_tools() in ai_client.py
-
-New method on `AIClient` alongside the existing `generate_content()`.
 
 ```python
 async def generate_with_tools(
@@ -191,95 +208,83 @@ async def generate_with_tools(
 3. Azure OpenAI — OpenAI `tools=` format
 4. Text-mode fallback — embed schemas in system prompt, parse `{"action":"tool_call",...}` JSON
 
-The text-mode fallback works on every provider but is less reliable than native tool use.
-It is the last resort, not the default path.
-
 ---
 
-## 8. Orchestration Loop
+## 8. Agent Endpoints
 
-Endpoint: `POST /agent/orchestrate`  
-Auth: `X-Internal-Secret` (same as all other FastAPI endpoints)
+### POST /agent/chat — Primary chatbot endpoint
 
+Accepts the structured payload from Django. Builds the system prompt internally, runs the
+agent loop restricted to `kb_search` + `web_search`, falls back to one-shot on failure.
+
+```json
+{
+  "message": "string",
+  "conversation_history": [...],
+  "tutor_mode": "direct | socratic",
+  "user_stats": { ... } | null,
+  "file_text": "string" | null,
+  "user_id": int | null
+}
 ```
-1. Get tool definitions (all registered, or whitelist from request.tools).
-2. Call generate_with_tools(messages, tools, system_prompt).
-3. If stop_reason == end_turn  ->  return OrchestratorResponse.
-4. If stop_reason == tool_use:
-     a. Append assistant message (with tool_use blocks) to messages history.
-     b. Execute each tool call via execute_tool().
-     c. Append all tool results as a user message.
-     d. Go to step 2.
-5. If max_iterations reached  ->  return OrchestratorResponse with error field set.
-```
 
-**What gets logged:**
+Returns `{ "response": str }`.
 
-| Event | Level |
-|---|---|
-| Orchestrate start (tools count, max_iterations, messages count) | INFO |
-| Each iteration (stop_reason, tool_calls count) | DEBUG |
-| Each tool call (name, iteration) | INFO |
-| Each tool result (name, output length, duration_ms) | INFO |
-| Tool error (name, error message) | WARNING |
-| Max iterations hit | WARNING |
-| AI provider failure | ERROR |
+### POST /agent/orchestrate — Generic tool-loop endpoint
+
+Used by quiz evaluation and other non-chatbot flows that need tool access.
+Accepts `messages`, `tools` whitelist, `system_prompt`, `max_tokens`, `max_iterations`.
+Returns `OrchestratorResponse`.
+
+### GET /agent/tools, POST /agent/call
+
+Debug/direct-call endpoints. Not called by Django in production.
 
 ---
 
 ## 9. Django Integration
 
-### chatbot_api_async (apps/chatbot/async_views.py)
+`async_views.chatbot_api_async` flow:
 
-The main chatbot endpoint has two paths, selected by a Django setting:
+1. Parse `message`, `session_id`, `tutor_mode` from request body.
+2. Resolve auth + get/create session.
+3. Save user message to DB.
+4. Fetch last 20 messages from session history.
+5. Fetch user stats via `_fetch_user_performance_sync()` (3 cheap DB queries).
+6. `POST /agent/chat` with the structured payload.
+7. On FastAPI failure: return static fallback (message not persisted).
+8. Save AI response to DB, return to React.
 
-```python
-use_agent = getattr(settings, "CHATBOT_USE_AGENT", False)
-
-if use_agent:
-    # Build system_prompt + Anthropic messages list separately
-    system_prompt, messages = await _build_agent_context(user_message, history, user=user)
-    resp = await call_fastapi("POST", "/agent/orchestrate", json={
-        "messages": messages,
-        "system_prompt": system_prompt,
-        "tools": getattr(settings, "CHATBOT_AGENT_TOOLS", None),
-        "max_tokens": max_tokens,
-        "max_iterations": getattr(settings, "CHATBOT_AGENT_MAX_ITERATIONS", 5),
-    }, timeout=120.0)
-    # Falls back to one-shot if orchestrate returns empty or non-200
-
-if not use_agent:
-    # Original path — fully preserved
-    full_prompt = await _build_chatbot_prompt(user_message, history, user=user)
-    resp = await call_fastapi("POST", "/chatbot/", json={"prompt": full_prompt}, timeout=60.0)
-```
-
-Django still handles: session creation, saving ChatMessage records, auth, fallback responses.
-
-### _build_agent_context (helpers.py)
-
-New helper that returns `(system_prompt: str, messages: list[dict])`.
-
-- `system_prompt` contains platform facts, KB context, persona, and tool-use guidance.
-  No conversation history — that goes in messages.
-- `messages` is the conversation history in Anthropic `[{role, content}]` format,
-  with the current user turn appended as the last entry.
-
-The existing `_build_chatbot_prompt()` is preserved and used as the one-shot fallback.
-
-### Settings
-
-```python
-# settings.py or .env
-CHATBOT_USE_AGENT = True               # Default: False (safe rollout — off until tested)
-CHATBOT_AGENT_TOOLS = None             # None = all tools. Pass a list to restrict.
-CHATBOT_AGENT_MAX_ITERATIONS = 5       # Default: 5
-CHATBOT_MAX_TOKENS = 1200            # Existing setting, reused for the agent too
-```
+There is no agent flag, no prompt building, no one-shot path in Django.
+FastAPI owns the full AI decision tree.
 
 ---
 
-## 10. What Does NOT Change
+## 10. Fallback Strategy (Three Layers)
+
+1. **Tool error** — executor catches exception, returns `ToolResult.error`; agent continues reasoning.
+2. **Agent loop empty/failed** — one-shot `generate_content()` call in `router.py` (no tools, just system + message).
+3. **FastAPI unreachable** — Django returns a static keyword-matched response; message is not persisted.
+
+---
+
+## 11. System Prompt
+
+All prompt text lives in `ai_service/agent/prompts.py`. The router never builds strings.
+
+The chatbot system prompt (`build_chat_system_prompt`) contains:
+- Platform facts (name, URLs, support contacts)
+- Formatting rules (markdown links for page references)
+- Tool usage rules (kb_search first, web_search for external only)
+- Current date
+- User stats block (injected if available)
+- Socratic mode block (injected if `tutor_mode == "socratic"`)
+
+Total: under 400 tokens without user stats + Socratic mode.
+
+---
+
+## 12. What Does NOT Change
 
 | Endpoint | Why it stays hardcoded |
 |---|---|
@@ -289,135 +294,71 @@ CHATBOT_MAX_TOKENS = 1200            # Existing setting, reused for the agent to
 | `POST /api/flashcards/review/` | SM-2 algorithm |
 | All auth endpoints | Never AI-controlled |
 | Materials CRUD | Deterministic |
-| `POST /api/chat/stream/` | Still one-shot (see Pending) |
-| `POST /api/chat/file/` | Still one-shot (see Pending) |
-
-Agent is additive. The original endpoints and the one-shot chatbot path are fully intact.
 
 ---
 
-## 11. What the AI Controls vs the Backend
+## 13. What the AI Controls vs the Backend
 
 | Decision | Owner |
 |---|---|
 | Which tool to call and when | AI |
+| When to search the KB vs the web | AI |
 | Quiz content, flashcard text | AI |
 | Short-answer evaluation | AI |
 | Summarization, explanation | AI |
 | Authentication | Django |
-| MCQ answer comparison | Django (deterministic string compare) |
+| MCQ answer comparison | Django (deterministic) |
 | SM-2 scheduling | Django (algorithm-based) |
 | DB writes (sessions, decks, messages) | Django |
 | Input validation | Django |
-| YouTube transcript fetching | Tool handler (deterministic API call, no AI) |
 
 ---
 
-## 12. Pending Items
-
-### 12.1 ~~search_web tool~~ — DONE
-
-`agent_server/tools/search.py` implemented using Tavily (same provider as Django's websearch).
-Registered at timeout 12s. The AI now decides when to search rather than a keyword heuristic
-in `_build_chatbot_prompt()`. Requires `SEARCH_API_KEY` or `TAVILY_API_KEY` env var.
-Falls back to empty results silently if missing.
-
----
-
-### 12.2 ~~Quiz _evaluate_short_answer~~ — DONE
-
-`apps/quiz/async_views._evaluate_short_answer()` now calls `POST /agent/call` with
-`evaluate_answer` directly instead of routing through `/chatbot/`. Falls back to
-string match if the agent call fails.
-
----
-
-### 12.3 Stream and file chatbot endpoints
-
-`chatbot_stream_async` (`/api/chat/stream/`) and `chatbot_file_api_async` (`/api/chat/file/`)
-still call `POST /chatbot/` directly.
-
-**Stream:** Upgrading requires streaming SSE events for each tool call as well as the final
-text — a protocol change. Lower priority.
-
-**File:** The AI could call `summarize_text` first to fit the document in the context window.
-Moderate priority.
-
----
-
-### 12.4 Tests
-
-No unit or integration tests written yet for:
-- Individual tool handlers (youtube, evaluate, summarize)
-- Executor error handling (timeout, bad arguments, unexpected failure)
-- The orchestration loop (tool_use → tool_result → end_turn path)
-- Django agent branch in `chatbot_api_async`
-
----
-
-## 13. Key Design Rules
+## 14. Key Design Rules
 
 1. **Tools are in-process async functions.** No HTTP round-trips inside FastAPI.
-
 2. **Tools are stateless.** No DB writes. Django persists everything after the loop returns.
-
-3. **The orchestrator loop has a hard cap.** Default `max_iterations=5`, max 10.
-   If the AI loops unexpectedly, investigate tool descriptions or `system_prompt` — not the cap.
-
-4. **Schemas drive AI performance.** The `description` and `input_schema` of each tool
-   directly affect tool selection and argument quality. Treat them like prompt engineering.
-
-5. **Graceful degradation at every level.**
-   - Each tool catches its own exceptions and returns `ToolResult.error`.
-   - The executor never raises.
-   - The orchestrator returns an `error` field instead of crashing.
-   - The Django chatbot falls back to one-shot `/chatbot/` if agent returns empty or fails.
-
-6. **Django never calls `/agent/tools`.** That endpoint is for debugging and future frontends.
-   Django only calls `/agent/orchestrate` (and `/agent/call` for direct tool invocation).
+3. **The agent loop has a hard cap.** Default `max_iterations=5`, max 10.
+4. **Schemas drive AI performance.** Tool `description` and `input_schema` are prompt engineering.
+5. **Graceful degradation at every level.** Each tool catches its own exceptions; the executor never raises; the router returns an error field; Django has a static fallback.
+6. **Prompt text lives in `prompts.py`.** The router imports functions — it never builds strings itself.
 
 ---
 
-## 14. Example Trace: YouTube video to flashcards
+## 15. Example Trace: YouTube video to flashcards
 
 User: `"Make me flashcards from https://youtube.com/watch?v=abc123"`
 
 ```
 Django chatbot_api_async:
-  - Creates/loads session, saves user message to DB
-  - Calls _build_agent_context() -> (system_prompt, messages)
-  - Calls POST /agent/orchestrate
+  → Creates/loads session, saves user message to DB
+  → Fetches user stats
+  → POST /agent/chat { message, conversation_history, user_stats, tutor_mode: "direct" }
 
-Orchestrator iteration 1:
-  - AI: tool_use { name: "extract_youtube_transcript", input: {url: "..."} }
-  - Executor: youtube.py handler -> {text: "...", title: "Intro to ML", video_id: "abc123"}
-
-Orchestrator iteration 2:
-  - AI: tool_use { name: "generate_flashcards",
-                   input: {text, subject: "Intro to ML", num_cards: 10, difficulty: "medium"} }
-  - Executor: registry._generate_flashcards_handler -> {cards: [{question, answer}, ...]}
-
-Orchestrator iteration 3:
-  - AI: end_turn { text: "Here are 10 flashcards based on Intro to ML: ..." }
-  - Returns OrchestratorResponse(
-        response="Here are 10 flashcards...",
-        tool_calls_made=["extract_youtube_transcript", "generate_flashcards"],
-        iterations=3
-    )
+FastAPI /agent/chat:
+  → Builds system prompt
+  → Agent loop iteration 1:
+      AI: tool_use { name: "extract_youtube_transcript", input: {url: "..."} }
+      Executor: {text: "...", title: "Intro to ML", video_id: "abc123"}
+  → Agent loop iteration 2:
+      AI: tool_use { name: "generate_flashcards",
+                     input: {text, subject: "Intro to ML", num_cards: 10} }
+      Executor: {cards: [{question, answer}, ...]}
+  → Agent loop iteration 3:
+      AI: end_turn { text: "Here are 10 flashcards based on Intro to ML: ..." }
+  → Returns { "response": "Here are 10 flashcards..." }
 
 Django chatbot_api_async:
-  - Saves AI response as ChatMessage
-  - Returns JSON to frontend
+  → Saves AI response as ChatMessage
+  → Returns JSON to React
 ```
-
-Total: 3 iterations, 2 tool calls. Django handles all persistence.
 
 ---
 
-## 15. Anti-Patterns to Avoid
+## 16. Anti-Patterns to Avoid
 
 - Do not add auth, scoring, or DB writes to any tool.
-- Do not put the agent layer in Django — it belongs in FastAPI with the AI client.
+- Do not put prompt construction in Django — it belongs in FastAPI `prompts.py`.
 - Do not let tools call each other. The AI composes them; tools do not.
-- Do not expose all tools to every context. Use the `tools` whitelist in `OrchestratorRequest`.
+- Do not expose all tools to the chatbot. Use `_CHAT_TOOLS = ["kb_search", "web_search"]`.
 - Do not remove the direct quiz/flashcard endpoints. The quiz page calls them directly.

@@ -189,7 +189,7 @@ the quiz generation form with:
 
 ---
 
-## 3. Socratic Tutor Mode
+## 3. Socratic Tutor Mode ✅ SHIPPED
 
 ### What It Does
 A toggle in the chatbot interface that shifts the AI from answer-giving
@@ -220,69 +220,47 @@ The Socratic method forces active recall and self-explanation —
 two of the highest-impact learning techniques in cognitive science.
 
 ### LLM Cost Control
-- **This is a prompt engineering change only — zero architectural cost**
-- No new models, no new endpoints
-- No additional API calls per session
-- The only cost is a slightly longer system prompt
+- **Prompt engineering only — zero architectural cost**
+- No new models, no new endpoints, no extra API calls
+- One short block appended to the system prompt when mode is active
 
-### Implementation Strategy
+### Shipped Implementation
 
-**Step 1 — Add mode to ChatSession**
+**`tutor_mode` is a per-request field, not a DB column.**
+Django forwards `tutor_mode: "direct" | "socratic"` in the `/agent/chat`
+payload on every request. No `ChatSession` migration, no `PATCH` endpoint.
+
+**System prompt injection lives in `ai_service/agent/prompts.py`:**
 ```python
-class ChatSession(models.Model):
-    # existing fields...
-    tutor_mode = models.CharField(
-        max_length=20,
-        choices=[("direct", "Direct"), ("socratic", "Socratic")],
-        default="direct"
-    )
-```
-
-**Step 2 — Mode toggle endpoint**
-`PATCH /api/chat/mode/` accepts `{"tutor_mode": "socratic"}`.
-Updates the session's tutor_mode field. Simple view, one DB write.
-
-**Step 3 — Conditional system prompt**
-In `_build_chatbot_prompt()`, branch on the session's tutor_mode:
-
-```python
-if tutor_mode == "socratic":
-    mode_instructions = SOCRATIC_PROMPT_BLOCK
-else:
-    mode_instructions = DIRECT_PROMPT_BLOCK
-```
-
-**Socratic prompt block:**
-```
+_SOCRATIC_RULES = """
 TUTOR MODE: SOCRATIC
+Guide the student through questions rather than giving answers directly.
+Ask what they already know, build on correct thinking, ask one question at a time.
+Reveal the full answer only after at least two exchanges of guided reasoning,
+or if the student explicitly asks you to explain directly.
+"""
 
-Your role is to guide the student to the answer through questions,
-not to give it directly. Follow these principles:
-
-1. ALWAYS start by asking what the student already knows about the topic.
-2. When they respond, identify the correct elements in their answer and
-   build on those. Never dismiss what they said entirely.
-3. Ask one focused question at a time. Do not overwhelm.
-4. When the student is close, prompt them: "You're nearly there — what
-   happens next?"
-5. Only reveal the full answer after at least two exchanges, or if the
-   student explicitly asks for it ("just tell me").
-6. After the student reaches the answer, consolidate: "Exactly right.
-   Let's state it clearly: ..."
-7. End each exchange with a question that deepens understanding:
-   "Now — where would you expect to see this in real life?"
-
-Never lecture. Always converse.
+def build_chat_system_prompt(tutor_mode: str, user_stats: dict | None) -> str:
+    ...
+    if tutor_mode == "socratic":
+        sections += ["", _SOCRATIC_RULES]
+    return "\n".join(sections)
 ```
 
-**Step 4 — Persist mode across sessions**
-The tutor_mode is stored on ChatSession (per user, since sessions are
-deterministic). The student's preference persists across logins.
+**Frontend toggle in `Chatbot.jsx`:**
+```jsx
+const [isSocratic, setIsSocratic] = useState(false);
+// toggle button in the toolbar
+<button className={`search-pill${isSocratic ? ' active' : ''}`}
+        onClick={() => setIsSocratic(v => !v)}>
+  Socratic
+</button>
+// included in every request
+{ message, session_id, tutor_mode: isSocratic ? "socratic" : "direct" }
+```
 
-**Step 5 — Frontend toggle**
-A simple toggle in the chat interface: "Direct answers" / "Guide me".
-The active mode is returned in the chat status endpoint so the frontend
-can render the correct state on load.
+Mode resets to `"direct"` when the page refreshes. It is intentionally
+not persisted — students toggle it per conversation, not per account.
 
 ---
 

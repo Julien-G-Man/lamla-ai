@@ -30,6 +30,9 @@ FastAPI (`ai_service/.env` or process env):
 - DeepSeek: `DEEPSEEK_API_KEY`, `DEEPSEEK_API_URL`
 - Gemini: `GEMINI_API_KEY`, `GEMINI_API_URL`
 - HuggingFace: `HUGGING_FACE_API_TOKEN`, `HUGGING_FACE_MODEL`
+- `SEARCH_API_KEY` (or `TAVILY_API_KEY`) — Tavily web search key used by the `search_web` agent tool
+- `KB_SEARCH_PROVIDER` — KB retrieval backend: `tfidf` (default, no cost) or `openai`
+- `KB_FILE_PATH` — override path to `text_embeddings.json` (optional; auto-resolved if unset)
 
 See `docs/architecture-design/AI_PROVIDERS.md` for full provider docs.
 
@@ -71,10 +74,10 @@ Flashcards:
 Chat:
 
 - `POST /api/chat/`
-- `POST /api/chat/stream/`
 - `POST /api/chat/file/`
 - `GET /api/chat/history/`
-- `POST /api/chat/history/clear/`
+- `DELETE /api/chat/history/clear/`
+- `POST /api/chat/history/rename/`
 
 Materials:
 

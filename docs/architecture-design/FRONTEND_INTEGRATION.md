@@ -49,11 +49,13 @@ Derived in `services/api.js`:
 
 ## Contract: Chatbot
 
-- Message: `POST /chat/`
-- File message: `POST /chat/file/`
-- Stream: `POST /chat/stream/`
-- History: `GET /chat/history/`
-- Clear history: `DELETE /chat/history/clear/`
+- Message: `POST /chat/` — body: `{message, session_id, tutor_mode: "direct"|"socratic"}`
+- File message: `POST /chat/file/` — multipart: `file` + `message`, `session_id`, `tutor_mode`
+- History: `GET /chat/history/` — optional `?session_id=`
+- Clear history: `DELETE /chat/history/clear/` — optional body `{session_id}`
+- Rename session: `POST /chat/history/rename/`
+
+Note: there is no stream endpoint. The full response is returned in one HTTP response; the frontend renders it with a client-side typewriter animation.
 
 ## Error Handling Expectations
 

@@ -29,7 +29,7 @@
 ## Public vs Internal FastAPI Endpoints
 
 - Public: `GET /health`
-- Internal-only: `/chatbot/*`, `/quiz/*`, `/flashcards/*`
+- Internal-only: `/agent/*`, `/quiz/*`, `/flashcards/*`
   - require valid `X-Internal-Secret`
   - browser-origin requests must be in `FASTAPI_ALLOWED_ORIGINS`
 
@@ -44,7 +44,7 @@ Executed on page load and every 10 minutes (`App.jsx`).
 
 ## Main Django Route Mounts
 
-From `backend/lamla/urls.py`:
+From `backend/config/urls.py`:
 
 - `/api/` + `apps.accounts.urls`
 - `/api/` + `apps.chatbot.urls`
