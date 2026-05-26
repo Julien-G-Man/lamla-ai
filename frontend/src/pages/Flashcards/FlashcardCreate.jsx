@@ -3,7 +3,10 @@ import { useNavigate } from "react-router-dom";
 import AppShell from "../../components/AppShell/AppShell";
 import { useAuth } from "../../context/AuthContext";
 import djangoApi, { getApiErrorMessage } from "../../services/api";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faFilePdf } from "@fortawesome/free-solid-svg-icons";
 import "./Flashcards.css";
+import "../Dashboards/Dashboard.css";
 
 const SUBJECT_OPTIONS = [
   "Computer Science",
@@ -187,14 +190,15 @@ export default function FlashcardCreate() {
           </div>
         </div>
       )}
-      <main className="fc-page">
-        <header className="fc-create-header">
+      <main className="db-main">
+        <div className="db-tab">
+        <div className="db-page-header" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
           <div>
             <h1>Create Flashcards</h1>
             <p>Turn your notes into a reusable deck.</p>
           </div>
-          <button className="fc-secondary" onClick={() => navigate("/flashcards")}>Back to Decks</button>
-        </header>
+          <button className="db-btn db-btn-ghost" onClick={() => navigate("/flashcards")}>Back to Decks</button>
+        </div>
 
         <section className="fc-create-layout">
           <article className="fc-panel fc-create-form">
@@ -261,7 +265,7 @@ export default function FlashcardCreate() {
                       if (file) extractText(file);
                     }}
                   >
-                    <div className="upload-icon">PDF</div>
+                    <div className="upload-icon"><FontAwesomeIcon icon={faFilePdf} /></div>
                     <div className="upload-text">Upload your study materials</div>
                     <div className="upload-description">PDF, DOCX, PPTX, or TXT</div>
 
@@ -335,6 +339,7 @@ export default function FlashcardCreate() {
             )}
           </aside>
         </section>
+        </div>
       </main>
     </AppShell>
   );

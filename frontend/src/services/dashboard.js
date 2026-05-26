@@ -23,6 +23,11 @@ export const dashboardService = {
     return res.data.history;
   },
 
+  getQuizReplay: async (sessionId) => {
+    const res = await djangoApi.get(`/quiz/sessions/${sessionId}/`);
+    return res.data.quiz_data;
+  },
+
   getFlashcardHistory: async () => {
     const res = await djangoApi.get('/flashcards/history/');
     return res.data.history;

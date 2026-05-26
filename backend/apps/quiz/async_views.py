@@ -459,6 +459,19 @@ class QuizHistoryView(APIView):
         return Response({'history': data})
 
 
+class QuizReplayView(APIView):
+    """GET /api/quiz/sessions/<session_id>/ — return the stored quiz data for replaying."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, session_id):
+        try:
+            session = QuizSession.objects.get(id=session_id, user=request.user)
+        except QuizSession.DoesNotExist:
+            return Response({'error': 'Quiz session not found.'}, status=404)
+
+        return Response({'quiz_data': session.questions_data})
+
+
 class WeakAreasView(APIView):
     """GET /api/quiz/weak-areas/ — bottom 5 topics by accuracy (min 3 questions)."""
     permission_classes = [IsAuthenticated]

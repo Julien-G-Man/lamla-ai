@@ -3,7 +3,7 @@ import AppShell from '../../components/AppShell/AppShell';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faClipboardList, faRedo, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { dashboardService } from '../../services/dashboard';
 import '../Dashboards/Dashboard.css';
 
@@ -12,6 +12,7 @@ const QuizHistory = () => {
   const { isAuthenticated, isLoading } = useAuth();
   const [quizHistory, setQuizHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [replaying, setReplaying] = useState(null); // session id currently loading
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) navigate('/auth/login');
@@ -24,6 +25,19 @@ const QuizHistory = () => {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [isAuthenticated]);
+
+  const handleTryAgain = async (sessionId) => {
+    if (replaying) return;
+    setReplaying(sessionId);
+    try {
+      const quizData = await dashboardService.getQuizReplay(sessionId);
+      navigate('/quiz/play', { state: { quizData } });
+    } catch (err) {
+      console.error('Failed to load quiz for replay', err);
+      alert('Could not load this quiz. Please try again.');
+      setReplaying(null);
+    }
+  };
 
   return (
     <AppShell>
@@ -44,7 +58,7 @@ const QuizHistory = () => {
                 <div className="db-empty"><p>Loading…</p></div>
               ) : quizHistory.length === 0 ? (
                 <div className="db-empty">
-                  <div className="db-empty-icon">📋</div>
+                  <div className="db-empty-icon"><FontAwesomeIcon icon={faClipboardList} /></div>
                   <p>No quiz history yet.</p>
                   <button className="db-btn db-btn-primary" onClick={() => navigate('/quiz/create')}>
                     Take a Quiz
@@ -58,7 +72,16 @@ const QuizHistory = () => {
                       <p>{q.total_questions} questions · {new Date(q.created_at).toLocaleDateString()}</p>
                     </div>
                     <div className="db-quiz-score">{q.score_percent}%</div>
-                    <button className="db-btn db-btn-ghost db-btn-sm">Review</button>
+                    <button
+                      className="db-btn db-btn-ghost db-btn-sm"
+                      onClick={() => handleTryAgain(q.id)}
+                      disabled={!!replaying}
+                      title="Retake this quiz with the same questions"
+                    >
+                      {replaying === q.id
+                        ? <FontAwesomeIcon icon={faSpinner} spin />
+                        : <><FontAwesomeIcon icon={faRedo} style={{ marginRight: 5 }} />Try Again</>}
+                    </button>
                   </div>
                 ))
               )}

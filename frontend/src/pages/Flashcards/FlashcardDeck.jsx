@@ -4,7 +4,10 @@ import AppShell from "../../components/AppShell/AppShell";
 import { useAuth } from "../../context/AuthContext";
 import djangoApi, { getApiErrorMessage } from "../../services/api";
 import RichTextRenderer from "../../utils/richTextRenderer";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faBook, faTrash, faArrowLeft } from "@fortawesome/free-solid-svg-icons";
 import "./Flashcards.css";
+import "../Dashboards/Dashboard.css";
 
 export default function FlashcardDeck() {
   const { id } = useParams();
@@ -148,24 +151,40 @@ export default function FlashcardDeck() {
 
   return (
     <AppShell>
-      <main className="fc-page">
-        <section className="fc-hero fc-hero--flat compact">
-          <div>
-            <h1>Deck Details: {title}</h1>
-            <p>{cards.length} cards in this deck</p>
-          </div>
-          <div className="fc-actions">
-            <button className="fc-primary" onClick={() => navigate(`/flashcards/study/${id}`)}>Study Deck</button>
-            <button className="fc-danger" onClick={deleteDeck}>Delete Deck</button>
-          </div>
-        </section>
+      <main className="db-main">
+        <div className="db-tab">
 
-        {loading && <p className="fc-muted">Loading cards...</p>}
-        {!loading && error && <p className="fc-error">{error}</p>}
-        {!loading && !cards.length && <p className="fc-empty">No cards in this deck.</p>}
+          <div className="db-page-header" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
+            <div>
+              <h1>{title || "Flashcard Deck"}</h1>
+              <p>{cards.length} card{cards.length !== 1 ? "s" : ""} in this deck</p>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button className="db-btn db-btn-ghost" onClick={() => navigate("/flashcards")}>
+                <FontAwesomeIcon icon={faArrowLeft} style={{ marginRight: 6 }} />
+                All Decks
+              </button>
+              <button className="db-btn db-btn-primary" onClick={() => navigate(`/flashcards/study/${id}`)}>
+                <FontAwesomeIcon icon={faBook} style={{ marginRight: 6 }} />
+                Study Deck
+              </button>
+              <button className="db-btn db-btn-danger" onClick={deleteDeck}>
+                <FontAwesomeIcon icon={faTrash} style={{ marginRight: 6 }} />
+                Delete
+              </button>
+            </div>
+          </div>
 
-        <section className="fc-grid deck-detail-grid">
-          {cards.map((card) => (
+          {loading && <div className="db-empty"><p>Loading cards…</p></div>}
+          {!loading && error && <div className="db-alert db-alert-error">{error}</div>}
+          {!loading && !cards.length && !error && (
+            <div className="db-empty">
+              <p>No cards in this deck.</p>
+            </div>
+          )}
+
+          <section className="fc-grid deck-detail-grid">
+            {cards.map((card) => (
             <article key={card.id} className="fc-panel fc-qa">
               {editingId === card.id ? (
                 <>
@@ -236,7 +255,9 @@ export default function FlashcardDeck() {
               )}
             </article>
           ))}
-        </section>
+          </section>
+
+        </div>
       </main>
     </AppShell>
   );

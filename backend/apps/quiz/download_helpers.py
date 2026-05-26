@@ -143,7 +143,7 @@ def _build_pdf(results: dict) -> BytesIO:
 
     # Colour palette
     C = {
-        'primary':       rl_colors.HexColor('#4F46E5'),
+        'primary':       rl_colors.HexColor('#1d4ed8'),
         'primary_light': rl_colors.HexColor('#EEF2FF'),
         'answer':        rl_colors.HexColor('#059669'),
         'answer_bg':     rl_colors.HexColor('#ECFDF5'),

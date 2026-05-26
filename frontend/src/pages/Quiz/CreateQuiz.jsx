@@ -4,6 +4,7 @@ import AppShell from '../../components/AppShell/AppShell';
 import { useAuth } from '../../context/AuthContext';
 import djangoApi from '../../services/api';
 import './CreateQuiz.css';
+import '../Dashboards/Dashboard.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
     faKeyboard,
@@ -214,13 +215,12 @@ const CreateQuiz = () => {
                     </div>
                 </div>
             )}
-            <div className="page-wrapper">
-                <header className="quiz-create-header">
-                    <h1 className="main-page-title">Quiz Mode</h1>
-                    <p className="main-page-description">
-                        Upload your study material, enter a YouTube video link, or paste text content to create customised quiz questions with AI.
-                    </p>
-                </header>
+            <main className="db-main">
+              <div className="db-tab">
+                <div className="db-page-header">
+                    <h1>Quiz Mode</h1>
+                    <p>Upload your study material, enter a YouTube video link, or paste text to create customised quiz questions with AI.</p>
+                </div>
 
                 <div className="quiz-card-container">
                     {/* Banner when pre-filled from a material */}
@@ -311,7 +311,7 @@ const CreateQuiz = () => {
                                         handleFileChange({ target: { files: e.dataTransfer.files } });
                                     }}
                                 >
-                                    <div className="upload-icon">📖</div>
+                                    <div className="upload-icon"><FontAwesomeIcon icon={faCloudUploadAlt} /></div>
                                     <div className="upload-text">Upload your study materials</div>
                                     <div className="upload-description">PDF, DOCX, PPT, PPTX, or TXT</div>
                                     <input
@@ -439,7 +439,8 @@ const CreateQuiz = () => {
                         </div>
                     )}
                 </div>
-            </div>
+              </div>
+            </main>
             {toast.visible && (
                 <div className={`toast ${toast.type}`} style={{ display: 'block' }}>
                     {toast.message}
