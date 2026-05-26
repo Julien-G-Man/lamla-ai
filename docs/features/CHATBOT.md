@@ -200,12 +200,55 @@ The sidebar preview shows "Quiz generated: Topic" instead of raw JSON.
 
 ## Streaming
 
-**Current:** Django returns the complete FastAPI response in one HTTP response.
-The frontend applies a client-side typewriter animation using `requestAnimationFrame`
-(40 chars per frame).
+**Implemented:** Real token streaming via Server-Sent Events (SSE).
 
-**Planned:** Server-Sent Events per-chunk from FastAPI through Django to the browser.
-Deferred to a later sprint.
+### Event protocol
+
+| Event type | Payload | Browser action |
+|---|---|---|
+| `session` | `{session_id}` | Update current session ID, refresh sidebar if new |
+| `tool_start` | `{tool}` | Show tool label in thinking bubble ("Searching knowledge base…") |
+| `tool_done` | `{tool}` | Clear tool label, return to plain dots |
+| `token` | `{content}` | Append text delta to AI bubble in real time; unlock input |
+| `done` | `{side_data}` | Finalize message; trigger quiz form if `action=="show_quiz_form"` |
+| `error` | `{message}` | Show error text in AI bubble |
+
+### Data flow
+
+```
+Browser  POST /api/chat/stream/  →  Django StreamingHttpResponse
+  Django  POST /agent/chat/stream  →  FastAPI StreamingResponse
+    FastAPI  _run_agent_loop_stream()
+      Tool calls: Claude streams tool_use block → tool_start event
+      Tool execution: execute_tool() → tool_done event
+      Final response: Claude streams text_delta → token events
+      Complete: done event with side_data
+  Django buffers tokens, saves full text to DB on done
+Browser appends tokens to bubble in real time
+```
+
+### Why SSE through Django
+
+Django owns auth and DB. FastAPI owns AI. The browser cannot call FastAPI directly
+(internal-only). Django proxies the SSE stream with `httpx.AsyncClient.stream()` and
+forwards events verbatim using `StreamingHttpResponse`.
+
+### Tool label display
+
+When the model calls a tool, `tool_start` updates the thinking bubble with a
+human-readable label. `TOOL_LABELS` (module-level constant in `Chatbot.jsx`):
+
+| Tool | Label |
+|---|---|
+| `kb_search` | "Searching knowledge base…" |
+| `search_web` | "Searching the web…" |
+| `request_quiz_form` | "Preparing quiz…" |
+
+### Fallback
+
+File uploads (`POST /api/chat/file/`) still use the non-streaming endpoint
+(`POST /agent/chat`) — mixing FormData with SSE adds complexity for no benefit.
+The non-streaming path also remains available as an internal fallback.
 
 ---
 
@@ -233,8 +276,9 @@ A toggle in the UI switches modes. Mode is not persisted server-side.
 
 From `backend/apps/chatbot/urls.py`:
 
-- `POST /api/chat/` — main chat endpoint
-- `POST /api/chat/file/` — chat with file attachment
+- `POST /api/chat/` — non-streaming chat (kept for internal fallback; file path still uses this)
+- `POST /api/chat/stream/` — SSE streaming chat (primary browser path)
+- `POST /api/chat/file/` — chat with file attachment (non-streaming)
 - `GET /api/chat/history/` — load a specific session's messages (`?session_id=`)
 - `DELETE /api/chat/history/clear/` — delete a session (`?session_id=`)
 - `POST /api/chat/history/rename/` — rename a session

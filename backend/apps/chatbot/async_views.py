@@ -10,7 +10,7 @@ from time import perf_counter
 
 import httpx
 from asgiref.sync import sync_to_async
-from django.http import JsonResponse
+from django.http import JsonResponse, StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
@@ -267,6 +267,117 @@ async def create_quiz_from_agent(request):
         return JsonResponse({"error": "Invalid JSON"}, status=400)
     except Exception as e:
         logger.error("[quiz/agent] error: %s", e, exc_info=True)
+        return JsonResponse({"error": "Internal server error"}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+async def chatbot_stream_api_async(request):
+    """
+    SSE streaming proxy for the chatbot.
+
+    Connects to FastAPI POST /agent/chat/stream and forwards typed events
+    (tool_start, tool_done, token, done, error) directly to the browser.
+    Prepends a "session" event so the client knows the real session_id.
+    Buffers all "token" content and saves the full AI response to the DB
+    when the "done" event arrives.
+    """
+    try:
+        data = json.loads(request.body) if request.body else {}
+        user_message = data.get("message", "")
+        session_id = data.get("session_id", None)
+        tutor_mode = data.get("tutor_mode", "direct")
+
+        if not user_message:
+            return JsonResponse({"error": "Message is required"}, status=400)
+
+        # Pre-flight: auth, session, history, stats (same as non-streaming view)
+        user, session_obj = await _get_or_create_session(request, session_id=session_id)
+        await _save_user_message(session_obj, user_message)
+        conversation_history = await _get_conversation_history(session_obj, limit=20)
+
+        user_stats = None
+        if user:
+            user_stats = await sync_to_async(_fetch_user_performance_sync, thread_sensitive=True)(user)
+
+        real_session_id = session_obj.session_id if session_obj else session_id
+
+        async def sse_generator():
+            full_text_parts: list[str] = []
+
+            # Tell the client the real (backend-assigned) session_id immediately
+            yield f"data: {json.dumps({'type': 'session', 'session_id': real_session_id})}\n\n"
+
+            try:
+                from apps.core.async_client import build_fastapi_headers, get_fastapi_base_urls
+                headers = build_fastapi_headers()
+                base_urls = get_fastapi_base_urls()
+                if not base_urls:
+                    yield f"data: {json.dumps({'type': 'error', 'message': 'AI service not configured.'})}\n\n"
+                    return
+                fastapi_base = base_urls[0]
+                payload = {
+                    "message": user_message,
+                    "conversation_history": conversation_history,
+                    "tutor_mode": tutor_mode,
+                    "user_stats": user_stats,
+                    "user_id": getattr(user, "id", None),
+                }
+
+                async with httpx.AsyncClient(timeout=120.0) as client:
+                    async with client.stream(
+                        "POST",
+                        f"{fastapi_base}/agent/chat/stream",
+                        headers=headers,
+                        json=payload,
+                    ) as response:
+                        if response.status_code != 200:
+                            logger.error(
+                                "[chatbot:stream] FastAPI returned %d", response.status_code
+                            )
+                            yield f"data: {json.dumps({'type': 'error', 'message': 'AI service error'})}\n\n"
+                            return
+
+                        async for line in response.aiter_lines():
+                            if not line.startswith("data: "):
+                                continue
+                            raw = line[6:]  # strip "data: " prefix
+                            try:
+                                event = json.loads(raw)
+                            except json.JSONDecodeError:
+                                continue
+
+                            etype = event.get("type")
+                            if etype == "token":
+                                full_text_parts.append(event.get("content", ""))
+
+                            # Forward the event verbatim to the browser
+                            yield f"data: {raw}\n\n"
+
+                            if etype == "done":
+                                full_text = "".join(full_text_parts).strip()
+                                if full_text and session_obj:
+                                    await _save_ai_message(session_obj, full_text)
+                                return
+                            elif etype == "error":
+                                return
+
+            except (httpx.TimeoutException, httpx.RequestError) as exc:
+                logger.error("[chatbot:stream] FastAPI unreachable: %s", exc)
+                yield f"data: {json.dumps({'type': 'error', 'message': 'AI service temporarily unavailable.'})}\n\n"
+            except Exception as exc:
+                logger.error("[chatbot:stream] unexpected error: %s", exc, exc_info=True)
+                yield f"data: {json.dumps({'type': 'error', 'message': 'Internal server error.'})}\n\n"
+
+        response = StreamingHttpResponse(sse_generator(), content_type="text/event-stream")
+        response["Cache-Control"] = "no-cache"
+        response["X-Accel-Buffering"] = "no"
+        return response
+
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+    except Exception as exc:
+        logger.error("[chatbot:stream] setup error: %s", exc, exc_info=True)
         return JsonResponse({"error": "Internal server error"}, status=500)
 
 

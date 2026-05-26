@@ -3,10 +3,11 @@ import logging
 import uuid
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from agent.executor import execute_tool
 from agent.prompts import ORCHESTRATE_SYSTEM, build_chat_system_prompt, wrap_file_context
 from agent.registry import get_definitions, _generate_quiz_handler
-from agent.helpers import _to_anthropic_tool, _serialize_raw_content, _run_agent_loop
+from agent.helpers import _to_anthropic_tool, _serialize_raw_content, _run_agent_loop, _run_agent_loop_stream
 from agent.schemas import (
     OrchestratorRequest, OrchestratorResponse, ToolCall, ToolResult,
     ChatRequest, AgentQuizGenerateRequest,
@@ -170,6 +171,66 @@ async def agent_chat(request: ChatRequest):
     if side_data.get("prefill"):
         result["prefill"] = side_data["prefill"]
     return result
+
+
+@agent_router.post("/chat/stream")
+async def agent_chat_stream(request: ChatRequest):
+    """
+    SSE streaming version of /agent/chat.
+
+    Streams typed events as they occur:
+      tool_start  — model invoked a tool
+      tool_done   — tool execution complete
+      token       — text delta from the final response
+      done        — streaming complete (carries side_data with action/prefill)
+      error       — unrecoverable failure
+
+    The Django proxy buffers all token events, concatenates them, and saves the
+    full text to the database on the "done" event.
+    """
+    system = build_chat_system_prompt(request.tutor_mode, request.user_stats)
+
+    messages: list[dict] = []
+    for msg in request.conversation_history:
+        role = "user" if msg.get("message_type") == "user" else "assistant"
+        messages.append({"role": role, "content": msg["content"]})
+
+    user_content = (
+        wrap_file_context(request.file_text, request.message)
+        if request.file_text else request.message
+    )
+    messages.append({"role": "user", "content": user_content})
+
+    logger.info(
+        "[agent:chat:stream] start mode=%s stats=%s file=%s history=%d",
+        request.tutor_mode,
+        "yes" if request.user_stats else "no",
+        "yes" if request.file_text else "no",
+        len(request.conversation_history),
+    )
+
+    async def event_generator():
+        try:
+            async for event in _run_agent_loop_stream(
+                messages=messages,
+                system=system,
+                tool_names=_CHAT_TOOLS,
+                max_iterations=_CHAT_MAX_ITERATIONS,
+                max_tokens=_CHAT_MAX_TOKENS,
+            ):
+                yield f"data: {json.dumps(event)}\n\n"
+        except Exception as exc:
+            logger.exception("[agent:chat:stream] unhandled error: %s", exc)
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Internal server error'})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",   # disable nginx buffering
+        },
+    )
 
 
 # ---------------------------------------------------------------------------

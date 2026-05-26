@@ -220,6 +220,20 @@
     40%           { opacity: 1;    transform: translateY(-2px); }
 }
 
+/* ── Thinking wrap (dots + optional tool label) ───────────────── */
+
+.ai-thinking-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ai-thinking-label {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
 /* ── Message content (markdown) ───────────────────────────────── */
 
 .message-content { width: 100%; }

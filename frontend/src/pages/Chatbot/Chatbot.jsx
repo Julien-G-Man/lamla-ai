@@ -158,8 +158,13 @@ const MessageBubble = ({
                     </div>
                 )}
                 {message.isThinking ? (
-                    <div className="ai-thinking-dots" aria-label="AI is typing">
-                        <span /><span /><span />
+                    <div className="ai-thinking-wrap" aria-label={message.thinkingLabel || 'AI is typing'}>
+                        <div className="ai-thinking-dots" aria-hidden="true">
+                            <span /><span /><span />
+                        </div>
+                        {message.thinkingLabel && (
+                            <span className="ai-thinking-label">{message.thinkingLabel}</span>
+                        )}
                     </div>
                 ) : (
                     <RichTextRenderer
@@ -203,6 +208,13 @@ const freshSessionId = () =>
     `chat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
 const QUIZ_MSG_PREFIX = '__QUIZ__:';
+
+// Tool name → human-readable label shown in the thinking bubble during tool execution
+const TOOL_LABELS = {
+    kb_search:         'Searching knowledge base…',
+    search_web:        'Searching the web…',
+    request_quiz_form: 'Preparing quiz…',
+};
 
 const toUiMessage = (msg) => {
     if (msg.content?.startsWith(QUIZ_MSG_PREFIX)) {
@@ -414,24 +426,6 @@ const Chatbot = ({ user: userProp }) => {
         navigate('/quiz/play', { state: { quizData } });
     };
 
-    // Client-side typewriter: animates fullText into message with placeholderId
-    const runTypewriter = useCallback((fullText, placeholderId) => {
-        let i = 0;
-        const CHARS_PER_FRAME = 40;
-        const step = () => {
-            if (i >= fullText.length) {
-                scrollToBottom();
-                return;
-            }
-            i = Math.min(i + CHARS_PER_FRAME, fullText.length);
-            setHistory(prev => prev.map(m =>
-                m.id === placeholderId ? { ...m, text: fullText.slice(0, i), isThinking: false } : m
-            ));
-            requestAnimationFrame(step);
-        };
-        requestAnimationFrame(step);
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
     const handleSendMessage = useCallback(async (e) => {
         if (e) e.preventDefault();
         let text = messageInput.trim();
@@ -473,22 +467,104 @@ const Chatbot = ({ user: userProp }) => {
                 const aiText = data.response || '[Error: Empty response from file API]';
                 if (data.session_id && data.session_id !== currentSessionId) setCurrentSessionId(data.session_id);
                 setIsProcessing(false);
-                runTypewriter(aiText, placeholderId);
+                setHistory(prev => prev.map(m =>
+                    m.id === placeholderId ? { ...m, text: aiText, isThinking: false } : m
+                ));
+                scrollToBottom();
             } else {
-                const res = await djangoApi.post('/chat/', {
-                    message: text,
-                    session_id: currentSessionId,
-                    tutor_mode,
+                // SSE streaming path
+                const token = localStorage.getItem('auth_token');
+                const baseUrl = (djangoApi.defaults.baseURL || '').replace(/\/+$/, '');
+
+                const sseRes = await fetch(`${baseUrl}/chat/stream/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { Authorization: `Token ${token}` } : {}),
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ message: text, session_id: currentSessionId, tutor_mode }),
                 });
-                const aiText = res.data?.response || '[Error: Empty response]';
-                const chatAction = res.data?.action;
-                const chatPrefill = res.data?.prefill;
-                if (res.data?.session_id && res.data.session_id !== currentSessionId) {
-                    setCurrentSessionId(res.data.session_id);
-                    fetchChatHistory(); // refresh sidebar when a new backend session is assigned
+
+                if (!sseRes.ok) {
+                    const errData = await sseRes.json().catch(() => ({}));
+                    throw new Error(errData.error || `Request failed (${sseRes.status})`);
                 }
-                setIsProcessing(false);
-                runTypewriter(aiText, placeholderId);
+
+                const reader = sseRes.body.getReader();
+                const decoder = new TextDecoder();
+                let sseBuffer = '';
+                let fullText = '';      // accumulated token content — shown all at once on 'done'
+                let chatAction = null;
+                let chatPrefill = null;
+
+                try {
+                    // eslint-disable-next-line no-constant-condition
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        sseBuffer += decoder.decode(value, { stream: true });
+                        const lines = sseBuffer.split('\n');
+                        sseBuffer = lines.pop(); // keep last incomplete line
+
+                        for (const line of lines) {
+                            if (!line.startsWith('data: ')) continue;
+                            let event;
+                            try { event = JSON.parse(line.slice(6)); } catch { continue; }
+
+                            const { type } = event;
+
+                            if (type === 'session') {
+                                if (event.session_id && event.session_id !== currentSessionId) {
+                                    setCurrentSessionId(event.session_id);
+                                    fetchChatHistory();
+                                }
+                            } else if (type === 'tool_start') {
+                                // Show which tool is running; label stays until response arrives
+                                const label = TOOL_LABELS[event.tool] || 'Thinking…';
+                                setHistory(prev => prev.map(m =>
+                                    m.id === placeholderId ? { ...m, thinkingLabel: label } : m
+                                ));
+                            } else if (type === 'token') {
+                                // Buffer silently — will display all at once on 'done'
+                                fullText += event.content || '';
+                            } else if (type === 'done') {
+                                const sd = event.side_data || {};
+                                chatAction = sd.action || null;
+                                chatPrefill = sd.prefill || null;
+                                // Display the full response in one shot
+                                const finalText = fullText.trim() || '[No response received]';
+                                setHistory(prev => prev.map(m =>
+                                    m.id === placeholderId
+                                        ? { ...m, text: finalText, isThinking: false, thinkingLabel: null }
+                                        : m
+                                ));
+                                setIsProcessing(false);
+                            } else if (type === 'error') {
+                                const msg = event.message || 'An unknown error occurred.';
+                                setHistory(prev => prev.map(m =>
+                                    m.id === placeholderId
+                                        ? { ...m, text: `[Error: ${msg}]`, isThinking: false, thinkingLabel: null }
+                                        : m
+                                ));
+                                setIsProcessing(false);
+                            }
+                        }
+                    }
+                } finally {
+                    reader.releaseLock();
+                    // If stream ended without a 'done' or 'error', clear thinking state
+                    setHistory(prev => prev.map(m =>
+                        m.id === placeholderId && m.isThinking
+                            ? { ...m, text: fullText.trim() || '[No response received]', isThinking: false, thinkingLabel: null }
+                            : m
+                    ));
+                    setIsProcessing(false);
+                }
+
+                scrollToBottom();
+
                 if (chatAction === 'show_quiz_form') {
                     addMessage('', 'quiz_form', 'AI Tutor', { prefillTopic: chatPrefill?.topic || '' });
                 }
@@ -500,7 +576,7 @@ const Chatbot = ({ user: userProp }) => {
             setIsProcessing(false);
             scrollToBottom();
         }
-    }, [messageInput, attachedFile, isSocratic, isProcessing, currentSessionId, runTypewriter]);
+    }, [messageInput, attachedFile, isSocratic, isProcessing, currentSessionId, fetchChatHistory]);
 
     const copyToClipboard = (text, id) => {
         navigator.clipboard.writeText(text)

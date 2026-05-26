@@ -3,7 +3,7 @@ import logging
 import httpx
 import openai
 import anthropic
-from typing import List, Optional, Union
+from typing import AsyncGenerator, List, Optional, Union
 from core.config import settings
 from core.utils import _coerce_text, _extract_json_substring
 
@@ -294,6 +294,140 @@ class AIClient:
             "stop_reason": stop_reason,
             "tool_calls": tool_calls,
             "text": " ".join(text_parts).strip() or None,
+            "raw_content": raw_content,
+        }
+
+    # ------------------------------------------------------------------ #
+    #  Agent: generate_with_tools_stream (streaming version)              #
+    # ------------------------------------------------------------------ #
+
+    async def generate_with_tools_stream(
+        self,
+        messages: list[dict],
+        tools: list[dict],
+        max_tokens: int = 1024,
+        system: str = "",
+        timeout: int = 60,
+    ) -> AsyncGenerator[dict, None]:
+        """
+        Streaming version of generate_with_tools. Async generator.
+
+        Yields:
+            {"type": "tool_start", "tool": name}   — model started a tool call (Claude only)
+            {"type": "token",      "content": str} — text delta from the response
+            {"type": "_result",    ...}             — internal: stop_reason, tool_calls, raw_content
+
+        Falls back to non-streaming generate_with_tools() when Claude is unavailable.
+        In that case a single "token" event carries the full response text, and
+        "tool_start" events are emitted before "_result" for each tool call detected.
+        """
+        if self.claude_key and self._anthropic_client:
+            try:
+                async for event in self._claude_stream_with_tools(
+                    messages, tools, max_tokens, system, timeout
+                ):
+                    yield event
+                return
+            except Exception as exc:
+                logger.warning(
+                    "[agent:ai_client] Claude stream failed: %s — non-stream fallback", exc
+                )
+
+        # Non-streaming fallback: collect full result, emit synthetic events
+        try:
+            result = await self.generate_with_tools(messages, tools, max_tokens, system, timeout)
+            # Emit tool_start for every tool call so the client sees progress indicators
+            for tc in result.get("tool_calls", []):
+                yield {"type": "tool_start", "tool": tc.get("name", "")}
+            if result.get("text"):
+                yield {"type": "token", "content": result["text"]}
+            yield {
+                "type": "_result",
+                "stop_reason": result.get("stop_reason", "end_turn"),
+                "tool_calls": result.get("tool_calls", []),
+                "raw_content": result.get("raw_content", []),
+            }
+        except Exception as exc:
+            yield {
+                "type": "_result",
+                "stop_reason": "error",
+                "tool_calls": [],
+                "raw_content": [],
+                "error": str(exc),
+            }
+
+    async def _claude_stream_with_tools(
+        self,
+        messages: list[dict],
+        tools: list[dict],
+        max_tokens: int,
+        system: str,
+        timeout: int,
+    ) -> AsyncGenerator[dict, None]:
+        """
+        Stream one Claude API call with tool-use support.
+
+        Yields tool_start events as tool-use blocks open, token events for every text
+        delta, then a final _result event with stop_reason, tool_calls, and raw_content.
+        """
+        kwargs: dict = dict(
+            model=self.claude_model,
+            max_tokens=max_tokens,
+            tools=tools,
+            messages=messages,
+            timeout=timeout,
+        )
+        if system:
+            kwargs["system"] = system
+
+        tool_calls: list[dict] = []
+        current_tool: dict | None = None  # {"id": ..., "name": ..., "input_json": ""}
+
+        async with self._anthropic_client.messages.stream(**kwargs) as stream:
+            async for event in stream:
+                if event.type == "content_block_start":
+                    block = event.content_block
+                    if block.type == "tool_use":
+                        current_tool = {"id": block.id, "name": block.name, "input_json": ""}
+                        yield {"type": "tool_start", "tool": block.name}
+                    else:
+                        current_tool = None
+
+                elif event.type == "content_block_delta":
+                    delta = event.delta
+                    if delta.type == "text_delta":
+                        yield {"type": "token", "content": delta.text}
+                    elif delta.type == "input_json_delta" and current_tool is not None:
+                        current_tool["input_json"] += delta.partial_json
+
+                elif event.type == "content_block_stop":
+                    if current_tool is not None:
+                        try:
+                            inp = (
+                                json.loads(current_tool["input_json"])
+                                if current_tool["input_json"] else {}
+                            )
+                        except Exception:
+                            inp = {}
+                        tool_calls.append({
+                            "id": current_tool["id"],
+                            "name": current_tool["name"],
+                            "input": inp,
+                        })
+                        current_tool = None
+
+            final_msg = await stream.get_final_message()
+
+        raw_content = list(final_msg.content)
+        stop_reason = "tool_use" if tool_calls else "end_turn"
+        logger.debug(
+            "[agent:ai_client] claude stream stop_reason=%s calls=%d",
+            stop_reason, len(tool_calls),
+        )
+        yield {
+            "type": "_result",
+            "stop_reason": stop_reason,
+            "tool_calls": tool_calls,
             "raw_content": raw_content,
         }
 

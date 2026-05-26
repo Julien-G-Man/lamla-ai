@@ -1,5 +1,6 @@
 import json
 import logging
+from typing import AsyncGenerator
 
 from core.ai_client import ai_client
 from agent.executor import execute_tool
@@ -107,4 +108,119 @@ async def _run_agent_loop(
         msgs.append({"role": "user", "content": tool_result_blocks})
 
     return "", f"Stopped after {max_iterations} iterations without a final response.", side_data
+
+
+async def _run_agent_loop_stream(
+    messages: list[dict],
+    system: str,
+    tool_names: list[str],
+    max_iterations: int,
+    max_tokens: int,
+) -> AsyncGenerator[dict, None]:
+    """
+    Streaming version of _run_agent_loop. Async generator.
+
+    Yields typed event dicts consumed by the SSE router endpoint:
+        {"type": "tool_start", "tool": name}    model invoked a tool (may arrive before execution)
+        {"type": "tool_done",  "tool": name}    tool execution complete
+        {"type": "token",      "content": str}  text delta from the final response
+        {"type": "done",       "side_data": {}} streaming complete; side_data carries action/prefill
+        {"type": "error",      "message": str}  unrecoverable error
+
+    Never raises — errors are surfaced as "error" events.
+    """
+    tool_defs = get_definitions(tool_names)
+    anthropic_tools = [_to_anthropic_tool(d) for d in tool_defs]
+    msgs = list(messages)
+    side_data: dict = {}
+
+    for iteration in range(1, max_iterations + 1):
+        tool_calls_this_iter: list[dict] = []
+        raw_content_blocks: list = []
+        stop_reason = "end_turn"
+        error_msg: str | None = None
+
+        try:
+            async for event in ai_client.generate_with_tools_stream(
+                messages=msgs, tools=anthropic_tools,
+                max_tokens=max_tokens, system=system, timeout=60,
+            ):
+                etype = event.get("type")
+
+                if etype == "tool_start":
+                    yield event          # forward to client immediately
+
+                elif etype == "token":
+                    yield event          # forward text delta to client
+
+                elif etype == "_result":
+                    stop_reason = event.get("stop_reason", "end_turn")
+                    tool_calls_this_iter = event.get("tool_calls", [])
+                    raw_content_blocks = event.get("raw_content", [])
+                    error_msg = event.get("error")
+
+        except Exception as exc:
+            logger.error("[agent:stream] generate_with_tools_stream failed iter=%d: %s", iteration, exc)
+            yield {"type": "error", "message": f"AI provider error: {exc}"}
+            return
+
+        if error_msg:
+            yield {"type": "error", "message": error_msg}
+            return
+
+        if stop_reason == "end_turn":
+            logger.info("[agent:stream] done iter=%d", iteration)
+            yield {"type": "done", "side_data": side_data}
+            return
+
+        # Tool execution phase
+        if not tool_calls_this_iter:
+            yield {"type": "done", "side_data": side_data}
+            return
+
+        raw_content = _serialize_raw_content(raw_content_blocks)
+        msgs.append({"role": "assistant", "content": raw_content})
+
+        tool_result_blocks = []
+        for tc in tool_calls_this_iter:
+            tool_name = tc.get("name", "")
+            call_obj = ToolCall(
+                tool_use_id=tc.get("id", f"call_{tool_name}_{iteration}"),
+                name=tool_name,
+                input=tc.get("input", {}),
+            )
+            tool_result = await execute_tool(call_obj)
+
+            if tool_result.error:
+                content = f"[Tool error: {tool_result.error}]"
+                logger.warning(
+                    "[agent:stream] tool error tool=%s iter=%d: %s",
+                    tool_name, iteration, tool_result.error,
+                )
+            else:
+                output = tool_result.output
+                content = (
+                    json.dumps(output, ensure_ascii=False)
+                    if isinstance(output, (dict, list)) else str(output)
+                )
+                if tool_name == "request_quiz_form" and isinstance(output, dict):
+                    side_data["action"] = "show_quiz_form"
+                    prefill_topic = output.get("topic", "")
+                    if prefill_topic:
+                        side_data["prefill"] = {"topic": prefill_topic}
+                logger.info(
+                    "[agent:stream] tool=%s iter=%d done ms=%.1f",
+                    tool_name, iteration, tool_result.duration_ms,
+                )
+
+            yield {"type": "tool_done", "tool": tool_name}
+            tool_result_blocks.append({
+                "type": "tool_result",
+                "tool_use_id": call_obj.tool_use_id,
+                "content": content,
+            })
+
+        msgs.append({"role": "user", "content": tool_result_blocks})
+
+    yield {"type": "error", "message": f"Stopped after {max_iterations} iterations without a final response."}
 

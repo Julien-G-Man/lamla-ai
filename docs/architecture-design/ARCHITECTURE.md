@@ -37,7 +37,8 @@
 
 | Endpoint | Caller | Purpose |
 |---|---|---|
-| `POST /agent/chat` | Django `chatbot_api_async` | Main chatbot — agent loop with `kb_search`, `search_web`, `request_quiz_form` |
+| `POST /agent/chat` | Django `chatbot_api_async` | Non-streaming chatbot — agent loop, returns complete JSON |
+| `POST /agent/chat/stream` | Django `chatbot_stream_api_async` | SSE streaming chatbot — yields `tool_start`, `tool_done`, `token`, `done`, `error` events |
 | `POST /agent/quiz/generate/` | Django `create_quiz_from_agent` | Standalone quiz generation from chatbot (no agent loop) |
 | `POST /agent/orchestrate` | Internal / future features | Generic tool-loop endpoint |
 | `GET /agent/tools` | Debug | List registered tools |
