@@ -6,6 +6,23 @@
 
 ---
 
+## Status
+
+| Feature | Status |
+|---|---|
+| Socratic Tutor Mode | ✅ Shipped |
+| Post-Quiz Mistake Analysis | ⏳ Not started |
+| Smart Material Summarizer | ⏳ Not started |
+| AI Mistake Patterns (Weekly Batch) | ⏳ Not started |
+
+> **Note:** Agentic inline quiz creation (user says "quiz me on X" in the AI Tutor →
+> quiz generated immediately) is also shipped, but lives in the chatbot feature, not
+> this tier. It uses a synchronous FastAPI call (`POST /agent/quiz/generate/`) rather
+> than a Celery task — one LLM call per chatbot-initiated quiz, no caching needed since
+> each quiz is personalised to the user's current difficulty level.
+
+---
+
 ## Cost Philosophy
 
 Before building any feature here, establish one rule:

@@ -12,6 +12,11 @@
 |---|---|---|
 | Quiz generation (MCQ + short answer) | ✅ Live | Static difficulty |
 | AI chatbot tutor with file context | ✅ Live | — |
+| Chatbot tool calling (kb_search, web search) | ✅ Live | — |
+| SSE token streaming + tool-call UX | ✅ Live | — |
+| Agentic inline quiz creation (from AI Tutor) | ✅ Live | — |
+| Quiz card persistence across sessions (`__QUIZ__:`) | ✅ Live | — |
+| Socratic Tutor Mode | ✅ Live | — |
 | Flashcards with SM-2 spaced repetition | ✅ Live | — |
 | Community material sharing | ✅ Live | Not indexed by concept |
 | Study streak tracking | ✅ Live | No meaningful milestones |
@@ -119,15 +124,19 @@ This loop — fully closed — is what turns a quiz tool into a tutor.
 ## Build Sequence
 
 ```
-Week 1–2    Weak area detection + topic tagging
-Week 3      Spaced quiz scheduling
-Week 4      Daily study plan + weekly email digest
-Week 5      Milestone / badge system
-Week 6      Exam simulation mode
-Week 7      Post-quiz mistake analysis (LLM, cached)
-Week 8      Smart material summarizer (LLM, one-time per upload)
-Week 9      Celery queue + per-user daily LLM budget
-Week 10     Socratic tutor mode toggle
-Ongoing     Concept tagging, peer challenges, study groups
+✅ SHIPPED   Weak area detection + spaced quiz scheduling (Tier 1)
+✅ SHIPPED   Socratic tutor mode (Tier 2)
+✅ SHIPPED   Chatbot tool calling + SSE streaming (chatbot enhancements)
+✅ SHIPPED   Agentic inline quiz creation + quiz card persistence
+
+⏳ NEXT      Exam simulation mode — frontend UX (Tier 1)
+⏳ NEXT      Daily study plan (Tier 1)
+⏳           Milestone / badge system (Tier 1)
+⏳           Weekly progress email digest (Tier 1)
+⏳           Post-quiz mistake analysis — LLM, cached (Tier 2)
+⏳           Smart material summarizer — one-time per upload (Tier 2)
+⏳           Celery task queue + per-user daily LLM budget (Tier 3)
+
+Ongoing     Concept tagging, peer challenges, study groups (Tier 3–4)
 After 200 MAU  Quiz Battle (Tier 5)
 ```
