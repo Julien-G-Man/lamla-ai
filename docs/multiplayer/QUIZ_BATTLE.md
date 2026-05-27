@@ -84,7 +84,7 @@ class ClashParticipant(models.Model):
     user         # ForeignKey(User)
     display_name # CharField(50)
     score        # IntegerField (accumulated)
-    answers      # JSONField — [{q_idx, answer, correct, points, ms_taken}]
+    answers      # JSONField — [{q_idx, correct, points}]  ← written at game end from Redis state
     is_host      # BooleanField
     rank         # IntegerField (null until game finishes)
     joined_at    # DateTimeField
@@ -98,15 +98,20 @@ class ClashParticipant(models.Model):
 
 ## REST Endpoints
 
-| Method | URL | Purpose |
-|---|---|---|
-| `POST` | `/api/clash/create/` | Create room, generate questions via FastAPI. Body: `{subject, difficulty, num_questions, time_per_question, study_text?}`. Returns `{room_code, …}` |
-| `POST` | `/api/clash/join/` | Join a waiting room. Body: `{room_code}`. Returns room info + participant list |
-| `GET`  | `/api/clash/{code}/` | Room detail — used by lobby on load |
-| `GET`  | `/api/clash/{code}/results/` | Final leaderboard after game ends |
+| Method | URL | Auth | Purpose |
+|---|---|---|---|
+| `POST` | `/api/clash/create/` | User | Create room, generate questions via FastAPI. Body: `{subject, difficulty, num_questions, time_per_question, study_text?}`. Returns `{room_code, …}` |
+| `POST` | `/api/clash/join/` | User | Join a waiting room. Body: `{room_code}`. Returns room info + participant list |
+| `GET`  | `/api/clash/my/` | User | Current user's finished Clash participations — used by user dashboard recent activity. Returns `{clashes: [{room_code, subject, difficulty, num_questions, score, rank, player_count, is_host, finished_at}]}` |
+| `GET`  | `/api/clash/{code}/` | User | Room detail — used by lobby on load |
+| `GET`  | `/api/clash/{code}/results/` | User | Final leaderboard after game ends |
+| `GET`  | `/api/clash/admin/` | Admin | All rooms newest-first with summary stats (room_code, subject, difficulty, participant count, winner, status, timestamps) |
+| `GET`  | `/api/clash/admin/{code}/` | Admin | Full detail for one room — metadata + full participant leaderboard (score, correct, accuracy, rank) |
 
 If `study_text` (≥ 50 chars) is provided, questions are generated from that material.
 Otherwise the subject/difficulty are used as the generation prompt.
+
+Admin endpoints require `is_staff=True` or `is_superuser=True` (checked in the view, not via the `IsAdminUser` DRF permission class used by the dashboard app).
 
 ---
 
@@ -128,7 +133,7 @@ Unauthenticated connections are rejected with close code `4001`.
 | `type` | Payload | Who |
 |---|---|---|
 | `start_game` | `{}` | Host only — triggers countdown + game loop |
-| `submit_answer` | `{question_index, answer, elapsed_ms}` | Any player |
+| `submit_answer` | `{question_index, answer}` | Any player — `answer` is a letter (`"A"`–`"D"`) |
 
 ### Server → All in Room (group_send)
 
@@ -164,11 +169,11 @@ WAITING
   asyncio.sleep(3)  — countdown
   ↓
 ACTIVE — question loop (asyncio task, keyed by room_code):
-  │  broadcast clash.new_question
-  │  poll every 0.5s → break early if all answered
+  │  broadcast clash.new_question  (records question_start_time in Redis)
+  │  poll every 1.0s → break early if all answered
   │  timer expires (time_per_question + 1s grace)
   │  broadcast clash.question_ended
-  │  asyncio.sleep(3)  — answer reveal pause
+  │  asyncio.sleep(10)  — answer reveal pause (read explanation + leaderboard)
   │  … next question
   │
   │  last question done
@@ -197,6 +202,8 @@ points           = BASE_POINTS + int(SPEED_BONUS_MAX * time_ratio)  # if correct
 - Correct answer: **1000 + up to 500 speed bonus = max 1500 pts per question**
 - Wrong or no answer: **0 pts**
 - Scores accumulate across all questions
+
+Elapsed time is computed **server-side** from `question_start_time` stored in Redis at the moment the question is broadcast. Client-supplied timing is never trusted.
 
 ---
 
@@ -228,8 +235,10 @@ remaining players.
 
 | Key | Value |
 |---|---|
-| `clash_state_{room_code}` | `{status, current_question, answered{}, scores{}, question_start_time, ended_question}` |
+| `clash_state_{room_code}` | `{status, current_question, answered{}, scores{}, question_start_time, ended_question, user_answers{}}` |
 | `clash_presence_{room_code}` | `{user_id: username}` — online player map |
+
+`user_answers` accumulates `{user_id: [{q_idx, correct, points}]}` throughout the game and is written to `ClashParticipant.answers` when `_save_final_scores` runs at game end.
 
 ---
 
@@ -256,6 +265,24 @@ All Clash routes require authentication.
 | Player joins mid-game | Receives `game_catchup` event with current question and remaining time. |
 | Room code collision | `_generate_room_code()` is retried until unique (6-char uppercase+digits = ~2 billion combinations). |
 | LLM generation fails | Room creation returns an error before any WebSocket connection. No zombie rooms. |
+
+---
+
+## Admin Dashboard
+
+Admins can inspect every Clash session via two dedicated pages inside `AdminAppShell`:
+
+| Route | Component | Shows |
+|---|---|---|
+| `/admin-dashboard/clashes` | `AdminClash` | Table of all rooms — code, subject, difficulty, player count, winner, status, created date |
+| `/admin-dashboard/clashes/:code` | `AdminClashDetail` | Room metadata grid + full leaderboard (rank medals, score, correct/total, accuracy badge, host tag) |
+
+Clash data is also integrated into the existing admin overview:
+
+- **Stat cards** — "Clashes" card (total finished rooms) replaces the old "Avg Score" card.
+- **Activity feed** (`Recent Real Activity` and `Activity Explorer`) — finished Clash sessions appear as `type: "clash"` events: *"hosted a Clash on 'Cell Biology' (8 players, medium)"*.
+- **Usage Analytics chart (14 days)** — purple "Clashes" line, using `finished_at` date.
+- **Estimated Token Usage** — "Clash" tile for questions JSON character volume; included in Total.
 
 ---
 

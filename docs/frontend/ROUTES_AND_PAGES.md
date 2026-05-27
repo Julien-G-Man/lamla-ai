@@ -49,6 +49,8 @@ Source of truth: `frontend/src/App.jsx`.
 | `/admin-dashboard/user/:id` | AdminUserDetails |
 | `/admin-dashboard/activity` | AdminActivity |
 | `/admin-dashboard/ratings` | AdminRatings |
+| `/admin-dashboard/clashes` | AdminClash |
+| `/admin-dashboard/clashes/:code` | AdminClashDetail |
 
 Admin pages use `AdminAppShell`, which keeps the shared authenticated top navbar and an admin-styled sidebar.
 

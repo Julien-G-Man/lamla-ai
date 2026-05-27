@@ -17,6 +17,8 @@ The frontend now uses route-based admin pages under `/admin-dashboard/*` instead
 - `/admin-dashboard/settings` - System settings and feature toggles
 - `/admin-dashboard/activity` - Activity feed explorer
 - `/admin-dashboard/ratings` - Quiz ratings history
+- `/admin-dashboard/clashes` - All Clash sessions table
+- `/admin-dashboard/clashes/:code` - Individual Clash detail (leaderboard, player stats)
 - `/admin-dashboard/user/:id` - User analytics detail page
 - `/admin-dashboard/profile` - Admin profile page (same profile form, admin shell)
 
@@ -27,6 +29,39 @@ All admin endpoints require `IsAdminUser` permission (authenticated + `is_admin=
 ---
 
 ## User Dashboard
+
+### Recent Activity
+
+The user dashboard merges four activity sources into a single chronological list (newest first, limited to 6 items):
+
+| Source | API called | Display |
+|---|---|---|
+| Quizzes | `GET /api/quiz/history/` | Subject · `Score: N%` · date; `N%` badge on right |
+| Flashcard decks | `GET /api/flashcards/history/` | Title · `N cards` · date |
+| Uploaded materials | `GET /api/materials/mine/` | Title · size + downloads · date |
+| Clash games | `GET /api/clash/my/` | Subject · `N players · NQ` · date; `#rank of N` / `N pts` on right |
+
+Clash items only appear for **finished** rooms. The `GET /api/clash/my/` endpoint returns:
+
+```json
+{
+  "clashes": [
+    {
+      "room_code": "AB12CD",
+      "subject": "Cell Biology",
+      "difficulty": "medium",
+      "num_questions": 10,
+      "score": 9500,
+      "rank": 2,
+      "player_count": 8,
+      "is_host": false,
+      "finished_at": "2026-05-28T14:30:00Z"
+    }
+  ]
+}
+```
+
+---
 
 ### `GET /api/dashboard/stats/`
 
@@ -115,6 +150,7 @@ Retrieve system-wide statistics.
   "total_flashcards": 8900,
   "total_chat_sessions": 2100,
   "total_chat_messages": 42000,
+  "total_clashes": 87,
   "avg_quizzes_per_user": 4.34,
   "avg_chats_per_user": 1.68,
   "activity_24h": {
@@ -124,6 +160,7 @@ Retrieve system-wide statistics.
     "flashcards": 120,
     "chat_messages": 350,
     "uploaded_materials": 5,
+    "clashes": 3,
     "anonymous_api_hits": 64
   },
   "unauthenticated_usage_24h": {
@@ -145,7 +182,8 @@ Retrieve system-wide statistics.
     "chat": 10500000,
     "quiz": 10800000,
     "flashcards": 2225000,
-    "total": 23525000,
+    "clash": 435000,
+    "total": 23960000,
     "method": "chars_div_4_estimate",
     "note": "Approximation only. Provider billing tokens may differ."
   }
@@ -174,7 +212,8 @@ Retrieve usage trends over a specified period.
     "quizzes": [32, 45],
     "decks": [7, 10],
     "chat_messages": [250, 340],
-    "uploaded_materials": [2, 3]
+    "uploaded_materials": [2, 3],
+    "clashes": [1, 2]
   }
 }
 ```
@@ -197,24 +236,34 @@ Retrieve system-wide activity feed with flexible filtering.
 **Response (200 OK):**
 ```json
 {
-  "activity": [
+  "activities": [
     {
       "type": "quiz",
-      "text": "user_456 completed a History quiz (92%)",
+      "actor": "user_456",
+      "text": "completed a History quiz (92%)",
       "created_at": "2025-01-15T10:30:00Z"
     },
     {
       "type": "flashcards",
-      "text": "user_789 created flashcard deck 'French Vocabulary'",
+      "actor": "user_789",
+      "text": "created flashcard deck 'French Vocabulary' (Languages)",
       "created_at": "2025-01-15T09:15:00Z"
     },
     {
-      "type": "chat",
-      "text": "user_123 chat session (18 messages)",
+      "type": "clash",
+      "actor": "user_123",
+      "text": "hosted a Clash on 'Cell Biology' (8 players, medium)",
       "created_at": "2025-01-15T08:45:00Z"
     }
   ],
-  "total": 1250,
+  "total": 1253,
+  "counts": {
+    "quiz": 540,
+    "flashcards": 120,
+    "chat": 580,
+    "material": 10,
+    "clash": 3
+  },
   "period": "week"
 }
 ```

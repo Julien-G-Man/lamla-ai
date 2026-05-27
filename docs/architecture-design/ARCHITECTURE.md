@@ -184,12 +184,12 @@ across the host's disconnect/reconnect within the same worker process.
 ```
 countdown (asyncio.sleep 3s)
 → for each question:
-    broadcast clash.new_question
-    poll every 0.5s — break if all answered or timer expires
+    broadcast clash.new_question  (records question_start_time in Redis)
+    poll every 1.0s — break if all answered or timer expires
     broadcast clash.question_ended  (answer + explanation + top3)
-    asyncio.sleep(3s)  — reveal pause
+    asyncio.sleep(10s)  — reveal pause (read answer + leaderboard)
 → broadcast clash.game_finished
-→ persist scores + ranks to DB
+→ persist scores, ranks, and per-question answers to DB
 ```
 
 Participant count is re-fetched at the start of each question iteration so
@@ -232,3 +232,6 @@ correct answer → BASE_POINTS (1000) + SPEED_BONUS_MAX (500) × (1 − elapsed/
 wrong / no answer → 0
 max per question → 1500 pts
 ```
+
+`elapsed` is computed server-side from `question_start_time` stored in Redis when the
+question is broadcast. The client never supplies timing — `elapsed_ms` is not accepted.
