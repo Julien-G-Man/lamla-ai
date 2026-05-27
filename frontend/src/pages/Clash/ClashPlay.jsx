@@ -58,7 +58,6 @@ export default function ClashPlay() {
 
   const wsRef = useRef(null);
   const timerRef = useRef(null);
-  const answerStartRef = useRef(null);
   const phaseRef = useRef("connecting");
 
   function startTimer(totalSecs, remainingSecs) {
@@ -125,7 +124,6 @@ export default function ClashPlay() {
           setFeedback(null);
           setReveal(null);
           setPhase("question"); phaseRef.current = "question";
-          answerStartRef.current = Date.now();
 
           if (msg.type === "game_catchup") {
             const tpq = msg.time_limit ?? timePerQuestion;
@@ -182,10 +180,9 @@ export default function ClashPlay() {
 
   function submitAnswer(answer) {
     if (phaseRef.current !== "question") return;
-    const elapsed_ms = answerStartRef.current ? Math.round(Date.now() - answerStartRef.current) : 0;
     setSelectedAnswer(answer);
     setPhase("answered"); phaseRef.current = "answered";
-    wsRef.current?.send(JSON.stringify({ type: "submit_answer", question_index: qIndex, answer, elapsed_ms }));
+    wsRef.current?.send(JSON.stringify({ type: "submit_answer", question_index: qIndex, answer }));
   }
 
   const timerPct = timeLimit > 0 ? Math.min(100, (timeRemaining / timeLimit) * 100) : 0;
@@ -248,11 +245,12 @@ export default function ClashPlay() {
 
           <div className="clash-options-grid">
             {qOptions.map((opt, i) => {
+              const letter = LETTERS[i];
               let cls = "clash-option-btn";
               if (showReveal && correctAns) {
-                if (opt === correctAns)               cls += " correct";
-                else if (opt === selectedAnswer)      cls += " incorrect";
-              } else if (opt === selectedAnswer) {
+                if (letter === correctAns)            cls += " correct";
+                else if (letter === selectedAnswer)   cls += " incorrect";
+              } else if (letter === selectedAnswer) {
                 cls += " selected";
               }
               return (
@@ -260,9 +258,9 @@ export default function ClashPlay() {
                   key={i}
                   className={cls}
                   disabled={phase !== "question"}
-                  onClick={() => submitAnswer(opt)}
+                  onClick={() => submitAnswer(letter)}
                 >
-                  <span className="clash-option-letter">{LETTERS[i]}</span>
+                  <span className="clash-option-letter">{letter}</span>
                   {opt}
                 </button>
               );

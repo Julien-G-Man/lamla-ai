@@ -31,7 +31,7 @@ BASE_POINTS = 1000
 SPEED_BONUS_MAX = 500
 COUNTDOWN_SECONDS = 3
 ANSWER_REVEAL_SECONDS = 3   # pause between question end and next question
-POLL_INTERVAL = 0.5         # how often the game loop checks if all answered
+POLL_INTERVAL = 1.0         # how often the game loop checks if all answered
 
 
 class ClashConsumer(AsyncJsonWebsocketConsumer):
@@ -77,7 +77,10 @@ class ClashConsumer(AsyncJsonWebsocketConsumer):
         self.connected = True
 
         await self._set_presence(True)
-        await self._broadcast_lobby()
+        # Only broadcast lobby updates while in the waiting room; during an
+        # active game everyone is on the play screen, not the lobby.
+        if self.room.status == ClashRoom.WAITING:
+            await self._broadcast_lobby()
 
         # If game is already running, immediately catch up this player
         if self.room.status == ClashRoom.ACTIVE:
@@ -104,7 +107,8 @@ class ClashConsumer(AsyncJsonWebsocketConsumer):
         self.connected = False
         if self.user:
             await self._set_presence(False)
-            await self._broadcast_lobby()
+            if self.room and self.room.status == ClashRoom.WAITING:
+                await self._broadcast_lobby()
 
         await self.channel_layer.group_discard(self.group_name, self.channel_name)
 
@@ -158,7 +162,6 @@ class ClashConsumer(AsyncJsonWebsocketConsumer):
 
         q_idx = content.get('question_index')
         answer = str(content.get('answer', '')).strip()
-        elapsed_ms = int(content.get('elapsed_ms', 0))
 
         # Reject stale / out-of-order answers
         if q_idx != state.get('current_question'):
@@ -175,8 +178,11 @@ class ClashConsumer(AsyncJsonWebsocketConsumer):
         correct_answer = questions[q_idx].get('answer', '').strip()
         is_correct = answer.lower() == correct_answer.lower()
 
-        # Scoring
-        elapsed_s = min(elapsed_ms / 1000.0, self.room.time_per_question)
+        # Elapsed time computed server-side from the recorded question start timestamp.
+        # Never trust client-supplied elapsed_ms — a cheating client could send 0
+        # to always claim the maximum speed bonus.
+        question_start = state.get('question_start_time', time.time())
+        elapsed_s = min(time.time() - question_start, self.room.time_per_question)
         points = 0
         if is_correct:
             time_ratio = max(0.0, 1.0 - elapsed_s / self.room.time_per_question)
