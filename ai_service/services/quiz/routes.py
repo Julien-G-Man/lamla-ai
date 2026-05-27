@@ -27,10 +27,25 @@ async def quiz_endpoint(payload: QuizRequest):
     """
     Internal FastAPI endpoint used by Django to generate quizzes via LLM.
     """
+    print(
+        "quiz_endpoint start:",
+        {
+            "subject": payload.subject,
+            "num_mcq": payload.num_mcq,
+            "num_short": payload.num_short,
+            "difficulty": payload.difficulty,
+        },
+    )
+
     if ai_client is None:
+        print("quiz_endpoint ai_client unavailable")
         raise HTTPException(status_code=503, detail="AI service not available")
 
     normalized_study_text = _normalize_study_text(payload.study_text)
+    print(
+        "quiz_endpoint normalized study text:",
+        {"subject": payload.subject, "chars": len(normalized_study_text)},
+    )
     prompt_payload = QuizRequest(
         subject=payload.subject,
         study_text=normalized_study_text,
@@ -44,11 +59,16 @@ async def quiz_endpoint(payload: QuizRequest):
         # Scale max_tokens with quiz size: each MCQ needs ~120 tokens, short ~80.
         # Add 512 overhead for JSON structure. Floor at 2048, cap at 8192.
         estimated_tokens = max(2048, min(8192, (payload.num_mcq * 120) + (payload.num_short * 80) + 512))
+        print(
+            "quiz_endpoint token estimate:",
+            {"subject": payload.subject, "estimated_tokens": estimated_tokens},
+        )
 
         data = None
         client = await get_async_client()
         raw = await ai_client.generate_content(client, prompt, max_tokens=estimated_tokens, timeout=60)
 
+        print("quiz_endpoint raw response type:", type(raw).__name__)
         logger.debug("Quiz provider returned type: %s", type(raw).__name__)
 
         if isinstance(raw, dict):
@@ -56,6 +76,10 @@ async def quiz_endpoint(payload: QuizRequest):
                 # Azure response format – extract content string from choices
                 try:
                     content_str = _as_text(raw["choices"][0].get("message", {}).get("content"))
+                    print(
+                        "quiz_endpoint azure content preview:",
+                        {"subject": payload.subject, "preview": content_str[:120]},
+                    )
                     logger.debug("Extracted Azure content (first 100): %s", content_str[:100])
                     data = _parse_json_safe(content_str, provider_hint="Azure")
                     if data is None:
@@ -74,18 +98,29 @@ async def quiz_endpoint(payload: QuizRequest):
                             )
                             data = _parse_json_safe(repair_text, provider_hint="Azure-repair")
                         except Exception as repair_exc:
+                            print("quiz_endpoint azure repair failed:", repair_exc)
                             logger.warning("Azure repair attempt failed: %s", repair_exc)
                     if data is None:
+                        print("quiz_endpoint azure parsing failed")
                         raise HTTPException(status_code=502, detail="Failed to parse Azure response")
                 except (KeyError, IndexError) as e:
+                    print("quiz_endpoint malformed azure choices structure:", e)
                     logger.error("Malformed Azure choices structure: %s", e)
                     raise HTTPException(status_code=502, detail="Failed to parse Azure response")
             else:
                 # Already a parsed dict (e.g. DeepSeek / Gemini returning clean JSON)
                 data = raw
+                print(
+                    "quiz_endpoint parsed dict response:",
+                    {"subject": payload.subject, "keys": list(data.keys()) if isinstance(data, dict) else []},
+                )
         else:
             # String response – strip fences then parse
             raw_text = str(raw)
+            print(
+                "quiz_endpoint string response preview:",
+                {"subject": payload.subject, "preview": raw_text[:120]},
+            )
             data = _parse_json_safe(raw_text)
             if data is None:
                 try:
@@ -102,8 +137,10 @@ async def quiz_endpoint(payload: QuizRequest):
                     )
                     data = _parse_json_safe(repair_text, provider_hint="repair")
                 except Exception as repair_exc:
+                    print("quiz_endpoint repair failed:", repair_exc)
                     logger.warning("Repair attempt failed: %s", repair_exc)
             if data is None:
+                print("quiz_endpoint invalid quiz format from provider")
                 raise HTTPException(status_code=502, detail="Invalid quiz format from AI provider")
 
         # Validate response structure
@@ -115,7 +152,17 @@ async def quiz_endpoint(payload: QuizRequest):
         if not isinstance(short_questions, list):
             short_questions = []
 
+        print(
+            "quiz_endpoint parsed question counts:",
+            {
+                "subject": payload.subject,
+                "mcq_questions": len(mcq_questions),
+                "short_questions": len(short_questions),
+            },
+        )
+
         if not mcq_questions and not short_questions:
+            print("quiz_endpoint returned no questions:", {"subject": payload.subject, "data": data})
             logger.warning("Quiz response has no questions. Data: %s", data)
             raise HTTPException(
                 status_code=502,
@@ -139,6 +186,24 @@ async def quiz_endpoint(payload: QuizRequest):
         normalized_short = [
             norm for q in short_questions if (norm := normalize_question(q, "short"))
         ]
+
+        print(
+            "quiz_endpoint normalized questions:",
+            {
+                "subject": payload.subject,
+                "mcq_questions": len(normalized_mcq),
+                "short_questions": len(normalized_short),
+            },
+        )
+
+        print(
+            "quiz_endpoint success:",
+            {
+                "subject": payload.subject,
+                "num_mcq": len(normalized_mcq),
+                "num_short": len(normalized_short),
+            },
+        )
 
         return {
             "subject": payload.subject,

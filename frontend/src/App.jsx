@@ -36,6 +36,10 @@ import MaterialUpload from "./pages/Materials/MaterialUpload";
 import NotFound from "./pages/NotFound/NotFound";
 import Donate from "./pages/Donate/Donate";
 import DonateThankyou from "./pages/Donate/DonateThankyou";
+import ClashCreate from "./pages/Clash/ClashCreate";
+import ClashLobby from "./pages/Clash/ClashLobby";
+import ClashPlay from "./pages/Clash/ClashPlay";
+import ClashResults from "./pages/Clash/ClashResults";
 
 const WAKE_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -109,6 +113,12 @@ function App() {
             <Route path="/ai" element={<Navigate to="/ai-tutor" replace />} />
             <Route path="/chat" element={<Navigate to="/ai-tutor" replace />} />
             <Route path="/chatbot" element={<Navigate to="/ai-tutor" replace />} />
+
+            <Route path="/clash" element={<ClashCreate />} />
+            <Route path="/clash/lobby/:code" element={<ClashLobby />} />
+            <Route path="/clash/play/:code" element={<ClashPlay />} />
+            <Route path="/clash/results/:code" element={<ClashResults />} />
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Router>
