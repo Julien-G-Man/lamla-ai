@@ -285,16 +285,15 @@ export default function ClashCreate() {
                   <option value={20}>20</option>
                 </select>
               </div>
-            </div>
-
-            <div className="clash-field">
-              <label htmlFor="cc-time">Time per Question</label>
-              <select id="cc-time" value={timePerQuestion} onChange={e => setTimePerQuestion(Number(e.target.value))} disabled={loading}>
-                <option value={10}>10 seconds — Fast</option>
-                <option value={15}>15 seconds</option>
-                <option value={20}>20 seconds — Standard</option>
-                <option value={30}>30 seconds — Relaxed</option>
-              </select>
+              <div className="clash-field">
+                <label htmlFor="cc-time">Time per Question</label>
+                <select id="cc-time" value={timePerQuestion} onChange={e => setTimePerQuestion(Number(e.target.value))} disabled={loading}>
+                  <option value={10}>10s — Fast</option>
+                  <option value={15}>15s</option>
+                  <option value={20}>20s — Standard</option>
+                  <option value={30}>30s — Relaxed</option>
+                </select>
+              </div>
             </div>
 
             <button className="clash-btn-primary" type="submit" disabled={loading || isExtracting}>

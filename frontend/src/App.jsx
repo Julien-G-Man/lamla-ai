@@ -40,6 +40,8 @@ import ClashCreate from "./pages/Clash/ClashCreate";
 import ClashLobby from "./pages/Clash/ClashLobby";
 import ClashPlay from "./pages/Clash/ClashPlay";
 import ClashResults from "./pages/Clash/ClashResults";
+import AdminClash from "./pages/Dashboards/AdminClash";
+import AdminClashDetail from "./pages/Dashboards/AdminClashDetail";
 
 const WAKE_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -88,6 +90,8 @@ function App() {
             <Route path="/admin-dashboard/user/:id" element={<AdminUserDetails />} />
             <Route path="/admin-dashboard/activity" element={<AdminActivity />} />
             <Route path="/admin-dashboard/ratings" element={<AdminRatings />} />
+            <Route path="/admin-dashboard/clashes" element={<AdminClash />} />
+            <Route path="/admin-dashboard/clashes/:code" element={<AdminClashDetail />} />
             <Route path="/profile" element={<Profile />} />
 
             <Route path="/quiz" element={<QuizHistory />} />

@@ -33,6 +33,11 @@ export const dashboardService = {
     return res.data.history;
   },
 
+  getClashHistory: async () => {
+    const res = await djangoApi.get('/clash/my/');
+    return res.data.clashes;
+  },
+
   getChatHistory: async () => {
     const res = await djangoApi.get('/chatbot/history/');
     return res.data.history;

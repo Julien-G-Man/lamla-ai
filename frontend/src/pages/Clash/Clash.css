@@ -375,7 +375,7 @@
 }
 
 .clash-panel-single {
-  max-width: 520px;
+  width: 100%;
 }
 
 /* ── Source material tabs (mirrors CreateQuiz tab-group style) ── */
@@ -547,8 +547,12 @@
 
 .clash-fields-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
+}
+
+@media (max-width: 540px) {
+  .clash-fields-row { grid-template-columns: 1fr 1fr; }
 }
 
 /* Join panel — make code input visually prominent */
@@ -1321,7 +1325,6 @@
   .clash-panels          { grid-template-columns: 1fr; }
   .clash-play-layout     { grid-template-columns: 1fr; }
   .clash-play-sidebar    { position: static; }
-  .clash-fields-row      { grid-template-columns: 1fr; }
 
   .clash-create-page,
   .clash-lobby-page,

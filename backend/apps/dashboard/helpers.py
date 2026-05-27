@@ -87,10 +87,11 @@ def _admin_activity_actor(user_obj):
 
 
 def _collect_admin_activity(start_at=None, limit=50, offset=0):
-    """Build merged activity timeline from quiz, flashcards, chat sessions, and materials."""
+    """Build merged activity timeline from quiz, flashcards, chat sessions, materials, and clashes."""
     from apps.flashcards.models import Deck
     from apps.materials.models import Material
     from apps.chatbot.models import ChatSession
+    from apps.clash.models import ClashRoom
 
     limit = max(1, min(int(limit or 50), 200))
     offset = max(0, int(offset or 0))
@@ -102,12 +103,16 @@ def _collect_admin_activity(start_at=None, limit=50, offset=0):
     decks_qs = Deck.objects.select_related("user")
     chats_qs = ChatSession.objects.select_related("user").annotate(message_count=dm.Count("messages"))
     materials_qs = Material.objects.select_related("uploaded_by")
+    clashes_qs = ClashRoom.objects.select_related("host").annotate(
+        participant_count=dm.Count("participants")
+    ).filter(status=ClashRoom.FINISHED)
 
     if start_at is not None:
         quizzes_qs = quizzes_qs.filter(created_at__gte=start_at)
         decks_qs = decks_qs.filter(created_at__gte=start_at)
         chats_qs = chats_qs.filter(created_at__gte=start_at)
         materials_qs = materials_qs.filter(created_at__gte=start_at)
+        clashes_qs = clashes_qs.filter(finished_at__gte=start_at)
 
     for quiz in quizzes_qs.order_by("-created_at")[:fetch_size]:
         subject = quiz.subject or "General"
@@ -153,6 +158,17 @@ def _collect_admin_activity(start_at=None, limit=50, offset=0):
             }
         )
 
+    for clash in clashes_qs.order_by("-finished_at")[:fetch_size]:
+        n = int(getattr(clash, "participant_count", 0) or 0)
+        recent_activity.append(
+            {
+                "type": "clash",
+                "actor": _admin_activity_actor(clash.host),
+                "text": f"hosted a Clash on '{clash.subject}' ({n} player{'s' if n != 1 else ''}, {clash.difficulty})",
+                "created_at": clash.finished_at,
+            }
+        )
+
     recent_activity.sort(key=lambda item: item["created_at"], reverse=True)
 
     counts_by_type = {
@@ -160,6 +176,7 @@ def _collect_admin_activity(start_at=None, limit=50, offset=0):
         "flashcards": 0,
         "chat": 0,
         "material": 0,
+        "clash": 0,
     }
     for item in recent_activity:
         item_type = item.get("type")

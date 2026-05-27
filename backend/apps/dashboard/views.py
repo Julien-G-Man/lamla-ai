@@ -82,6 +82,7 @@ class AdminDashboardStatsView(APIView):
         from apps.accounts.models import User
         from apps.flashcards.models import Deck, Flashcard
         from apps.materials.models import Material
+        from apps.clash.models import ClashRoom, ClashParticipant
 
         now = timezone.now()
         day_ago = now - datetime.timedelta(days=1)
@@ -116,6 +117,18 @@ class AdminDashboardStatsView(APIView):
             }
             for row in QuizExperienceRating.objects.select_related('user').order_by('-created_at')[:20]
         ]
+
+        # Clash stats
+        total_clashes = ClashRoom.objects.filter(status=ClashRoom.FINISHED).count()
+        clashes_24h = ClashRoom.objects.filter(
+            status=ClashRoom.FINISHED, finished_at__gte=day_ago
+        ).count()
+
+        clash_questions_chars = _safe_char_sum(
+            ClashRoom.objects.filter(status=ClashRoom.FINISHED),
+            Length(Cast('questions', output_field=TextField()))
+        )
+        estimated_tokens_clash = _tokens_from_chars(clash_questions_chars)
 
         # 24h activity
         quizzes_24h = QuizSession.objects.filter(created_at__gte=day_ago).count()
@@ -161,7 +174,8 @@ class AdminDashboardStatsView(APIView):
         estimated_tokens_total = (
             estimated_tokens_chat +
             estimated_tokens_flashcards +
-            estimated_tokens_quiz
+            estimated_tokens_quiz +
+            estimated_tokens_clash
         )
 
         avg_quizzes_per_user = round((quiz_stats['total'] or 0) / max(total_users, 1), 2)
@@ -180,6 +194,7 @@ class AdminDashboardStatsView(APIView):
             'total_flashcards': total_flashcards,
             'total_chat_sessions': total_chat_sessions,
             'total_chat_messages': total_chat_messages,
+            'total_clashes': total_clashes,
             'average_score': round(float(quiz_stats['avg'] or 0), 1),
             'total_ratings': int(feedback_stats.get('total') or 0),
             'average_experience_rating': round(float(feedback_stats.get('average') or 0), 2),
@@ -193,6 +208,7 @@ class AdminDashboardStatsView(APIView):
                 'flashcards': cards_24h,
                 'chat_messages': chat_messages_24h,
                 'uploaded_materials': materials_24h,
+                'clashes': clashes_24h,
                 'anonymous_api_hits': anonymous_usage_24h,
             },
             'unauthenticated_usage_24h': {
@@ -208,6 +224,7 @@ class AdminDashboardStatsView(APIView):
                 'chat': estimated_tokens_chat,
                 'quiz': estimated_tokens_quiz,
                 'flashcards': estimated_tokens_flashcards,
+                'clash': estimated_tokens_clash,
                 'total': estimated_tokens_total,
                 'method': 'chars_div_4_estimate',
                 'note': 'Approximation only. Provider billing tokens may differ.',
@@ -224,6 +241,7 @@ class AdminUsageTrendsView(APIView):
         from apps.accounts.models import User
         from apps.flashcards.models import Deck
         from apps.materials.models import Material
+        from apps.clash.models import ClashRoom
 
         try:
             days = int(request.query_params.get("days", 14))
@@ -249,6 +267,9 @@ class AdminUsageTrendsView(APIView):
         decks_map = _series(Deck.objects.all(), "created_at")
         chats_map = _series(ChatMessage.objects.all(), "created_at")
         materials_map = _series(Material.objects.all(), "created_at")
+        clashes_map = _series(
+            ClashRoom.objects.filter(status=ClashRoom.FINISHED), "finished_at"
+        )
 
         labels = []
         users = []
@@ -256,6 +277,7 @@ class AdminUsageTrendsView(APIView):
         decks = []
         chats = []
         materials = []
+        clashes = []
         for offset in range(days):
             day = start_day + datetime.timedelta(days=offset)
             labels.append(day.isoformat())
@@ -264,6 +286,7 @@ class AdminUsageTrendsView(APIView):
             decks.append(decks_map.get(day, 0))
             chats.append(chats_map.get(day, 0))
             materials.append(materials_map.get(day, 0))
+            clashes.append(clashes_map.get(day, 0))
 
         return Response(
             {
@@ -275,6 +298,7 @@ class AdminUsageTrendsView(APIView):
                     "decks": decks,
                     "chat_messages": chats,
                     "uploaded_materials": materials,
+                    "clashes": clashes,
                 },
             }
         )

@@ -21,6 +21,7 @@ const typeLabel = {
   flashcards: 'Flashcards',
   chat: 'Chats',
   material: 'Materials',
+  clash: 'Clashes',
 };
 
 const formatRelativeTime = (isoDate) => {
@@ -88,6 +89,7 @@ const AdminActivity = () => {
       { label: typeLabel.flashcards, value: counts.flashcards ?? 0 },
       { label: typeLabel.chat, value: counts.chat ?? 0 },
       { label: typeLabel.material, value: counts.material ?? 0 },
+      { label: typeLabel.clash, value: counts.clash ?? 0 },
     ];
   }, [payload]);
 

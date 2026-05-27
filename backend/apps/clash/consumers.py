@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 BASE_POINTS = 1000
 SPEED_BONUS_MAX = 500
 COUNTDOWN_SECONDS = 3
-ANSWER_REVEAL_SECONDS = 3   # pause between question end and next question
+ANSWER_REVEAL_SECONDS = 10  # pause between question end and next question
 POLL_INTERVAL = 1.0         # how often the game loop checks if all answered
 
 
@@ -191,6 +191,12 @@ class ClashConsumer(AsyncJsonWebsocketConsumer):
         # Atomic-ish update in Redis
         state['answered'][user_id] = {'correct': is_correct, 'points': points}
         state['scores'][user_id] = state['scores'].get(user_id, 0) + points
+
+        ua = state.setdefault('user_answers', {})
+        if user_id not in ua:
+            ua[user_id] = []
+        ua[user_id].append({'q_idx': q_idx, 'correct': is_correct, 'points': points})
+
         await self._set_state(state)
 
         # Private confirmation — only this player sees this
@@ -285,7 +291,7 @@ class ClashConsumer(AsyncJsonWebsocketConsumer):
         ranking = await self._build_ranking(scores)
 
         # Persist final scores
-        await self._save_final_scores(scores, ranking)
+        await self._save_final_scores(scores, ranking, state)
 
         self.room.status = ClashRoom.FINISHED
         self.room.finished_at = timezone.now()
@@ -353,6 +359,7 @@ class ClashConsumer(AsyncJsonWebsocketConsumer):
             'answered': {},
             'scores': {},
             'ended_question': -1,
+            'user_answers': {},   # {user_id: [{q_idx, correct, points}]}
         }
         await sync_to_async(cache.set)(self._state_key(), state, timeout=7200)
 
@@ -410,8 +417,9 @@ class ClashConsumer(AsyncJsonWebsocketConsumer):
             entry['rank'] = i + 1
         return ranking
 
-    async def _save_final_scores(self, scores: dict, ranking: list):
+    async def _save_final_scores(self, scores: dict, ranking: list, state: dict = None):
         rank_map = {e['user_id']: e['rank'] for e in ranking}
+        user_answers_map = (state or {}).get('user_answers', {})
         participants = await sync_to_async(list)(
             ClashParticipant.objects.filter(room=self.room)
         )
@@ -419,6 +427,7 @@ class ClashConsumer(AsyncJsonWebsocketConsumer):
             uid = str(p.user_id)
             p.score = scores.get(uid, 0)
             p.rank = rank_map.get(uid)
+            p.answers = user_answers_map.get(uid, [])
         await sync_to_async(
             ClashParticipant.objects.bulk_update
-        )(participants, ['score', 'rank'])
+        )(participants, ['score', 'rank', 'answers'])

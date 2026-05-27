@@ -224,6 +224,139 @@ async def room_info(request, room_code):
 
 @csrf_exempt
 @require_http_methods(["GET"])
+async def my_clashes(request):
+    """Current user's finished Clash participations, newest first."""
+    user, err = await _authenticate(request)
+    if err:
+        return err
+
+    participations = await sync_to_async(list)(
+        ClashParticipant.objects
+        .filter(user=user, room__status=ClashRoom.FINISHED)
+        .select_related('room', 'room__host')
+        .order_by('-room__finished_at')
+    )
+
+    # Total participants per room (need one extra query per room — batch it)
+    room_ids = [p.room_id for p in participations]
+    counts_qs = await sync_to_async(list)(
+        ClashParticipant.objects
+        .filter(room_id__in=room_ids)
+        .values('room_id')
+    )
+    from collections import Counter
+    player_counts = Counter(c['room_id'] for c in counts_qs)
+
+    return JsonResponse({
+        "clashes": [
+            {
+                "room_code": p.room.room_code,
+                "subject": p.room.subject,
+                "difficulty": p.room.difficulty,
+                "num_questions": p.room.num_questions,
+                "score": p.score,
+                "rank": p.rank,
+                "player_count": player_counts.get(p.room_id, 1),
+                "is_host": p.is_host,
+                "finished_at": p.room.finished_at.isoformat() if p.room.finished_at else None,
+            }
+            for p in participations
+        ]
+    })
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+async def admin_clash_list(request):
+    """Admin: list all Clash rooms with summary stats."""
+    user, err = await _authenticate(request)
+    if err:
+        return err
+    if not (user.is_staff or user.is_superuser):
+        return JsonResponse({"detail": "Admin access required."}, status=403)
+
+    rooms = await sync_to_async(list)(
+        ClashRoom.objects.select_related('host').prefetch_related('participants').order_by('-created_at')
+    )
+
+    results = []
+    for room in rooms:
+        participants = await sync_to_async(list)(
+            room.participants.select_related('user').order_by('rank', '-score')
+        )
+        winner = None
+        for p in participants:
+            if p.rank == 1:
+                winner = {"username": p.user.username, "display_name": p.display_name, "score": p.score}
+                break
+
+        results.append({
+            "room_code": room.room_code,
+            "subject": room.subject,
+            "difficulty": room.difficulty,
+            "num_questions": room.num_questions,
+            "time_per_question": room.time_per_question,
+            "status": room.status,
+            "host_username": room.host.username,
+            "participant_count": len(participants),
+            "winner": winner,
+            "created_at": room.created_at.isoformat(),
+            "started_at": room.started_at.isoformat() if room.started_at else None,
+            "finished_at": room.finished_at.isoformat() if room.finished_at else None,
+        })
+
+    return JsonResponse({"clashes": results})
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+async def admin_clash_detail(request, room_code):
+    """Admin: full detail for one Clash room."""
+    user, err = await _authenticate(request)
+    if err:
+        return err
+    if not (user.is_staff or user.is_superuser):
+        return JsonResponse({"detail": "Admin access required."}, status=403)
+
+    try:
+        room = await sync_to_async(
+            ClashRoom.objects.select_related('host').get
+        )(room_code=room_code.upper())
+    except ClashRoom.DoesNotExist:
+        return JsonResponse({"detail": "Room not found."}, status=404)
+
+    participants = await sync_to_async(list)(
+        room.participants.select_related('user').order_by('rank', '-score', 'joined_at')
+    )
+
+    return JsonResponse({
+        "room_code": room.room_code,
+        "subject": room.subject,
+        "difficulty": room.difficulty,
+        "num_questions": room.num_questions,
+        "time_per_question": room.time_per_question,
+        "status": room.status,
+        "host_username": room.host.username,
+        "created_at": room.created_at.isoformat(),
+        "started_at": room.started_at.isoformat() if room.started_at else None,
+        "finished_at": room.finished_at.isoformat() if room.finished_at else None,
+        "participants": [
+            {
+                "rank": p.rank,
+                "username": p.user.username,
+                "display_name": p.display_name,
+                "score": p.score,
+                "is_host": p.is_host,
+                "correct": sum(1 for a in (p.answers or []) if a.get("correct")),
+                "joined_at": p.joined_at.isoformat(),
+            }
+            for p in participants
+        ],
+    })
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
 async def clash_results(request, room_code):
     """Final leaderboard for a finished Clash."""
     user, err = await _authenticate(request)

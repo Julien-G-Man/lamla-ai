@@ -10,6 +10,7 @@ import {
   faTriangleExclamation,
   faTrophy,
   faBook,
+  faBolt,
 } from '@fortawesome/free-solid-svg-icons';
 import AdminAppShell from '../../components/AppShell/AdminAppShell';
 import { useAuth } from '../../context/AuthContext';
@@ -39,6 +40,7 @@ const AnalyticsLineChart = ({ labels = [], series = {} }) => {
     { id: 'decks', label: 'Decks', color: '#38bdf8' },
     { id: 'chat_messages', label: 'Chat Messages', color: '#0d2170' },
     { id: 'uploaded_materials', label: 'Materials', color: '#921e1e' },
+    { id: 'clashes', label: 'Clashes', color: '#a855f7' },
   ];
 
   const maxVal = Math.max(1, ...keys.flatMap((k) => series[k.id] || [0]));
@@ -156,11 +158,7 @@ export default function AdminOverview() {
     { icon: faFileAlt, label: 'Flashcard Decks', value: nfmt(adminStats.total_flashcard_decks) },
     { icon: faLayerGroup, label: 'Flashcards', value: nfmt(adminStats.total_flashcards) },
     { icon: faBook, label: 'Uploaded Materials', value: nfmt(adminStats.total_materials) },
-    {
-      icon: faTrophy,
-      label: 'Avg Score',
-      value: adminStats.average_score != null ? `${adminStats.average_score}%` : '0%',
-    },
+    { icon: faBolt, label: 'Clashes', value: nfmt(adminStats.total_clashes) },
     {
       icon: faTriangleExclamation,
       label: 'Anonymous API Hits (24h)',
@@ -235,6 +233,7 @@ export default function AdminOverview() {
             <div className="db-stat-card"><div className="db-stat-body"><p>Chat</p><h3>{nfmt(adminStats.estimated_tokens?.chat)}</h3></div></div>
             <div className="db-stat-card"><div className="db-stat-body"><p>Quiz</p><h3>{nfmt(adminStats.estimated_tokens?.quiz)}</h3></div></div>
             <div className="db-stat-card"><div className="db-stat-body"><p>Flashcards</p><h3>{nfmt(adminStats.estimated_tokens?.flashcards)}</h3></div></div>
+            <div className="db-stat-card"><div className="db-stat-body"><p>Clash</p><h3>{nfmt(adminStats.estimated_tokens?.clash)}</h3></div></div>
             <div className="db-stat-card"><div className="db-stat-body"><p>Total</p><h3>{nfmt(adminStats.estimated_tokens?.total)}</h3></div></div>
           </div>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginTop: 10 }}>

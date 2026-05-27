@@ -10,6 +10,7 @@ import {
   faLayerGroup,
   faRobot,
   faTrophy,
+  faBolt,
 } from '@fortawesome/free-solid-svg-icons';
 import './Dashboard.css';
 import { dashboardService } from '../../services/dashboard';
@@ -49,8 +50,9 @@ const Dashboard = () => {
       dashboardService.getQuizHistory(),
       dashboardService.getFlashcardHistory().catch(() => []),
       materialsService.getMine().catch(() => []),
+      dashboardService.getClashHistory().catch(() => []),
     ])
-      .then(([statsData, quizzes, flashcardDecks, materials]) => {
+      .then(([statsData, quizzes, flashcardDecks, materials, clashes]) => {
         setStats({
           totalQuizzes: statsData.total_quizzes,
           averageScore: statsData.average_score,
@@ -84,7 +86,18 @@ const Dashboard = () => {
           created_at: material.created_at,
         }));
 
-        const mergedActivity = [...quizActivity, ...deckActivity, ...materialActivity].sort(
+        const clashActivity = (clashes || []).map((c) => ({
+          id: `clash-${c.room_code}`,
+          type: 'clash',
+          title: c.subject,
+          subtitle: `${c.player_count} player${c.player_count !== 1 ? 's' : ''} · ${c.num_questions}Q`,
+          rank: c.rank,
+          score: c.score,
+          player_count: c.player_count,
+          created_at: c.finished_at,
+        }));
+
+        const mergedActivity = [...quizActivity, ...deckActivity, ...materialActivity, ...clashActivity].sort(
           (a, b) => new Date(b.created_at) - new Date(a.created_at)
         );
 
@@ -113,8 +126,18 @@ const Dashboard = () => {
     { icon: faRobot, title: 'AI Tutor', desc: 'Get instant personalised help', path: '/ai-tutor' },
   ];
 
-  const activityIcon = (type) => (type === 'quiz' ? faBook : type === 'material' ? faCloudUploadAlt : faLayerGroup);
-  const activityLabel = (type) => (type === 'quiz' ? 'Quiz' : type === 'material' ? 'Material uploaded' : 'Flashcards');
+  const activityIcon = (type) => {
+    if (type === 'quiz') return faBook;
+    if (type === 'material') return faCloudUploadAlt;
+    if (type === 'clash') return faBolt;
+    return faLayerGroup;
+  };
+  const activityLabel = (type) => {
+    if (type === 'quiz') return 'Quiz';
+    if (type === 'material') return 'Material uploaded';
+    if (type === 'clash') return 'Clash';
+    return 'Flashcards';
+  };
 
   return (
     <AppShell>
@@ -215,6 +238,16 @@ const Dashboard = () => {
                     </div>
                     {item.type === 'quiz' && item.score != null && (
                       <span className="db-activity-score">{item.score}%</span>
+                    )}
+                    {item.type === 'clash' && item.rank != null && (
+                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <div className="db-activity-score" style={{ display: 'block' }}>
+                          #{item.rank} of {item.player_count}
+                        </div>
+                        <div style={{ fontSize: '0.75em', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                          {item.score.toLocaleString()} pts
+                        </div>
+                      </div>
                     )}
                   </div>
                 ))}
