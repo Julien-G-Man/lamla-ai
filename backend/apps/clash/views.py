@@ -57,7 +57,7 @@ async def create_clash(request):
         return JsonResponse({"detail": "Subject is required."}, status=400)
     if difficulty not in ("easy", "medium", "hard"):
         difficulty = "medium"
-    num_questions = max(5, min(num_questions, 20))
+    num_questions = max(5, min(num_questions, 50))
     if time_per_question not in VALID_TIME_OPTIONS:
         time_per_question = 20
 
