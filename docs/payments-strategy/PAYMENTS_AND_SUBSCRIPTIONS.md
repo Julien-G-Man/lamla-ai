@@ -1,6 +1,6 @@
 # Payments & Subscription Strategy
 
-This document is the single source of truth for how Lamla AI handles money —
+This document is the single source of truth for how Ocasia handles money —
 now and in the future. It covers the voluntary donation phase, the planned
 subscription model, Paystack integration specifics, and the business decisions
 behind each choice.

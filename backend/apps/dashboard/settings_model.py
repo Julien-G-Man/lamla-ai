@@ -30,7 +30,7 @@ class SystemSettings(models.Model):
     quiz_daily_limit = models.IntegerField(default=0, help_text="Quizzes per user per day (0=unlimited)")
     
     # General settings
-    platform_name = models.CharField(max_length=255, default="Lamla AI")
+    platform_name = models.CharField(max_length=255, default="Ocasia")
     support_email = models.EmailField(blank=True, help_text="Contact email for support requests")
     
     # Metadata

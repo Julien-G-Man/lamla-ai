@@ -9,7 +9,7 @@ MESSAGE_TYPES = (
 
 class ChatbotKnowledge(models.Model):
     """
-    Curated knowledge about Lamla AI used for grounding
+    Curated knowledge about Ocasia used for grounding
     and system-level responses.
     """
     category   = models.CharField(max_length=50)

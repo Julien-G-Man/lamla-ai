@@ -1,18 +1,18 @@
 ## Sign Up And Login
 
-Signup: https://lamla-ai.vercel.app/auth/signup — enter email, username, and password, or click Continue with Google. Google signup skips email verification. Login: https://lamla-ai.vercel.app/auth/login — enter email (or username) and password.
+Signup: https://ocasia.vercel.app/auth/signup — enter email, username, and password, or click Continue with Google. Google signup skips email verification. Login: https://ocasia.vercel.app/auth/login — enter email (or username) and password.
 
 ## Email Verification
 
-After signing up, check your inbox for a verification email from Lamla AI and click the link. Check spam if it doesn't arrive. Use the Resend verification email button on the verification page if needed.
+After signing up, check your inbox for a verification email from Ocasia and click the link. Check spam if it doesn't arrive. Use the Resend verification email button on the verification page if needed.
 
 ## Profile Settings
 
-Go to https://lamla-ai.vercel.app/profile (or Dashboard → Profile tab). Edit your username or email and click Save Changes. Upload a profile photo (JPEG, PNG, WebP, or GIF, max 5MB) in the Profile Photo section.
+Go to https://ocasia.vercel.app/profile (or Dashboard → Profile tab). Edit your username or email and click Save Changes. Upload a profile photo (JPEG, PNG, WebP, or GIF, max 5MB) in the Profile Photo section.
 
 ## Dashboard Access
 
-Dashboard is at https://lamla-ai.vercel.app/dashboard. Tabs: overview stats, past quizzes, materials you uploaded, and profile settings.
+Dashboard is at https://ocasia.vercel.app/dashboard. Tabs: overview stats, past quizzes, materials you uploaded, and profile settings.
 
 ## Logout
 

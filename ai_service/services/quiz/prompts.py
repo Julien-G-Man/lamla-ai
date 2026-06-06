@@ -23,7 +23,7 @@ def _build_quiz_prompt(payload: QuizRequest) -> str:
     source_note = _SOURCE_CONTEXT.get(source_type, _SOURCE_CONTEXT["text"]).format(title=title)
 
     return (
-        f"You are Lamla AI's Quiz Engine. Generate a quiz based on this study material:\n\n"
+        f"You are Ocasia's Quiz Engine. Generate a quiz based on this study material:\n\n"
         f"{payload.study_text}\n\n"
         f"Subject: {payload.subject}\n"
         f"Difficulty Level: {payload.difficulty}\n"

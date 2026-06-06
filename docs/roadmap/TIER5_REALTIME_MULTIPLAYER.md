@@ -227,6 +227,6 @@ The quiz generation pipeline is already built.
 The social graph (friends, study groups) is built in Tier 4.
 
 When those pieces are in place and the user base is active, Tier 5 is
-the feature that turns Lamla from a study tool into a study event.
+the feature that turns Ocasia from a study tool into a study event.
 
 → See `../multiplayer/QUIZ_BATTLE.md` for full technical specification.

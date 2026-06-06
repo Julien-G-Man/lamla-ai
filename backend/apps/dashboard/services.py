@@ -14,7 +14,7 @@ def _admin_recipient() -> str:
 
 
 def send_contact_emails(title: str, name: str, email: str, message: str) -> None:
-    site_name = getattr(settings, "SITE_NAME", "Lamla AI")
+    site_name = getattr(settings, "SITE_NAME", "Ocasia")
     admin_email = _admin_recipient()
     if not admin_email:
         raise ValueError("No admin recipient configured for contact emails.")
@@ -50,7 +50,7 @@ def send_contact_emails(title: str, name: str, email: str, message: str) -> None
 
 
 def send_newsletter_emails(email: str) -> None:
-    site_name = getattr(settings, "SITE_NAME", "Lamla AI")
+    site_name = getattr(settings, "SITE_NAME", "Ocasia")
     admin_email = _admin_recipient()
     if not admin_email:
         raise ValueError("No admin recipient configured for newsletter emails.")

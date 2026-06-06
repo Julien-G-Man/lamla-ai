@@ -33,7 +33,7 @@ TOOL_REGISTRY: dict[str, dict] = {
         "definition": ToolDefinition(
             name="kb_search",
             description=(
-                "Search the Lamla platform knowledge base for information about the platform, "
+                "Search the Ocasia platform knowledge base for information about the platform, "
                 "its features, how things work, pricing, or support contacts. "
                 "Always call this first for any platform-specific question before using web_search. "
                 "Returns the most relevant knowledge chunks."
@@ -65,7 +65,7 @@ TOOL_REGISTRY: dict[str, dict] = {
                 "Search the web for current information on a topic. "
                 "Use ONLY when the student's question requires up-to-date facts, "
                 "recent events, or information not available in the platform knowledge base. "
-                "Do NOT use for questions about the Lamla platform or general concepts "
+                "Do NOT use for questions about the Ocasia platform or general concepts "
                 "you can answer from training knowledge."
             ),
             input_schema={

@@ -1,4 +1,4 @@
-# Lamla AI — Intelligent EdTech Roadmap
+# Ocasia — Intelligent EdTech Roadmap
 
 > Goal: Build a platform that doesn't just quiz students — one that knows them as learners,
 > identifies exactly where they struggle, and focuses every session on the highest-leverage

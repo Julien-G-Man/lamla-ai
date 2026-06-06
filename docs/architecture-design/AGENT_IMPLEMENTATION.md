@@ -1,4 +1,4 @@
-# Agent Implementation — Lamla AI
+# Agent Implementation — Ocasia
 
 ---
 
@@ -8,7 +8,7 @@ Agent is a pattern where the AI receives a typed list of capabilities (tools), c
 to call them instead of generating a final response, and continues reasoning over the results
 until it produces a definitive answer.
 
-In Lamla this means:
+In Ocasia this means:
 - The AI receives tool definitions (name, description, JSON Schema) at the start of a request.
 - The AI can respond with a `tool_use` block instead of text.
 - The executor runs the tool in-process and returns the result to the AI.

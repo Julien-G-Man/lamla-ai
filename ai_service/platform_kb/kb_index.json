@@ -1,13 +1,13 @@
 {
   "platform_overview.md::s1": {
-    "heading": "What Lamla Is",
+    "heading": "What Ocasia Is",
     "source_file": "platform_overview.md",
-    "keywords": ["lamla", "platform", "overview", "purpose", "ai tutor", "learning app", "edtech", "study platform", "exam prep", "what is lamla", "about lamla"]
+    "keywords": ["ocasia", "platform", "overview", "purpose", "ai tutor", "learning app", "edtech", "study platform", "exam prep", "what is ocasia", "about ocasia"]
   },
   "platform_overview.md::s2": {
-    "heading": "Who Built Lamla",
+    "heading": "Who Built Ocasia",
     "source_file": "platform_overview.md",
-    "keywords": ["developers", "team", "founders", "who made lamla", "creators", "knust", "ghana", "computer science", "information technology", "student team", "mission"]
+    "keywords": ["developers", "team", "founders", "who made ocasia", "creators", "knust", "ghana", "computer science", "information technology", "student team", "mission"]
   },
   "platform_overview.md::s3": {
     "heading": "Main Navigation",
@@ -22,7 +22,7 @@
   "platform_overview.md::s5": {
     "heading": "Key Benefits",
     "source_file": "platform_overview.md",
-    "keywords": ["value", "benefits", "revision", "retention", "productivity", "time saving", "study smarter", "why use lamla"]
+    "keywords": ["value", "benefits", "revision", "retention", "productivity", "time saving", "study smarter", "why use ocasia"]
   },
   "platform_overview.md::s6": {
     "heading": "Getting Started",
@@ -32,7 +32,7 @@
   "platform_overview.md::s7": {
     "heading": "Quick Access URLs and Website",
     "source_file": "platform_overview.md",
-    "keywords": ["urls", "web addresses", "links", "page urls", "direct links", "website", "site", "homepage", "url", "address", "lamla url", "platform url", "where is", "find lamla", "open lamla", "access lamla", "lamla website", "lamla link", "lamla.ai", "vercel"]
+    "keywords": ["urls", "web addresses", "links", "page urls", "direct links", "website", "site", "homepage", "url", "address", "ocasia url", "platform url", "where is", "find ocasia", "open ocasia", "access ocasia", "ocasia website", "ocasia link", "ocasia.ai", "vercel"]
   },
   "learning_tools.md::s1": {
     "heading": "Quiz Generator",
@@ -157,7 +157,7 @@
   "support_and_policies.md::s1": {
     "heading": "How To Get Help",
     "source_file": "support_and_policies.md",
-    "keywords": ["support", "contact", "email", "whatsapp", "help desk", "customer service", "technical support", "get help", "contact us", "lamla support", "lamla contact"]
+    "keywords": ["support", "contact", "email", "whatsapp", "help desk", "customer service", "technical support", "get help", "contact us", "ocasia support", "ocasia contact"]
   },
   "support_and_policies.md::s2": {
     "heading": "What We Can Help With",
@@ -175,9 +175,9 @@
     "keywords": ["feedback", "suggestions", "feature request", "improvement", "ideas"]
   },
   "models_and_capabilities.md::s1": {
-    "heading": "AI Behind Lamla",
+    "heading": "AI Behind Ocasia",
     "source_file": "models_and_capabilities.md",
-    "keywords": ["ai models", "which ai", "what ai does lamla use", "powered by", "ai technology", "chatgpt", "claude", "ai provider", "large language model"]
+    "keywords": ["ai models", "which ai", "what ai does ocasia use", "powered by", "ai technology", "chatgpt", "claude", "ai provider", "large language model"]
   },
   "models_and_capabilities.md::s2": {
     "heading": "Why Responses Sometimes Vary",

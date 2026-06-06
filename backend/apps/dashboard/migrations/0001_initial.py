@@ -30,7 +30,7 @@ class Migration(migrations.Migration):
                 ('maintenance_message', models.TextField(blank=True, help_text='Message shown during maintenance mode')),
                 ('chatbot_daily_limit', models.IntegerField(default=0, help_text='Chat messages per user per day (0=unlimited)')),
                 ('quiz_daily_limit', models.IntegerField(default=0, help_text='Quizzes per user per day (0=unlimited)')),
-                ('platform_name', models.CharField(default='Lamla AI', max_length=255)),
+                ('platform_name', models.CharField(default='Ocasia', max_length=255)),
                 ('support_email', models.EmailField(blank=True, help_text='Contact email for support requests', max_length=254)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),

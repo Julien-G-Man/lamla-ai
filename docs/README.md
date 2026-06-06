@@ -1,4 +1,4 @@
-# Lamla AI Documentation
+# Ocasia Documentation
 
 This folder is the maintained source of truth for architecture, setup, features, security, and deployment.
 

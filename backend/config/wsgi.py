@@ -1,5 +1,5 @@
 """
-WSGI config for lamla project.
+WSGI config for Ocasia project.
 
 It exposes the WSGI callable as a module-level variable named ``application``.
 

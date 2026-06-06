@@ -9,7 +9,7 @@ from agent.router import agent_router
 from core.middleware import InternalAuthMiddleware
 from core.config import settings
 
-app = FastAPI(title="Lamla AI Engine")
+app = FastAPI(title="Ocasia - AI Engine")
 logger = logging.getLogger(__name__)
 
 app.add_middleware(
@@ -49,7 +49,7 @@ if _sentry_dsn:
         pass
 
 # ---------------------------------------------------------------------------
-# Logging — INFO+ for all Lamla app code; keep noisy libraries quieter
+# Logging — INFO+ for all Ocasia app code; keep noisy libraries quieter
 # ---------------------------------------------------------------------------
 logging.config.dictConfig({
     "version": 1,
@@ -66,7 +66,7 @@ logging.config.dictConfig({
         },
     },
     "loggers": {
-        # All Lamla service code
+        # All Ocasia service code
         "agent":    {"handlers": ["console"], "level": "INFO", "propagate": False},
         "services": {"handlers": ["console"], "level": "INFO", "propagate": False},
         "core":     {"handlers": ["console"], "level": "INFO", "propagate": False},

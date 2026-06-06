@@ -264,7 +264,7 @@ This is both ethical and legally important for privacy compliance.
 
 **4. No public chat or messaging**
 A general-purpose chat feature between students is a moderation
-nightmare at any scale. All AI interaction is with the Lamla tutor,
+nightmare at any scale. All AI interaction is with the Ocasia tutor,
 not between students. Study group interaction is limited to
 challenges and shared materials — no freeform messaging.
 

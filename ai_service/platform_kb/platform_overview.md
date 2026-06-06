@@ -1,8 +1,8 @@
-## What Lamla Is
+## What Ocasia Is
 
-Lamla AI is an AI-powered learning platform for students. Upload study materials to generate quizzes and flashcards automatically, or chat with an AI tutor anytime. Features: AI Tutor, Quiz Generator, Flashcards, Clash (multiplayer quiz battles), Materials Library, and a progress Dashboard.
+Ocasia is an AI-powered learning platform for students. Upload study materials to generate quizzes and flashcards automatically, or chat with an AI tutor anytime. Features: AI Tutor, Quiz Generator, Flashcards, Clash (multiplayer quiz battles), Materials Library, and a progress Dashboard.
 
-## Who Built Lamla
+## Who Built Ocasia
 
 Built by Computer Science and IT students from KNUST (Kwame Nkrumah University of Science and Technology), Ghana. The goal is to make studying more intentional and effective with practical AI tools.
 
@@ -27,15 +27,15 @@ Save time by auto-generating quizzes and flashcards from your notes. Get AI expl
 
 ## Quick Access URLs and Website
 
-Platform: https://lamla-ai.vercel.app
+Platform: https://ocasia.vercel.app
 
 Pages:
-- Login: https://lamla-ai.vercel.app/auth/login
-- Signup: https://lamla-ai.vercel.app/auth/signup
-- AI Tutor: https://lamla-ai.vercel.app/ai-tutor
-- Create Quiz: https://lamla-ai.vercel.app/quiz/create
-- Flashcards: https://lamla-ai.vercel.app/flashcards
-- Clash: https://lamla-ai.vercel.app/clash
-- Materials Library: https://lamla-ai.vercel.app/materials
-- Dashboard: https://lamla-ai.vercel.app/dashboard
-- Profile: https://lamla-ai.vercel.app/profile
+- Login: https://ocasia.vercel.app/auth/login
+- Signup: https://ocasia.vercel.app/auth/signup
+- AI Tutor: https://ocasia.vercel.app/ai-tutor
+- Create Quiz: https://ocasia.vercel.app/quiz/create
+- Flashcards: https://ocasia.vercel.app/flashcards
+- Clash: https://ocasia.vercel.app/clash
+- Materials Library: https://ocasia.vercel.app/materials
+- Dashboard: https://ocasia.vercel.app/dashboard
+- Profile: https://ocasia.vercel.app/profile

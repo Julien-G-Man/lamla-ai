@@ -413,9 +413,9 @@ async def clash_share_preview(request, room_code):
     share_url = f"{frontend_url}/clash/share/{room_code}/"
 
     # Try to enrich the title/description with the actual subject
-    og_title = "Join a Clash on Lamla AI!"
+    og_title = "Join a Clash on Ocasia!"
     og_desc = (
-        f"You've been invited to a live quiz battle on Lamla AI. "
+        f"You've been invited to a live quiz battle on Ocasia. "
         f"Join room {room_code} and compete now!"
     )
     try:
@@ -424,7 +424,7 @@ async def clash_share_preview(request, room_code):
             og_title = f"Clash: {room.subject} — Join the battle!"
             og_desc = (
                 f"You've been challenged to a live {room.subject} quiz battle "
-                f"on Lamla AI. Join room {room_code} and compete!"
+                f"on Ocasia. Join room {room_code} and compete!"
             )
     except ClashRoom.DoesNotExist:
         pass
@@ -438,11 +438,11 @@ async def clash_share_preview(request, room_code):
 <head>
   <meta charset="utf-8">
   <meta property="og:type" content="website">
-  <meta property="og:site_name" content="Lamla AI">
+  <meta property="og:site_name" content="Ocasia">
   <meta property="og:title" content="{t}">
   <meta property="og:description" content="{d}">
   <meta property="og:image" content="{image_url}">
-  <meta property="og:image:alt" content="Lamla AI Clash — Live Quiz Battle">
+  <meta property="og:image:alt" content="Ocasia Clash — Live Quiz Battle">
   <meta property="og:url" content="{share_url}">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="{t}">
@@ -452,7 +452,7 @@ async def clash_share_preview(request, room_code):
   <title>{t}</title>
 </head>
 <body>
-  <p>Redirecting to Lamla AI Clash…</p>
+  <p>Redirecting to Ocasia Clash…</p>
   <a href="{redirect_url}">Click here if not redirected</a>
 </body>
 </html>"""

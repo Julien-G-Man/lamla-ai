@@ -1,6 +1,6 @@
 # Graphify Architecture Guide
 
-This document explains what Graphify revealed about the Lamla system, how to interpret the graph outputs, and how to rerun the process safely.
+This document explains what Graphify revealed about the Ocasia system, how to interpret the graph outputs, and how to rerun the process safely.
 
 The previous version was a static snapshot. This version is intended to be a practical guide for engineers who need to understand system structure, confidence levels, and cross-service flow.
 
@@ -55,7 +55,7 @@ This separation makes community detection more meaningful and reports easier to 
 
 ## Big Picture Architecture
 
-At runtime, Lamla is split into three active layers:
+At runtime, Ocasia is split into three active layers:
 
 1. Frontend clients
 2. Django backend as API gateway + system-of-record

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Lamla AI uses a **custom Google OAuth implementation** (no django-allauth dependency) that exchanges Google ID tokens for application auth tokens. This provides a seamless "Sign in with Google" experience on both login and signup pages.
+Ocasia uses a **custom Google OAuth implementation** (no django-allauth dependency) that exchanges Google ID tokens for application auth tokens. This provides a seamless "Sign in with Google" experience on both login and signup pages.
 
 ## Architecture
 
@@ -119,12 +119,12 @@ import { GoogleLogin } from '@react-oauth/google';
 4. Click **Create Credentials** > **OAuth 2.0 Client ID**
 5. Configure OAuth consent screen (if first time)
 6. Application type: **Web application**
-7. Name: "Lamla AI Web Client"
+7. Name: "Ocasia Web Client"
 
 **Authorized JavaScript origins:**
 ```
 http://localhost:3000
-https://lamla-ai.vercel.app
+https://ocasia.vercel.app
 https://yourdomain.com
 ```
 

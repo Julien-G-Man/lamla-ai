@@ -168,24 +168,24 @@ def fallback_response(user_message: str) -> str:
     msg = user_message.lower()
     if any(w in msg for w in ["hello", "hi", "hey"]):
         return (
-            "Hello! I'm Lamla AI Tutor. I'm here to help with platform questions, "
+            "Hello! I'm Ocasia AI Tutor. I'm here to help with platform questions, "
             "study tips, and general topics. What would you like to know today?"
         )
     if any(w in msg for w in ["feature", "quiz", "flashcard"]):
         return (
-            "Lamla AI offers quiz generation, flashcard creation, performance tracking, "
+            "Ocasia offers quiz generation, flashcard creation, performance tracking, "
             "and study material uploads (PDF, PPTX, DOCX). "
-            "Visit https://lamla-ai.vercel.app to explore all features."
+            "Visit https://ocasia.vercel.app to explore all features."
         )
     if any(w in msg for w in ["contact", "support", "email"]):
         return (
-            "You can reach the Lamla team at lamlaaiteam@gmail.com "
+            "You can reach the Ocasia team at lamlaaiteam@gmail.com "
             "or WhatsApp +233509341251. We usually respond within 24 hours."
         )
     if any(w in msg for w in ["thank", "thanks"]):
         return "You're welcome! Let me know if you have any other questions."
     return (
-        "I'm Lamla AI Tutor. I can help with platform navigation, study tools, "
+        "I'm Ocasia AI Tutor. I can help with platform navigation, study tools, "
         "and general questions. What would you like to know?"
     )
 
